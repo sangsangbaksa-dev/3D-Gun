@@ -24,6 +24,8 @@ export const state = {
   /** 기지 핵(디펜스 목표). 소유: base. 0이 되면 패배 처리는 enemies 가 한다 */
   coreHp: 500,
   coreMaxHp: 500,
+  /** 보유 무기 (소유: player 가 읽고, loot 등이 push). 권총만 시작 보유 */
+  weapons: ['pistol'] as string[],
   allyCount: 0,
   allyCapBonus: 0, // 건물(숙소) 보너스. 최종 상한 = stats.allyCap + allyCapBonus
   stats: calcStats({}) as Stats,
