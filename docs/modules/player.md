@@ -17,7 +17,8 @@ src/player/
     controller.ts      PlayerController.update(dt, intent, env) → FrameOut. 이벤트 발행 담당
   view/                Three.js / DOM
     playerView.ts      휴머노이드+모자·배낭, 조준 자세, 반동, 총구 불꽃/조명, 재장전 동작
-    guns.ts            무기 3종 프리미티브 모델
+    guns.ts            무기 6종 프리미티브 모델 (슬라이드/탄창/펌프/볼트/실린더가 움직인다)
+    sfx.ts             WebAudio 합성 총소리 ('weapon:sound' 구독)
     effects.ts         풀링된 트레이서, 피, 착탄 먼지, 불똥, 탄피
     hud.ts             조준선(퍼짐 반영), 히트마커(일반/헤드/처치), 피격 비네트, 탄약·슬롯, 재장전 바, 대시 쿨타임
 ```
@@ -26,7 +27,7 @@ src/player/
 main 의 `playtest` 슬라이스가 자체 사격·체력·좀비 시뮬레이션을 쓰므로, `main.ts` 에서 `playerOptions.combat = false` 로 둔다. 이 상태에서 player 모듈은 **이동·대시·카메라(조준 줌)·모델**만 맡고, 전투(사격·재장전·피격·HUD)는 꺼진다. enemies(W2)가 `zombies` 목록을 채우고 playtest 가 빠지는 시점에 그 한 줄을 지우면 전투 전체가 켜진다. 조준은 언제나 **화면 중앙(카메라 광선)** 이다. 포인터 잠금은 선택 사항이라 잠금이 없어도 조작된다.
 
 ## 조작
-WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · **우클릭 조준**(이동 35% 감속, 퍼짐 절반, 카메라 당김·줌) · R 재장전 · 1/2/3 무기 교체(보유한 것만). 탄이 0이면 자동 재장전.
+WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · **우클릭 조준**(이동 35% 감속, 퍼짐 절반, 카메라 당김·줌) · R 재장전 · 1~6 무기 교체(보유한 것만) · V 무기 강화창. 탄이 0이면 자동 재장전.
 `state.mode !== 'play'`(건설/모달)이거나 포인터가 잠겨 있지 않으면 이동·사격이 멈춘다.
 
 ## 데이터 (`src/data/index.ts`, 직렬화 가능)
@@ -83,3 +84,32 @@ WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · *
 | `hud.ts` DOM | UGUI 크로스헤어·탄약 텍스트, 히트마커 애니메이션 |
 | `events` | C# `EventBus`/`event Action<T>` |
 | 좌표 | 앞 방향 부호는 `forwardOf/rightOf` 한 곳에서 뒤집기 |
+
+
+## 총기 6종과 강화 (후속)
+
+`src/data/index.ts` 의 **`GUNS: Record<GunId, GunDef>`** 가 전체 표다 (`GUN_ORDER` = 키 1~6). 기존 `WEAPONS`/`WeaponId`(권총·샷건·기관총)는 loot·playtest 가 쓰므로 그대로 두고 `GUNS` 가 같은 값을 재사용한다.
+
+| id | 이름 | 종류 | 특징 |
+|----|------|------|------|
+| pistol | 권총 | 연사 | 가볍고 안정적 |
+| magnum | 매그넘 | 단발 | 한 방 42, 관통 2, 실린더가 돈다 |
+| smg | 기관총 | 연사 | 빠른 연사, 퍼짐 큼 |
+| shotgun | 샷건 | 단발 | 펠릿 7, 근거리 |
+| rifle | 돌격소총 | 연사 | 정확한 연사, 사거리 110 |
+| sniper | 저격총 | 단발 | 130 피해, 관통 3, 조준경(스코프) 오버레이, 줌 24° |
+
+`GunDef` 추가 필드: `kind auto pierce adsFov scope sway snd{pitch,len,noise,thump} desc` (+ 기존 `dmg rate mag reload pellets spread range recoil bloom falloff tracer`).
+단발 총기는 클릭 한 번에 한 발이고, 쿨다운이 끝나기 0.2초 전에 누른 클릭도 버퍼에 남는다. 관통탄은 맞힐 때마다 피해 70%.
+
+**강화**: `state.weaponLv[id]`(구매, 런 단위) + `state.weaponLvBonus[id | '*']`(영구 보너스, W8 이 런 시작 때 채움). 레벨당 피해 +12%, 연사 간격 −5%, 탄창 +10%, 재장전 −6%, 퍼짐 −6%, 산탄(`pellets>1`)은 2레벨마다 +1발 (`GUN_UPGRADE.perLevel`). 비용은 `GUN_UPGRADE.gold/parts` 배열(인덱스 = 현재 레벨), 최대 `maxLv` 5.
+- 강화창(V): 보유 무기의 현재→다음 수치와 비용을 보여 주고 버튼으로 강화한다. 열려 있는 동안 `state.mode='modal'`, `input.modalOpen=true`, `ui:modal` 발행.
+- 다른 모듈이 강화하려면 `weapon:upgrade {weapon}` 이벤트를 내면 된다(비용은 컨트롤러가 `spend`). 결과는 `weapon:upgraded {weapon, level}`.
+
+**연출**: 총기별 반동(슬라이드 후퇴, 펌프 동작, 볼트 액션, 실린더 회전, 해머), 시선 이동에 따른 총 흔들림(sway), 걸을 때 흔들림과 숨쉬기, 우클릭 조준(줌, 감속, 총별 시야각), 재장전 동작(탄창 빠짐·삽입, 샷건은 펌프 3회, 저격총은 볼트), 총구 불꽃·조명, 탄피, 피·착탄 먼지, 트레이서(저격총은 빠르고 굵게), 헤드샷/처치 히트마커.
+
+**사운드 훅**: `weapon:sound {weapon, kind}` (`fire dry reload reloadDone switch hit kill headshot`). 기본 합성음은 `view/sfx.ts`(`BUILTIN_SFX=false` 로 끄고 W7 오디오가 같은 이벤트를 받아도 된다).
+
+**새 런(`run:start`)**: 다음 프레임에(스탯 보정이 먼저 반영되도록) 보유 무기를 권총만(+`state.start.weapons` 가 있으면 그것도)으로, 강화 레벨 0으로, 탄약·체력을 가득, 위치를 `MAP.playerStart` 로 되돌리고 무적 2초를 준다. `player:respawn`, `weapon:switched` 발행.
+
+**획득 경로**: 새 총기(매그넘, 돌격소총, 저격총)는 loot 보상표/상점이 `weapon:unlock {weapon}` 을 내거나 `state.weapons` 에 id 를 넣으면 된다.

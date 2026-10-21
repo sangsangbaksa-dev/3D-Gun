@@ -4,9 +4,10 @@ import * as THREE from 'three';
 import { animateWalk } from '../../core/humanoid';
 import { MAP } from '../../data/map';
 import { state } from '../../core/state';
-import { ENEMY_RULES } from '../../data';
+import { ENEMY_RULES, ZOMBIE_TUNING } from '../../data';
 import type { EnemySim } from '../logic/sim';
 import type { Zombie } from '../logic/zombie';
+import type { RingColor } from '../logic/fx';
 import { buildZombieModel, disposeModel, type ZombieModel } from './models';
 
 interface ZView {
@@ -18,17 +19,20 @@ interface ZView {
   fallDir: number;
 }
 interface RingFx { mesh: THREE.Group; inner?: THREE.Mesh; t: number; dur: number; r: number; warn: boolean }
-interface GasFx { group: THREE.Group; t: number; dur: number; r: number; puffs: THREE.Mesh[] }
+interface GasFx { group: THREE.Group; t: number; dur: number; r: number; puffs: THREE.Mesh[]; base: number }
 interface Float { el: HTMLDivElement; x: number; y: number; z: number; t: number }
+interface ProjFx { mesh: THREE.Mesh; sx: number; sz: number; tx: number; tz: number; t: number; dur: number }
+interface Flash { mesh: THREE.Mesh; t: number; dur: number; r: number }
 
 const DEATH_TIME = 2.2;
-const UP = new THREE.Vector3(0, 1, 0);
+const RING_COLOR: Record<RingColor, number> = { warn: 0xff3a2a, impact: 0xfff0d0, scream: 0xb36bff, acid: 0x9bff3a };
 
 const diskGeo = new THREE.CircleGeometry(1, 40);
 const ringGeo = new THREE.RingGeometry(0.92, 1, 48);
 const barGeo = new THREE.PlaneGeometry(1, 1);
 const starGeo = new THREE.OctahedronGeometry(0.1, 0);
 const starMat = new THREE.MeshBasicMaterial({ color: 0xffe14a });
+const ballGeo = new THREE.SphereGeometry(1, 12, 10);
 
 /** 지형 높이. 맵 담당이 world.getGroundY 를 추가하면 자동으로 쓴다 (그 전엔 0) */
 let groundFn: ((x: number, z: number) => number) | null = null;
@@ -40,6 +44,8 @@ export class EnemyView {
   private rings: RingFx[] = [];
   private gases: GasFx[] = [];
   private floats: Float[] = [];
+  private projs: ProjFx[] = [];
+  private flashes: Flash[] = [];
   private floatLayer: HTMLDivElement;
   private portals: { group: THREE.Group; ring: THREE.Mesh; beam: THREE.Mesh; mat: THREE.MeshBasicMaterial; beamMat: THREE.MeshBasicMaterial }[] = [];
   private fakeCore?: THREE.Group;
@@ -88,9 +94,10 @@ export class EnemyView {
   }
 
   private makeView(z: Zombie): ZView {
-    const m = buildZombieModel(z.type, z.id, z.wave);
+    const m = buildZombieModel(z.type, z.id, z.wave, z.elite);
     z.view = m.h;
     this.scene.add(m.h.group);
+    if (z.elite) m.h.group.scale.multiplyScalar(1.15);
     // 체력바 (카메라를 향한다)
     const bar = new THREE.Group();
     const bw = Math.max(0.9, z.radius * 2.2);
@@ -124,6 +131,8 @@ export class EnemyView {
     for (const v of Array.from(this.views.values())) this.syncZombie(v, dt);
     this.updateRings(dt);
     this.updateGas(dt);
+    this.updateProjs(dt);
+    this.updateFlashes(dt);
     this.updateFloats(dt);
     this.updatePortals();
     this.updateFakeCore();
@@ -132,9 +141,10 @@ export class EnemyView {
   private drainFx() {
     for (const e of this.sim.fx) {
       switch (e.k) {
-        case 'spawn': this.views.set(e.z, this.makeView(e.z)); this.dust(e.z.x, e.z.z, 1.2); break;
+        case 'spawn': this.views.set(e.z, this.makeView(e.z)); this.dust(e.z.x, e.z.z, Math.min(1.5, 0.6 + e.z.scale * 0.5)); break;
         case 'hit': {
-          this.addFloat(e.z.x, e.z.height, e.z.z, String(Math.round(e.dmg)), e.dmg >= e.z.maxHp * 0.25 ? '#ffd24a' : '#fff');
+          const armored = e.z.armor > 0 && !e.z.stunned;
+          this.addFloat(e.z.x, e.z.height, e.z.z, String(Math.round(e.dmg)), armored ? '#9fb4c4' : e.dmg >= e.z.maxHp * 0.25 ? '#ffd24a' : '#fff');
           break;
         }
         case 'stun': this.addFloat(e.z.x, e.z.height + 0.5, e.z.z, '기절!', '#ffe14a'); break;
@@ -142,7 +152,8 @@ export class EnemyView {
         case 'die': {
           const v = this.views.get(e.z);
           if (!v) break;
-          if (e.silent) this.removeView(v); else { v.dying = 0; v.bar.visible = false; v.stars.visible = false; this.dust(e.z.x, e.z.z, e.z.scale); }
+          if (e.silent) this.removeView(v);
+          else { v.dying = 0; v.bar.visible = false; v.stars.visible = false; this.dust(e.z.x, e.z.z, e.z.scale); }
           break;
         }
         case 'converted': {
@@ -150,9 +161,11 @@ export class EnemyView {
           if (v) this.removeView(v, true); // 모델은 씬에 남기고 W5 가 가져가 쓴다
           break;
         }
-        case 'ring': this.addRing(e.x, e.z, e.r, e.t, e.color === 'warn'); break;
-        case 'gas': this.addGas(e.x, e.z, e.r, e.t); break;
-        case 'roar': this.addRing(e.z.x, e.z.z, e.z.radius * 3, 0.6, false); break;
+        case 'ring': this.addRing(e.x, e.z, e.r, e.t, e.color); break;
+        case 'gas': this.addGas(e.x, e.z, e.r, e.t, e.kind); break;
+        case 'proj': this.addProj(e.x, e.z, e.tx, e.tz, e.t); break;
+        case 'blast': this.addBlast(e.x, e.z, e.r, e.kind); break;
+        case 'roar': this.addRing(e.z.x, e.z.z, e.z.radius * 3, 0.6, e.z.type === 'screamer' || e.z.type === 'bossLord' ? 'scream' : 'impact'); break;
         case 'swing': break;
       }
     }
@@ -189,15 +202,29 @@ export class EnemyView {
       armX = 2.4 - p;
     }
     // 이동 애니메이션
-    animateWalk(h, dt, z.moveSpeed * (z.type === 'runner' ? 0.8 : 1));
-    if (z.type === 'runner') { lean = -0.3; armX = 0.9 + Math.sin(sway * 2) * 0.5; }
-    if (z.type === 'fatty') roll = Math.sin(h.walk) * 0.07;
+    animateWalk(h, dt, z.moveSpeed * (z.type === 'runner' || z.type === 'swarmer' ? 0.8 : 1));
+    switch (z.type) {
+      case 'runner': lean = -0.3; armX = 0.9 + Math.sin(sway * 2) * 0.5; break;
+      case 'swarmer': lean = -0.35; armX = 1.0 + Math.sin(sway * 3) * 0.5; break;
+      case 'fatty': roll = Math.sin(h.walk) * 0.07; break;
+      case 'tank': roll = Math.sin(h.walk * 0.7) * 0.04; armX = 1.1; break;
+      case 'crawler': { // 바닥을 기어 다닌다
+        lean = -1.3; lift = 0.18; armX = 2.7 + Math.sin(h.walk * 1.4) * 0.5;
+        h.legs.forEach((l) => (l.rotation.x = 0.2));
+        break;
+      }
+      case 'leaper': lean = -0.18; armX = 0.8; break;
+      case 'spitter': lean = 0.1 + Math.sin(sway) * 0.03; armX = 1.1; break;
+      case 'bomber': armX = 0.6; roll = Math.sin(h.walk) * 0.05; break;
+      case 'screamer': lean = 0.1; armX = 0.3 + Math.sin(sway * 0.7) * 0.1; break;
+      default:
+    }
 
     switch (z.state) {
       case 'windup': {
         const p = 1 - z.stateT / ENEMY_RULES.windup;
         armX = 1.4 + p * 1.5;          // 팔을 번쩍 든다
-        lean = -p * 0.25;
+        lean = Math.min(lean, 0) - p * 0.25;
         break;
       }
       case 'stunned':
@@ -207,30 +234,55 @@ export class EnemyView {
         break;
       default:
     }
-    if (z.move === 'slam') { armX = 2.9; lean = 0.15; }
-    if (z.move === 'charge') { lean = -0.5; armX = z.charging ? 0.2 : 1.4; }
-    if (z.move === 'summon') { armX = 2.7; }
+    // 특수 동작 자세
+    let pulse = 0;
+    switch (z.move) {
+      case 'slam': armX = 2.9; lean = 0.15; break;
+      case 'charge': lean = -0.5; armX = z.phase === 1 ? 0.2 : 1.4; break;
+      case 'summon': case 'bombRain': armX = 2.7; lean = 0.1; break;
+      case 'volley': case 'spit': armX = 2.8; lean = 0.35 + Math.sin(this.time * 18) * 0.04; break;
+      case 'scream': armX = 2.4; lean = 0.45 + Math.sin(this.time * 30) * 0.05; break;
+      case 'leap': {
+        if (z.phase === 0) { lift = -0.35; lean = -0.5; armX = 0.2; }
+        else {
+          const p = 1 - Math.max(0, z.moveT) / ZOMBIE_TUNING.leaper.leap!.time;
+          lift = Math.sin(Math.PI * p) * 3.6; lean = -0.9; armX = 2.9;
+        }
+        break;
+      }
+      case 'fuse': pulse = Math.sin(this.time * 45) > 0 ? 1 : 0; break;
+      default:
+    }
     if (z.state !== 'stunned') g.rotation.z = roll;
     g.rotation.x = lean;
     g.position.y = gy + lift;
     h.arms.forEach((a) => (a.rotation.x = armX));
 
-    // 피격 반짝임 / 분노·광폭 발광
+    // 장식 애니메이션
+    const parts = v.m.parts;
+    if (parts.gem) { parts.gem.rotation.y = this.time * 2.5; parts.gem.position.y = 2.35 + Math.sin(this.time * 3) * 0.06; }
+    if (parts.sac) parts.sac.scale.setScalar(1 + Math.sin(this.time * 4) * 0.08 + (z.move === 'spit' ? 0.5 : 0));
+    if (parts.mouth) parts.mouth.scale.y = z.move === 'scream' ? 2.4 : 1 + Math.sin(this.time * 3) * 0.1;
+    if (parts.fuse) parts.fuse.scale.setScalar(0.8 + Math.abs(Math.sin(this.time * 14)) * 0.7);
+
+    // 피격 반짝임 / 분노·광폭·엘리트·자폭 발광
     const flash = z.hitFlash > 0 ? z.hitFlash / 0.14 : 0;
     const enraged = z.rage || (z.isBoss && z.hp < z.maxHp * 0.5);
-    const pulse = enraged ? 0.25 + Math.sin(this.time * 8) * 0.12 : 0;
+    const rp = enraged ? 0.25 + Math.sin(this.time * 8) * 0.12 : 0;
+    const fr = z.frenzy > 0 ? 0.2 + Math.sin(this.time * 12) * 0.1 : 0;
+    const gold = z.elite ? 0.14 + Math.sin(this.time * 3) * 0.06 : 0;
     for (const m of h.mats) {
-      m.emissive.setRGB(flash * 0.9 + pulse, flash * 0.35, flash * 0.3);
+      m.emissive.setRGB(flash * 0.9 + rp + gold + pulse * 0.9 + fr * 0.7, flash * 0.35 + gold * 0.75 + pulse * 0.3, flash * 0.3 + fr + pulse * 0.05);
     }
 
     // 체력바
-    const showBar = z.hp < z.maxHp || z.isBoss;
+    const showBar = z.hp < z.maxHp || z.isBoss || z.elite;
     v.bar.visible = showBar && z.state !== 'spawn';
     if (v.bar.visible) {
       const r = Math.max(0.001, z.hp / z.maxHp);
       v.barFill.scale.x = v.barW * r;
       v.barFill.position.x = -(v.barW * (1 - r)) / 2;
-      (v.barFill.material as THREE.MeshBasicMaterial).color.setHex(z.stunned ? 0xffd24a : r > 0.5 ? 0x6fd24a : r > 0.25 ? 0xe0a02a : 0xe03a2a);
+      (v.barFill.material as THREE.MeshBasicMaterial).color.setHex(z.stunned ? 0xffd24a : z.elite ? 0xf2c230 : r > 0.5 ? 0x6fd24a : r > 0.25 ? 0xe0a02a : 0xe03a2a);
       v.bar.position.set(z.x, gy + z.height + 0.45, z.z);
       v.bar.quaternion.copy(this.camera.quaternion);
     }
@@ -247,11 +299,11 @@ export class EnemyView {
   }
 
   // ── 이펙트 ───────────────────────────────────────────
-  private addRing(x: number, z: number, r: number, dur: number, warn: boolean) {
+  private addRing(x: number, z: number, r: number, dur: number, color: RingColor) {
+    const warn = color === 'warn';
     const group = new THREE.Group();
     group.position.set(x, groundY(x, z) + 0.08, z);
-    const color = warn ? 0xff3a2a : 0xfff0d0;
-    const edge = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: warn ? 0.9 : 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    const edge = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: RING_COLOR[color], transparent: true, opacity: warn ? 0.9 : 0.8, side: THREE.DoubleSide, depthWrite: false }));
     edge.rotation.x = -Math.PI / 2; edge.scale.setScalar(r);
     group.add(edge);
     let inner: THREE.Mesh | undefined;
@@ -281,19 +333,21 @@ export class EnemyView {
     }
   }
 
-  private addGas(x: number, z: number, r: number, dur: number) {
+  private addGas(x: number, z: number, r: number, dur: number, kind: 'gas' | 'acid') {
     const group = new THREE.Group();
     group.position.set(x, groundY(x, z), z);
     const puffs: THREE.Mesh[] = [];
-    for (let i = 0; i < 7; i++) {
-      const p = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8fd24a, transparent: true, opacity: 0.22, depthWrite: false }));
+    const acid = kind === 'acid';
+    for (let i = 0; i < (acid ? 5 : 7); i++) {
+      const p = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: acid ? 0x6cff2a : 0x8fd24a, transparent: true, opacity: 0.22, depthWrite: false }));
       const a = (i / 7) * Math.PI * 2, d = r * 0.5 * (i % 2 ? 1 : 0.4);
-      p.position.set(Math.cos(a) * d, 0.7 + (i % 3) * 0.3, Math.sin(a) * d);
+      p.position.set(Math.cos(a) * d, acid ? 0.12 : 0.7 + (i % 3) * 0.3, Math.sin(a) * d);
+      if (acid) p.scale.y = 0.25;
       p.userData.ph = Math.random() * 6;
       group.add(p); puffs.push(p);
     }
     this.scene.add(group);
-    this.gases.push({ group, t: 0, dur, r, puffs });
+    this.gases.push({ group, t: 0, dur, r, puffs, base: acid ? 0.5 : 0.22 });
   }
 
   private updateGas(dt: number) {
@@ -302,16 +356,59 @@ export class EnemyView {
       g.t += dt;
       const p = g.t / g.dur, fade = p > 0.7 ? 1 - (p - 0.7) / 0.3 : Math.min(1, p / 0.15);
       for (const m of g.puffs) {
-        m.scale.setScalar(g.r * (0.45 + 0.1 * Math.sin(this.time * 2 + m.userData.ph)) * (0.5 + 0.5 * Math.min(1, p * 4)));
-        (m.material as THREE.MeshBasicMaterial).opacity = 0.22 * fade;
+        const s = g.r * (0.45 + 0.1 * Math.sin(this.time * 2 + m.userData.ph)) * (0.5 + 0.5 * Math.min(1, p * 4));
+        const flat = g.base > 0.4 ? 0.2 : 1;
+        m.scale.set(s, s * flat, s);
+        (m.material as THREE.MeshBasicMaterial).opacity = g.base * fade;
       }
       if (g.t >= g.dur) { this.scene.remove(g.group); disposeModel(g.group); this.gases.splice(i, 1); }
     }
   }
 
+  /** 날아가는 산성 침 */
+  private addProj(sx: number, sz: number, tx: number, tz: number, dur: number) {
+    const mesh = new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({ color: 0x9bff3a }));
+    mesh.scale.setScalar(0.28);
+    this.scene.add(mesh);
+    this.projs.push({ mesh, sx, sz, tx, tz, t: 0, dur });
+  }
+
+  private updateProjs(dt: number) {
+    for (let i = this.projs.length - 1; i >= 0; i--) {
+      const p = this.projs[i];
+      p.t += dt;
+      const k = Math.min(1, p.t / p.dur);
+      const x = p.sx + (p.tx - p.sx) * k, z = p.sz + (p.tz - p.sz) * k;
+      p.mesh.position.set(x, groundY(x, z) + 1.6 * (1 - k) + Math.sin(Math.PI * k) * 3, z);
+      p.mesh.scale.setScalar(0.28 + Math.sin(this.time * 30) * 0.03);
+      if (p.t >= p.dur) { this.scene.remove(p.mesh); (p.mesh.material as THREE.Material).dispose(); this.projs.splice(i, 1); }
+    }
+  }
+
+  /** 폭발/착탄 섬광 */
+  private addBlast(x: number, z: number, r: number, kind: 'bomb' | 'acid' | 'slam') {
+    const color = kind === 'bomb' ? 0xffa030 : kind === 'acid' ? 0x9bff3a : 0xd8c8a0;
+    const mesh = new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
+    mesh.position.set(x, groundY(x, z) + (kind === 'slam' ? 0.3 : 0.8), z);
+    this.scene.add(mesh);
+    this.flashes.push({ mesh, t: 0, dur: kind === 'bomb' ? 0.45 : 0.3, r });
+    this.addRing(x, z, r, 0.45, kind === 'acid' ? 'acid' : 'impact');
+  }
+
+  private updateFlashes(dt: number) {
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i];
+      f.t += dt;
+      const p = Math.min(1, f.t / f.dur);
+      f.mesh.scale.setScalar(Math.max(0.01, f.r * (0.25 + p * 0.65)));
+      (f.mesh.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - p);
+      if (f.t >= f.dur) { this.scene.remove(f.mesh); (f.mesh.material as THREE.Material).dispose(); this.flashes.splice(i, 1); }
+    }
+  }
+
   /** 땅에서 솟는 먼지 (스폰/사망) */
   private dust(x: number, z: number, s: number) {
-    this.addRing(x, z, 1.4 * s, 0.5, false);
+    this.addRing(x, z, 1.4 * s, 0.5, 'impact');
   }
 
   private addFloat(x: number, y: number, z: number, text: string, color: string) {
@@ -365,6 +462,5 @@ export class EnemyView {
 
   dispose() {
     this.floatLayer.remove();
-    void UP;
   }
 }

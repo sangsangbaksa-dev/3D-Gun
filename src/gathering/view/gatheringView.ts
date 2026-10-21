@@ -20,6 +20,8 @@ interface FloatText { sprite: THREE.Sprite; life: number; max: number; y0: numbe
 export interface GatheringView {
   /** focus: 지금 E 가 닿는 가장 가까운 노드(링/막대 표시용) */
   update(dt: number, camera: THREE.PerspectiveCamera, player: { x: number; z: number }, focus: GatherNode | null, events: GatherEvent[]): void;
+  /** 새 런: 모든 노드 모델을 처음 상태로 되돌린다 */
+  reset(): void;
   /** 월드 좌표에 글자를 띄운다 (샘플 획득 등) */
   floatText(x: number, y: number, z: number, text: string, color: string): void;
   dispose(): void;
@@ -191,6 +193,13 @@ export function createGatheringView(scene: THREE.Scene, model: GatheringModel, g
 
   return {
     floatText,
+    reset() {
+      for (const v of views.values()) {
+        const r = v.model.ready;
+        v.anim = { kind: 'none' }; v.shake = 0;
+        r.visible = true; r.scale.setScalar(1); r.rotation.set(0, 0, 0); r.position.y = 0;
+      }
+    },
     update(dt, camera, player, focus, events) {
       time += dt;
       for (const e of events) onEvent(e);

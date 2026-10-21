@@ -49,6 +49,14 @@ export class ChestManager {
     this.spots.forEach((_, i) => this.spawnAtSpot(i));
   }
 
+  /** 새 런: 상자·재생성 대기·황금 타이머를 비우고 맵 상자를 다시 깐다 (열던 연출도 함께 사라진다) */
+  reset() {
+    this.chests = [];
+    this.respawn = [];
+    this.goldTimer = GOLD_SPAWN.interval;
+    this.initMap();
+  }
+
   private spawnAtSpot(i: number) {
     const s = this.spots[i];
     this.spawn(s.tier, s.x, s.z, 'map', null, i);
