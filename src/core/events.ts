@@ -22,6 +22,8 @@ export interface GameEvents {
   // allies
   'zombie:converted': { id: number; type: string };  // enemies 는 이 좀비를 목록에서 빼고 메시를 넘겨준다
   'ally:dead': { id: number };
+  'zombie:inject-failed': { id: number };            // 주사 실패 → enemies 가 그 좀비를 분노(이동속도 +30%) 상태로 깨운다
+  'ally:spawned': { id: number; role: string };
   // gathering
   'resource:gathered': { res: string; amount: number };
   // loot
