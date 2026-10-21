@@ -2,6 +2,7 @@
 // W7 오디오가 같은 이벤트로 실제 소리를 붙이려면 BUILTIN_SFX 를 false 로 끄면 된다.
 import { GUNS, type GunId } from '../../data';
 import { events } from '../../core/events';
+import { preferences } from '../../core/preferences';
 
 export const BUILTIN_SFX = true;
 
@@ -52,6 +53,7 @@ export class GunSfx {
     if (!BUILTIN_SFX) return;
     const ac = this.ensure();
     if (!ac || !this.master) return;
+    this.master.gain.value = 0.32 * preferences.effectsVolume;
     const t = ac.currentTime, snd = GUNS[id].snd;
     switch (kind) {
       case 'fire':
