@@ -107,8 +107,8 @@ export interface WeaponDef {
 export const WEAPON_ORDER: WeaponId[] = ['pistol', 'shotgun', 'smg'];
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
   pistol: { name: '권총', dmg: 14, rate: 0.34, mag: 12, reload: 1.5, pellets: 1, spread: 0.004, range: 80, recoil: 0.035, bloom: 0.6, falloff: 0.2, tracer: 0xffe6a0 },
-  shotgun: { name: '샷건', dmg: 9, rate: 0.85, mag: 6, reload: 2.3, pellets: 7, spread: 0.075, range: 28, recoil: 0.11, bloom: 0.15, falloff: 0.6, tracer: 0xffb060 },
-  smg: { name: '기관총', dmg: 7, rate: 0.085, mag: 35, reload: 2.0, pellets: 1, spread: 0.035, range: 60, recoil: 0.018, bloom: 0.12, falloff: 0.35, tracer: 0xa8e0ff },
+  shotgun: { name: '샷건', dmg: 13, rate: 0.7, mag: 8, reload: 1.9, pellets: 9, spread: 0.052, range: 38, recoil: 0.1, bloom: 0.1, falloff: 0.4, tracer: 0xffb060 },
+  smg: { name: '기관총', dmg: 10, rate: 0.068, mag: 48, reload: 1.65, pellets: 1, spread: 0.02, range: 78, recoil: 0.013, bloom: 0.07, falloff: 0.2, tracer: 0xa8e0ff },
 };
 
 // ── 총기 전체 표 (소유: player). WEAPONS/WeaponId 는 기존 모듈(loot, playtest)이 쓰므로 그대로 두고,
@@ -135,8 +135,8 @@ export interface GunDef extends WeaponDef {
 export const GUN_ORDER: GunId[] = ['pistol', 'magnum', 'smg', 'shotgun', 'rifle', 'sniper'];
 export const GUNS: Record<GunId, GunDef> = {
   pistol: { ...WEAPONS.pistol, kind: 'pistol', auto: true, pierce: 1, adsFov: 58, scope: false, sway: 1, snd: { pitch: 170, len: 0.16, noise: 0.6, thump: 0.5 }, desc: '가볍고 안정적인 기본 권총' },
-  shotgun: { ...WEAPONS.shotgun, kind: 'shotgun', auto: false, pierce: 1, adsFov: 62, scope: false, sway: 0.7, snd: { pitch: 95, len: 0.3, noise: 0.85, thump: 1 }, desc: '근거리에서 압도적인 산탄' },
-  smg: { ...WEAPONS.smg, kind: 'smg', auto: true, pierce: 1, adsFov: 56, scope: false, sway: 1.2, snd: { pitch: 220, len: 0.11, noise: 0.7, thump: 0.35 }, desc: '빠른 연사, 탄이 퍼진다' },
+  shotgun: { ...WEAPONS.shotgun, kind: 'shotgun', auto: false, pierce: 1, adsFov: 62, scope: false, sway: 0.7, snd: { pitch: 95, len: 0.3, noise: 0.85, thump: 1 }, desc: '가까운 거리에서 산탄이 몰려 맞는다' },
+  smg: { ...WEAPONS.smg, kind: 'smg', auto: true, pierce: 1, adsFov: 56, scope: false, sway: 1.2, snd: { pitch: 220, len: 0.11, noise: 0.7, thump: 0.35 }, desc: '연사가 빠르고 탄 퍼짐이 적다' },
   magnum: { name: '매그넘', dmg: 42, rate: 0.55, mag: 6, reload: 2.2, pellets: 1, spread: 0.006, range: 95, recoil: 0.1, bloom: 0.9, falloff: 0.15, tracer: 0xffd070,
     kind: 'revolver', auto: false, pierce: 2, adsFov: 54, scope: false, sway: 0.8, snd: { pitch: 120, len: 0.26, noise: 0.65, thump: 0.9 }, desc: '한 방이 묵직하고 관통한다' },
   rifle: { name: '돌격소총', dmg: 12, rate: 0.105, mag: 30, reload: 2.3, pellets: 1, spread: 0.014, range: 110, recoil: 0.024, bloom: 0.1, falloff: 0.25, tracer: 0xffe29a,
