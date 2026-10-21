@@ -1,9 +1,9 @@
 // 플레이어 컨트롤러: 이동 + 무기 + 피격/사망을 한 프레임에 묶는다. 엔진 비의존.
 // 입력은 FrameIntent, 월드 정보는 FrameEnv 로 받고, 결과는 FrameOut 으로 돌려준다 (view 는 이것만 읽는다).
-import { WEAPONS, WEAPON_ORDER, PLAYER, type WeaponId } from '../../data';
+import { GUNS, GUN_ORDER, GUN_UPGRADE, PLAYER, type GunId } from '../../data';
 import { MAP } from '../../data/map';
 import { events } from '../../core/events';
-import { state } from '../../core/state';
+import { state, spend } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
 import { aimOrigin, cameraPose, type CameraPose } from './camera';
 import { stepMovement, type MoveIntent } from './movement';
@@ -13,6 +13,8 @@ import type { Rng } from './math';
 
 export interface FrameIntent extends MoveIntent {
   fire: boolean;
+  /** 이번 프레임에 막 눌렀는가 (단발 총기용) */
+  firePressed: boolean;
   reload: boolean;
   /** 이번 프레임에 눌린 무기 슬롯 (0부터) 또는 null */
   slot: number | null;
@@ -53,22 +55,39 @@ export class PlayerController {
 
   constructor() {
     this.player = createPlayerState(state.stats.maxHp);
-    this.weapons = createWeaponState(state.stats);
+    this.weapons = createWeaponState(state.stats, state.weaponLv);
     events.on('player:hit', (h) => this.pendingHits.push(h));
     events.on('weapon:unlock', ({ weapon }) => {
-      if (!(weapon in WEAPONS) || state.weapons.includes(weapon)) return;
+      if (!(weapon in GUNS) || state.weapons.includes(weapon)) return;
       state.weapons.push(weapon);
-      events.emit('toast', { text: `${WEAPONS[weapon as WeaponId].name} 획득!` });
+      events.emit('toast', { text: `${GUNS[weapon as GunId].name} 획득!` });
       this.emitAmmo();
     });
+    events.on('weapon:upgrade', ({ weapon }) => this.upgrade(weapon as GunId));
   }
 
   /** 조준선 UI 용 현재 퍼짐(라디안) */
-  spreadNow() { return currentSpread(this.weapons, this.player.moving, this.player.aiming); }
+  spreadNow() { return currentSpread(this.weapons, state.stats, this.player.moving, this.player.aiming); }
+
+  /** 총기 강화: 골드+부품을 내고 레벨을 올린다. 성공하면 true */
+  upgrade(id: GunId): boolean {
+    if (!(id in GUNS) || !state.weapons.includes(id)) return false;
+    const lv = state.weaponLv[id] ?? 0;
+    if (lv >= GUN_UPGRADE.maxLv) { events.emit('toast', { text: `${GUNS[id].name}은(는) 최대 강화` }); return false; }
+    if (!spend({ parts: GUN_UPGRADE.parts[lv] }, GUN_UPGRADE.gold[lv])) { events.emit('toast', { text: '골드나 부품이 부족하다' }); return false; }
+    state.weaponLv[id] = lv + 1;
+    // 탄창이 커졌으면 현재 탄도 그만큼 채워 준다
+    const w = this.weapons;
+    w.ammo[id] += magSize(w, state.stats, id) - magSize({ ...w, lv: { ...w.lv, [id]: lv } }, state.stats, id);
+    events.emit('weapon:upgraded', { weapon: id, level: lv + 1 });
+    events.emit('toast', { text: `${GUNS[id].name} 강화 Lv${lv + 1}` });
+    this.emitAmmo();
+    return true;
+  }
 
   private emitAmmo() {
     const w = this.weapons;
-    events.emit('weapon:ammo', { weapon: w.current, ammo: w.ammo[w.current], mag: magSize(w.current, state.stats), reloading: isReloading(w) });
+    events.emit('weapon:ammo', { weapon: w.current, ammo: w.ammo[w.current], mag: magSize(w, state.stats), reloading: isReloading(w) });
   }
 
   update(dt: number, it: FrameIntent, env: FrameEnv): FrameOut {
@@ -89,7 +108,7 @@ export class PlayerController {
       this.pendingHits.length = 0;
       stepMovement(p, dt, it, stats.dashCd, env.collide);
       p.y = env.groundY(p.x, p.z);
-      out.pose = cameraPose(p);
+      out.pose = cameraPose(p, GUNS[w.current].adsFov);
       return out;
     }
 
@@ -123,26 +142,29 @@ export class PlayerController {
     if (!wasDashing && p.dashT > 0 && dashReady) out.dashed = true;
     p.y = env.groundY(p.x, p.z);
 
-    out.pose = cameraPose(p);
+    out.pose = cameraPose(p, GUNS[w.current].adsFov);
 
     // 무기
-    if (tickWeapon(w, dt, stats) === 'reloaded') { out.reloadDone = true; this.emitAmmo(); }
+    if (tickWeapon(w, dt, stats) === 'reloaded') { out.reloadDone = true; events.emit('weapon:sound', { weapon: w.current, kind: 'reloadDone' }); this.emitAmmo(); }
     if (!p.dead && env.canShoot) {
       if (it.slot !== null) {
-        const id = WEAPON_ORDER[it.slot];
+        const id = GUN_ORDER[it.slot];
         if (id && state.weapons.includes(id) && switchWeapon(w, id)) {
           out.switched = true;
           events.emit('weapon:switched', { weapon: id });
+          events.emit('weapon:sound', { weapon: id, kind: 'switch' });
           this.emitAmmo();
         } else if (id && !state.weapons.includes(id)) {
-          events.emit('toast', { text: `${WEAPONS[id].name}은(는) 아직 없다` });
+          events.emit('toast', { text: `${GUNS[id].name}은(는) 아직 없다` });
         }
       }
       if (it.reload && startReload(w, stats)) this.beginReload(out);
-      if (it.fire && !isReloading(w)) {
+      const wantFire = GUNS[w.current].auto ? it.fire : it.firePressed;
+      if (wantFire && !isReloading(w)) {
         if (w.ammo[w.current] <= 0) {
           if (startReload(w, stats)) this.beginReload(out); // 빈 총이면 자동 재장전
           else out.dryFire = true;
+          if (it.firePressed) events.emit('weapon:sound', { weapon: w.current, kind: 'dry' });
         } else {
           const shot = tryFire(w, {
             origin: aimOrigin(out.pose, p), dir: out.pose.dir,
@@ -150,8 +172,11 @@ export class PlayerController {
           });
           if (shot) {
             out.shot = shot;
-            p.kick = Math.min(0.22, p.kick + WEAPONS[shot.weapon].recoil * (p.aiming ? 0.6 : 1));
-            events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(shot.weapon, stats) });
+            p.kick = Math.min(0.3, p.kick + GUNS[shot.weapon].recoil * (p.aiming ? 0.6 : 1));
+            events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(w, stats) });
+            events.emit('weapon:sound', { weapon: shot.weapon, kind: 'fire' });
+            const hitKind = shot.pellets.some((pl) => pl.kill) ? 'kill' : shot.pellets.some((pl) => pl.headshot) ? 'headshot' : shot.pellets.some((pl) => pl.kind === 'zombie') ? 'hit' : null;
+            if (hitKind) events.emit('weapon:sound', { weapon: shot.weapon, kind: hitKind });
             this.emitAmmo();
           }
         }
@@ -167,6 +192,7 @@ export class PlayerController {
 
   private beginReload(out: FrameOut) {
     out.reloadStarted = true;
+    events.emit('weapon:sound', { weapon: this.weapons.current, kind: 'reload' });
     events.emit('weapon:reload', { weapon: this.weapons.current, duration: this.weapons.reloadTotal });
     this.emitAmmo();
   }

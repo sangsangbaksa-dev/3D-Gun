@@ -45,3 +45,14 @@ export function castRay<T extends Target>(o: Vec3, d: Vec3, maxDist: number, tar
 export function rayGround(o: Vec3, d: Vec3): number | null {
   return d.y < -1e-6 && o.y > 0 ? -o.y / d.y : null;
 }
+
+/** 광선이 닿는 모든 대상을 가까운 순으로 (관통탄용). */
+export function castRayAll<T extends Target>(o: Vec3, d: Vec3, maxDist: number, targets: readonly T[], pad = 0): RayHit<T>[] {
+  const hits: RayHit<T>[] = [];
+  for (const tg of targets) {
+    if (tg.dead) continue;
+    const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height);
+    if (t !== null && t <= maxDist) hits.push({ target: tg, t, y: o.y + d.y * t });
+  }
+  return hits.sort((a, b) => a.t - b.t);
+}
