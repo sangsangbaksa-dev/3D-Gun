@@ -1,6 +1,16 @@
 // 백신 제작과 아군화 성공률. 순수 계산만 한다 (three, DOM 없음).
 import { VACCINES, INJECT, CRAFT, type ResKey } from '../../data';
 import { state, spend, changed } from '../../core/state';
+import { meta, saveMeta } from '../../core/meta';
+
+export function syncVaccines() {
+  meta.vaccines = [state.vaccines[0] ?? 0, state.vaccines[1] ?? 0, state.vaccines[2] ?? 0];
+  saveMeta();
+}
+
+export function loadVaccines() {
+  state.vaccines = [meta.vaccines[0] ?? 0, meta.vaccines[1] ?? 0, meta.vaccines[2] ?? 0];
+}
 
 export interface VaccineCost { herb: number; parts: number; iron: number; sample: number; sampleSp: number }
 
@@ -74,7 +84,8 @@ export function updateCraft(dt: number, researchers: number): number[] {
   job.t += dt;
   if (job.t >= craftTime(researchers)) {
     craftQueue.shift();
-    state.vaccines[job.tier] = (state.vaccines[job.tier] ?? 0) + 1;
+    state.vaccines[job.tier] = (state.vaccines[job.tier] ?? 0) + VACCINES[job.tier].uses;
+    syncVaccines();
     changed();
     done.push(job.tier);
   }

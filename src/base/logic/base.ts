@@ -4,6 +4,7 @@ import { BUILDINGS, CORE, CORE_REBUILD_PCT, CORE_REPAIR, CORE_UPGRADES, BARRACKS
 import { MAP } from '../../data/map';
 import { events } from '../../core/events';
 import { state, spend, changed } from '../../core/state';
+import { meta, saveMeta } from '../../core/meta';
 import { newId, structures, nearest, type StructureRef, type ZombieRef } from '../../core/entities';
 import { checkSpot, turnToward, yawTo, type Circle, type PlaceCheck } from './grid';
 
@@ -122,6 +123,7 @@ export function createBase(deps: BaseDeps) {
         b.hp = Math.max(0, b.hp - dmg);
         b.hitFlash = 1;
         if (b.hp <= 0) remove(b, true);
+        else if (BUILDINGS[b.kind].turret) persistTurrets();
       },
     };
     return b;
@@ -135,7 +137,33 @@ export function createBase(deps: BaseDeps) {
     fx.push({ t: 'boom', x: b.x, z: b.z, r: b.radius * 1.4 });
     events.emit('building:destroyed', { id: b.id, kind: b.kind });
     refreshBonuses();
+    if (BUILDINGS[b.kind].turret) persistTurrets();
     if (destroyed) selfToast(`${BUILDINGS[b.kind].name}이(가) 파괴됐어요!`);
+  }
+
+  function persistTurrets() {
+    meta.turrets = buildings.filter((b) => !b.dead && BUILDINGS[b.kind].turret && b.ammo > 0).map((b) => ({
+      kind: b.kind, x: b.x, z: b.z, level: b.level, hp: b.hp, ammo: b.ammo,
+    }));
+    saveMeta();
+  }
+
+  function restoreTurrets() {
+    for (const s of meta.turrets) {
+      if (s.kind !== 'tower' && s.kind !== 'mgtower') continue;
+      if (!(s.hp > 0) || !(s.ammo > 0)) continue;
+      if (buildings.some((b) => b.kind === s.kind && Math.hypot(b.x - s.x, b.z - s.z) < 0.5)) continue;
+      const def = BUILDINGS[s.kind];
+      const lv = Math.min(def.turret?.levels.length ?? 1, Math.max(1, Math.floor(s.level) || 1));
+      const b = makeBuilding(s.kind, s.x, s.z, lv);
+      b.maxHp = Math.round(def.hp * (1 + 0.25 * (lv - 1)));
+      b.hp = Math.min(b.maxHp, Math.max(1, s.hp));
+      b.ammo = Math.max(1, Math.floor(s.ammo));
+      buildings.push(b);
+      structures.push(b);
+      obstacles.push({ x: s.x, z: s.z, r: BUILDINGS[s.kind].radius * 0.95, owner: b.id });
+      events.emit('building:placed', { id: b.id, kind: s.kind });
+    }
   }
 
   function checkPlace(kind: BuildingId, x: number, z: number, player?: { x: number; z: number }): PlaceCheck {
@@ -157,6 +185,7 @@ export function createBase(deps: BaseDeps) {
     fx.push({ t: 'placed', x, z, r: BUILDINGS[kind].radius });
     events.emit('building:placed', { id: b.id, kind });
     refreshBonuses();
+    if (BUILDINGS[kind].turret) persistTurrets();
     return { ok: true };
   }
 
@@ -191,14 +220,11 @@ export function createBase(deps: BaseDeps) {
     if (b.hp >= b.maxHp) return false;
     if (!pay(repairCost(b))) return false;
     b.hp = b.maxHp; b.hitFlash = 0;
+    if (BUILDINGS[b.kind].turret) persistTurrets();
     return true;
   }
-  function refill(b: Building): boolean {
-    const t = BUILDINGS[b.kind].turret;
-    if (!t || b.ammo >= t.ammo) return false;
-    if (!pay(t.refill)) return false;
-    b.ammo = t.ammo;
-    return true;
+  function refill(_b: Building): boolean {
+    return false;
   }
   function upgrade(b: Building): boolean {
     if (state.phase !== 'prep') { selfToast('강화는 준비 단계에만 할 수 있어요'); return false; }
@@ -209,6 +235,7 @@ export function createBase(deps: BaseDeps) {
     b.maxHp = Math.round(BUILDINGS[b.kind].hp * (1 + 0.25 * (b.level - 1)));
     b.hp = b.maxHp;
     fx.push({ t: 'placed', x: b.x, z: b.z, r: b.radius });
+    if (BUILDINGS[b.kind].turret) persistTurrets();
     return true;
   }
 
@@ -240,9 +267,9 @@ export function createBase(deps: BaseDeps) {
     if (b.kind === 'lab') return { kind: 'open-lab', label: `${def.name}: 백신 제작` };
     if (b.kind === 'shop') return { kind: 'open-shop', label: `${def.name}: 교환소` };
     if (b.hp < b.maxHp - 0.5) { const c = repairCost(b); return { kind: 'repair', label: `${def.name} 수리 (${costText(c)})`, cost: c }; }
-    if (def.turret && b.ammo < def.turret.ammo * 0.85) return { kind: 'refill', label: `${def.name} 탄약 보충 ${b.ammo}/${def.turret.ammo} (${costText(def.turret.refill)})`, cost: def.turret.refill };
     const u = state.phase === 'prep' ? upgradeInfo(b) : null;
     if (u) return { kind: 'upgrade', label: `${def.name} 강화 Lv${b.level + 1} (${costText(u.cost, u.gold)})`, cost: u.cost, gold: u.gold };
+    if (def.turret) return { kind: 'refill', label: `${def.name} 내구도 ${b.ammo}/${def.turret.ammo} · 다 쓰면 파괴 · 다음 판에도 남음` };
     return null;
   }
   const hasLab = () => buildings.some((b) => !b.dead && b.kind === 'lab');
@@ -329,6 +356,12 @@ export function createBase(deps: BaseDeps) {
       target.hit(lv.dmg * (1 + state.start.turretDmgMul) * (crit ? 2 : 1), true); // turretDmgMul: tycoon2d 영구 업그레이드
       b.ammo--;
       b.cooldown = lv.rate;
+      if (b.ammo <= 0) {
+        selfToast(`${def.name} 내구도를 다 써 파괴됐어요`);
+        remove(b, false);
+        continue;
+      }
+      persistTurrets();
       const my = def.height * 0.82;
       fx.push({
         t: 'shot', id: b.id, kind: b.kind,
@@ -342,7 +375,8 @@ export function createBase(deps: BaseDeps) {
 
   /** 새 런: 건물 전부 철거, 핵을 처음 상태로(시작 보너스 반영) */
   function reset() {
-    for (const b of [...buildings]) remove(b, false);
+    for (const b of [...buildings]) if (!BUILDINGS[b.kind].turret) remove(b, false);
+    persistTurrets();
     fx.length = 0;
     for (const z of slowed) delete (z as Slowable).slowMul;
     slowed.clear();
@@ -376,6 +410,7 @@ export function createBase(deps: BaseDeps) {
       events.emit('building:placed', { id: b.id, kind: sb.kind });
     }
     refreshBonuses();
+    persistTurrets();
     changed();
   }
 
@@ -384,6 +419,7 @@ export function createBase(deps: BaseDeps) {
     checkPlace, place, demolish, repair, refill, upgrade, repairCore, upgradeCore,
     repairCost, refillCost, upgradeInfo, maxLevel, coreRepairCost, coreUpgradeInfo,
     actionFor, coreAction, perform, update, save, load, reset,
+    restoreTurrets,
     setToast(f: (t: string) => void) { selfToast = f; },
   };
 }

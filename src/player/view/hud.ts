@@ -1,6 +1,6 @@
 // 전투 전용 DOM 오버레이: 조준선(퍼짐 반영), 히트마커, 피격 화면 효과, 탄약/무기 슬롯, 재장전 바.
 // 모든 요소는 코드로 만들어 붙인다 (index.html 은 W7 소유). 탄약 표시는 W7 HUD 가 생기면 SHOW_AMMO_PANEL 만 끄면 된다.
-import { GUNS, GUN_ORDER, GUN_UNLOCK_GOLD, GUN_UPGRADE, RES_LABEL, type GunId } from '../../data';
+import { GUNS, GUN_ORDER, GUN_UNLOCK_GOLD, RES_LABEL, type GunId } from '../../data';
 import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunStats } from '../logic/weapons';
@@ -152,7 +152,7 @@ export class CombatHud {
 }
 
 
-/** 총기 창 (V). 없는 총은 코인으로 사고, 가진 총은 골드+부품으로 강화한다. 강화는 'weapon:upgrade' 를 받은 컨트롤러가 처리한다. */
+/** 총기 창 (V). 없는 총은 코인으로 산다. 가진 총의 강화는 이 판에서 막혀 있다. */
 export class UpgradePanel {
   private el = el('pv-up', '<div class="box"></div>');
   private box = this.el.firstElementChild as HTMLElement;
@@ -175,18 +175,14 @@ export class UpgradePanel {
     };
     let html = `<h2>무기 <small style="font-weight:normal;opacity:.7">(V 로 닫기)</small></h2><div class="sub">코인 ${state.gold} · ${RES_LABEL.parts} ${state.res.parts}</div>`;
     for (const id of GUN_ORDER) {
-      const d = GUNS[id], own = state.weapons.includes(id), lv = state.weaponLv[id] ?? 0, max = lv >= GUN_UPGRADE.maxLv;
+      const d = GUNS[id], own = state.weapons.includes(id), lv = (state.weaponLv[id] ?? 0) + (state.weaponLvBonus[id] ?? 0);
       const price = GUN_UNLOCK_GOLD[id];
-      const cost = max ? '' : `${GUN_UPGRADE.gold[lv]}G + ${RES_LABEL.parts} ${GUN_UPGRADE.parts[lv]}`;
-      const can = own && !max && state.gold >= GUN_UPGRADE.gold[lv] && state.res.parts >= GUN_UPGRADE.parts[lv];
       const canBuy = !own && price != null && state.gold >= price;
-      const detail = own
-        ? fmt(id, lv) + (max ? '' : '  →  ' + fmt(id, lv + 1))
-        : (price != null ? `코인 ${price}에 구매` : '기본 지급');
+      const detail = own ? fmt(id, lv) : (price != null ? `코인 ${price}에 구매` : '기본 지급');
       const button = own
-        ? `<button data-id="${id}"${can ? '' : ' disabled'}>${max ? '최대 강화' : '강화 ' + cost}</button>`
+        ? `<button disabled>이 판에선 강화 불가</button>`
         : (price != null ? `<button data-buy="${id}"${canBuy ? '' : ' disabled'}>구매 ${price}G</button>` : '');
-      html += `<div class="g${own || price != null ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? 'Lv' + lv + '/' + GUN_UPGRADE.maxLv : '미보유'}</b></div>`
+      html += `<div class="g${own || price != null ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? '보유' : '미보유'}</b></div>`
         + `<div class="d">${d.desc}</div><div class="s">${detail}</div>${button}</div>`;
     }
     html += '<div class="x"><button data-close>닫기</button></div>';

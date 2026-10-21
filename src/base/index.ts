@@ -35,6 +35,7 @@ function linkFor(b: Building): Interactable {
 export const BaseSystem: System = {
   init(ctx: Ctx) {
     model = createBase({ obstacles, rng: Math.random });
+    model.restoreTurrets();
     canvas = document.getElementById('c');
     overlay = new BuildOverlay(ctx.scene);
     view = new BaseView(ctx.scene, ctx.camera, model);

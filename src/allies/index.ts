@@ -10,7 +10,7 @@ import { resolveObstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
 import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
 import { injector, stunnedNear, advance, resetInject, activeTier, blockReason, chanceFor } from './logic/inject';
-import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue } from './logic/vaccine';
+import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue, loadVaccines } from './logic/vaccine';
 import { AllyView } from './view/allyView';
 import { Fx } from './view/fx';
 import { Camp } from './view/camp';
@@ -110,6 +110,7 @@ export const AlliesSystem: System = {
       close: closePanel,
     });
     addInteractable(injectable);
+    loadVaccines();
     events.on('interact:lab', openPanel);
     events.on('building:placed', ({ kind }) => { if (kind === 'lab') labBuilt = true; });
     events.on('wave:prep', ({ wave }) => {
@@ -134,7 +135,7 @@ export const AlliesSystem: System = {
       for (const d of dying) d.v.dispose();
       dying.length = 0;
       state.allyCount = 0;
-      state.vaccines = [0, 0, 0];
+      loadVaccines();
       state.samples = 0; state.samplesSp = 0;
       changed();
     });
@@ -157,7 +158,7 @@ export const AlliesSystem: System = {
       if (input.pressed.has('KeyC')) {
         const t = nextOwnedTier(injector.tier < 0 ? -1 : injector.tier);
         if (t < 0) toast('보유한 백신이 없다');
-        else { injector.tier = t; toast(`${VACCINES[t].name} 선택 (보유 ${state.vaccines[t]})`); }
+        else { injector.tier = t; toast(`${VACCINES[t].name} 선택 · 내구도 ${state.vaccines[t]}`); }
       }
       if (input.pressed.has('KeyQ')) {
         let best: Ally | undefined, bd = 36;
@@ -177,7 +178,7 @@ export const AlliesSystem: System = {
     }
 
     for (const tier of updateCraft(dt, researchers())) {
-      toast(`${VACCINES[tier].name} 제작 완료!`);
+      toast(`${VACCINES[tier].name} 완성 · 내구도 +${VACCINES[tier].uses} (다음 판에도 남음)`);
       fx.burst(ctx.player.x, 2, ctx.player.z, 0x9dffb5, 10, 3);
     }
 

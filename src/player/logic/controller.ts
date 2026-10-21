@@ -1,9 +1,9 @@
 // 플레이어 컨트롤러: 이동 + 무기 + 피격/사망을 한 프레임에 묶는다. 엔진 비의존.
 // 입력은 FrameIntent, 월드 정보는 FrameEnv 로 받고, 결과는 FrameOut 으로 돌려준다 (view 는 이것만 읽는다).
-import { GUNS, GUN_ORDER, GUN_UPGRADE, PLAYER, type GunId } from '../../data';
+import { GUNS, GUN_ORDER, PLAYER, type GunId } from '../../data';
 import { MAP } from '../../data/map';
 import { events } from '../../core/events';
-import { state, spend } from '../../core/state';
+import { state } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
 import { aimOrigin, cameraPose, type CameraPose, type CameraView } from './camera';
 import { stepMovement, type MoveIntent } from './movement';
@@ -77,19 +77,9 @@ export class PlayerController {
   spreadNow() { return currentSpread(this.weapons, state.stats, this.player.moving, this.player.aiming); }
 
   /** 총기 강화: 골드+부품을 내고 레벨을 올린다. 성공하면 true */
-  upgrade(id: GunId): boolean {
-    if (!(id in GUNS) || !state.weapons.includes(id)) return false;
-    const lv = state.weaponLv[id] ?? 0;
-    if (lv >= GUN_UPGRADE.maxLv) { events.emit('toast', { text: `${GUNS[id].name}은(는) 최대 강화` }); return false; }
-    if (!spend({ parts: GUN_UPGRADE.parts[lv] }, GUN_UPGRADE.gold[lv])) { events.emit('toast', { text: '골드나 부품이 부족하다' }); return false; }
-    state.weaponLv[id] = lv + 1;
-    // 탄창이 커졌으면 현재 탄도 그만큼 채워 준다
-    const w = this.weapons;
-    w.ammo[id] += magSize(w, state.stats, id) - magSize({ ...w, lv: { ...w.lv, [id]: lv } }, state.stats, id);
-    events.emit('weapon:upgraded', { weapon: id, level: lv + 1 });
-    events.emit('toast', { text: `${GUNS[id].name} 강화 Lv${lv + 1}` });
-    this.emitAmmo();
-    return true;
+  upgrade(_id: GunId): boolean {
+    events.emit('toast', { text: '무기는 이 판에서 강화할 수 없다' });
+    return false;
   }
 
   private emitAmmo() {

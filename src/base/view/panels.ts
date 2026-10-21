@@ -106,7 +106,7 @@ export class BasePanels {
     });
     const d = BUILDINGS[BUILDING_ORDER[sel]];
     let stat = '';
-    if (d.turret) { const l = d.turret.levels[0]; stat = ` · 피해 ${l.dmg} · 연사 ${(1 / l.rate).toFixed(1)}/s · 사거리 ${l.range}m · 탄약 ${d.turret.ammo}`; }
+    if (d.turret) { const l = d.turret.levels[0]; stat = ` · 피해 ${l.dmg} · 연사 ${(1 / l.rate).toFixed(1)}/s · 사거리 ${l.range}m · 내구도 ${d.turret.ammo}발 · 영구`; }
     if (d.trap) stat = ` · 반경 ${d.trap.radius}m · 감속 ${Math.round((1 - d.trap.slow) * 100)}% · 초당 ${d.trap.dps}`;
     this.set(this.info, `<b>${d.name}</b> — ${d.desc}<br><span style="color:#9fb3c0">체력 ${d.hp}${stat}</span>` + (nearGateMsg ? `<br><em>${nearGateMsg}</em>` : ''));
     if (tip) { this.set(this.tip, tip.text); this.tip.className = 'bz-tip ' + (tip.ok ? 'good' : 'bad'); }
@@ -163,7 +163,7 @@ export class BasePanels {
 export const hoverText = (b: Building, repair: Cost | null, up: { cost: Cost; gold: number } | null, refund: string): string => {
   const d = BUILDINGS[b.kind];
   const lines = [`<b>${d.name}</b>${d.turret ? ` Lv${b.level}` : ''} · 체력 ${Math.ceil(b.hp)}/${b.maxHp}`];
-  if (d.turret) lines.push(`탄약 ${b.ammo}/${d.turret.ammo}`);
+  if (d.turret) lines.push(`내구도 ${b.ammo}/${d.turret.ammo} · 다 쓰면 파괴`);
   const keys: string[] = [];
   if (repair) keys.push(`<kbd>F</kbd> 수리 (${costText(repair)})`);
   if (up) keys.push(`<kbd>U</kbd> 강화 (${costText(up.cost, up.gold)})`);

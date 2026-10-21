@@ -14,10 +14,14 @@ export interface Meta {
   /** 스킬트리 노드의 영구 레벨(SKILLS 의 id). 런 시작 때 state.skillLv 로 들어간다 */
   skills: Record<string, number>;
   totalKills: number;
+  /** 백신 등급별 남은 주사 횟수. 0이면 그 등급은 파괴된 상태 */
+  vaccines: [number, number, number];
+  /** 런이 끝나도 남는 포탑. ammo 가 내구도 */
+  turrets: { kind: string; x: number; z: number; level: number; hp: number; ammo: number }[];
 }
 
 const KEY = 'zt3d.meta.v1';
-export const meta: Meta = { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 };
+export const meta: Meta = { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0, vaccines: [0, 0, 0], turrets: [] };
 
 /** 저장소(localStorage) 접근은 이 파일 안에만 둔다. Unity 에서는 persistentDataPath JSON 으로 대체 */
 export function loadMeta() {
@@ -36,12 +40,21 @@ export function loadMeta() {
         meta[k] = clean;
       }
     }
+    if (Array.isArray(d.vaccines)) {
+      meta.vaccines = [0, 1, 2].map((i) => {
+        const n = d.vaccines?.[i];
+        return typeof n === 'number' && n > 0 ? Math.floor(n) : 0;
+      }) as [number, number, number];
+    }
+    if (Array.isArray(d.turrets)) {
+      meta.turrets = d.turrets.filter((t) => t && (t.kind === 'tower' || t.kind === 'mgtower') && Number.isFinite(t.x) && Number.isFinite(t.z) && Number.isFinite(t.ammo) && t.ammo > 0 && Number.isFinite(t.hp) && t.hp > 0);
+    }
   } catch { /* 저장소를 못 쓰거나 깨졌으면 새로 시작 */ }
 }
 export function saveMeta() {
   try { localStorage.setItem(KEY, JSON.stringify(meta)); } catch { /* 무시 */ }
 }
 export function resetMeta() {
-  Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 });
+  Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0, vaccines: [0, 0, 0], turrets: [] });
   saveMeta();
 }

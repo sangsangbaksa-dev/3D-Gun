@@ -144,7 +144,7 @@ export class LabPanel {
       <div class="al-bd t${t}">${TIER_LBL[t]}</div>
       <div><div class="al-vn">${d.name}<small>기본 성공률 ${Math.round(d.rate * 100)}%</small></div>
         <div class="al-ch">${chips.join('')}</div>
-        <div class="al-own">보유 <b>${state.vaccines[t] ?? 0}</b>개</div></div>
+        <div class="al-own">내구도 <b>${state.vaccines[t] ?? 0}</b> · 제작 시 +${d.uses} · 다음 판에도 남음</div></div>
       <button class="al-btn" data-act="craft" data-tier="${t}" ${ok ? '' : 'disabled'}>제작</button>
     </div>`;
   }

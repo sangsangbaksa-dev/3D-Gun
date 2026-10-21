@@ -201,9 +201,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
   barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
   tower: {
-    name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1, hp: 300, height: 5, desc: '자동 사격, 업그레이드',
+    name: '감시탑', cost: { wood: 36, stone: 28, iron: 10, parts: 6 }, radius: 1, hp: 300, height: 5, desc: '영구 포탑. 내구도를 다 쓰면 파괴',
     turret: {
-      ammo: 40, refill: { wood: 2, stone: 1 },
+      ammo: 80, refill: { wood: 99, stone: 99 },
       levels: [
         { dmg: 9, rate: 0.7, range: 15, upCost: {}, upGold: 0 },
         { dmg: 14, rate: 0.6, range: 17, upCost: { wood: 10, stone: 10, iron: 2 }, upGold: 0 },
@@ -213,9 +213,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
   shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 교환' },
   mgtower: {
-    name: '기관포탑', cost: { wood: 10, stone: 10, iron: 8, parts: 4 }, radius: 1, hp: 350, height: 2.4, desc: '빠른 연사, 탄약 소모 큼',
+    name: '기관포탑', cost: { wood: 28, stone: 24, iron: 22, parts: 12 }, radius: 1, hp: 350, height: 2.4, desc: '영구 연사 포탑. 내구도를 다 쓰면 파괴',
     turret: {
-      ammo: 240, refill: { iron: 2, parts: 1 },
+      ammo: 140, refill: { iron: 99, parts: 99 },
       levels: [
         { dmg: 4, rate: 0.11, range: 13, upCost: {}, upGold: 0 },
         { dmg: 6, rate: 0.09, range: 14.5, upCost: { iron: 8, parts: 3 }, upGold: 0 },
@@ -301,11 +301,11 @@ export function calcStats(l: Record<string, number>): Stats {
   };
 }
 
-export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number }
+export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number; uses: number }
 export const VACCINES: VaccineDef[] = [
-  { name: '초급 백신', herb: 2, sample: 1, sampleSp: 0, parts: 0, iron: 0, rate: 0.4 },
-  { name: '중급 백신', herb: 5, sample: 3, sampleSp: 0, parts: 1, iron: 0, rate: 0.6 },
-  { name: '고급 백신', herb: 8, sample: 0, sampleSp: 2, parts: 0, iron: 2, rate: 0.8 },
+  { name: '초급 백신', herb: 10, sample: 6, sampleSp: 0, parts: 2, iron: 0, rate: 0.4, uses: 4 },
+  { name: '중급 백신', herb: 16, sample: 8, sampleSp: 0, parts: 4, iron: 4, rate: 0.6, uses: 3 },
+  { name: '고급 백신', herb: 22, sample: 0, sampleSp: 4, parts: 6, iron: 8, rate: 0.8, uses: 3 },
 ];
 
 // ── 백신/아군 (소유: allies). 직렬화 가능한 값만 둔다. ──
@@ -323,7 +323,7 @@ export const ALLY = { hp: 60, speed: 5, dmg: 9, atkRate: 0.8, atkRange: 1.7, rad
 /** 주사: 시간(초), 체력이 낮을수록 더해지는 성공률(최대), 보스 감산 */
 export const INJECT = { time: 1.5, range: 2.2, lowHpBonus: 0.2, bossPenalty: 0.3, minRate: 0.05, maxRate: 0.95 };
 /** 백신 제작: 1개당 기본 시간(초)과 연구 보조 1명당 가속 비율 */
-export const CRAFT = { time: 3, perResearcher: 0.35 };
+export const CRAFT = { time: 14, perResearcher: 0.25 };
 export const GATHER = { time: 3, carryRange: 2.5 };
 /** 아군 동시 상한의 절대 천장 */
 export const ALLY_HARD_CAP = 30;
