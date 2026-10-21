@@ -11,7 +11,7 @@ const STYLE = '.zt-title{position:fixed;inset:0;z-index:50;display:grid;place-it
 
 function createProfile(): Profile {
   let id: string;
-  try { id = 'LOCAL-' + crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase(); }
+  try { id = 'LOCAL-' + crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase(); }
   catch { id = 'LOCAL-' + Math.random().toString(36).slice(2, 12).toUpperCase(); }
   return { id, name: '생존자' };
 }
@@ -62,6 +62,7 @@ export class TitleScreen {
   private render(page: Page) {
     if (page === 'home') {
       this.panel.innerHTML = '<div class="eyebrow">MAIN MENU</div><div class="actions"><button class="action primary" data-action="start">게임 시작</button><button class="action" data-page="controls">조작 키</button><button class="action" data-page="settings">설정</button><button class="action" data-page="account">계정 / 기록</button></div><p class="saved-note">진행 상황과 프로필은 이 브라우저에 저장됩니다. 다른 기기에서 이어 하려면 계정 메뉴에서 백업을 내보내세요.</p>';
+      this.panel.querySelector<HTMLElement>('.eyebrow')!.textContent = this.profile.name + ' · LOCAL PROFILE';
       return;
     }
     const title = page === 'controls' ? '조작 키' : page === 'settings' ? '설정' : '계정 / 기록';
