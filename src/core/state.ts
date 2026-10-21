@@ -14,7 +14,7 @@ export const state = {
   res: Object.fromEntries(RES_KEYS.map((k) => [k, 0])) as Record<ResKey, number>,
   samples: 0,     // 좀비 샘플 (일반/달리기/뚱보)
   samplesSp: 0,   // 특수 샘플 (보스)
-  vaccines: [0, 0, 0] as number[], // 초급/중급/고급 보유 수
+  vaccines: [0, 0, 0] as number[], // 초급/중급/고급. 이번 판 소모품, 런이 끝나면 사라짐
   xp: 0,
   skillPoints: 0,
   skillLv: {} as Record<string, number>,

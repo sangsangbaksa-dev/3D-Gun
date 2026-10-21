@@ -2,6 +2,7 @@
 import { ALLY, ALLY_ROLES, ALLY_ROLE_ORDER, GATHER, type AllyRole, type ResKey } from '../../data';
 import { state, gain } from '../../core/state';
 import { events } from '../../core/events';
+import { meta, saveMeta } from '../../core/meta';
 import { allies, zombies, structures, nearest, newId, type AllyRef, type ZombieRef } from '../../core/entities';
 import { clamp, dist, turnToward, yawTo } from './math';
 
@@ -73,7 +74,32 @@ export function canSetRole(a: Ally, r: AllyRole): boolean {
 export function setRole(a: Ally, r: AllyRole): boolean {
   if (!canSetRole(a, r)) return false;
   a.role = r; a.carry = null; a.nodeId = 0; a.act = 'idle'; a.actT = 0;
+  persistAllies();
   return true;
+}
+
+const isRole = (r: string): r is AllyRole => (ALLY_ROLE_ORDER as string[]).includes(r);
+
+/** 체력이 남은 아군만 다음 판과 새로고침 뒤에 남긴다 */
+export function persistAllies() {
+  meta.allies = (allies as Ally[]).filter((a) => !a.dead && a.hp > 0).map((a) => ({
+    role: a.role, x: a.x, z: a.z, hp: a.hp, maxHp: a.maxHp, zType: a.zType, yaw: a.yaw,
+  }));
+  saveMeta();
+}
+
+/** 저장된 아군을 되돌린다. 이미 필드에 있으면 건너뛴다 */
+export function restoreAllies() {
+  if (allies.length || !meta.allies.length) return;
+  for (const s of meta.allies) {
+    if (!isRole(s.role) || !(s.hp > 0)) continue;
+    const a = spawnAlly(s.x, s.z, s.zType || 'walker', null, s.role);
+    a.maxHp = Math.max(1, s.maxHp);
+    a.hp = Math.min(a.maxHp, s.hp);
+    a.yaw = Number.isFinite(s.yaw) ? s.yaw : 0;
+    a.born = 1;
+  }
+  persistAllies();
 }
 
 export function spawnAlly(x: number, z: number, zType: string, view: unknown, role: AllyRole = pickRole()): Ally {
@@ -86,10 +112,12 @@ export function spawnAlly(x: number, z: number, zType: string, view: unknown, ro
       if (a.dead || dmg <= 0) return;
       a.hp -= dmg; a.hurtT = 0.25; a.sinceHit = 0;
       if (a.hp <= 0) { a.hp = 0; a.dead = true; a.deadT = 0; }
+      else persistAllies();
     },
   };
   allies.push(a);
   syncCount();
+  persistAllies();
   events.emit('ally:spawned', { id: a.id, role });
   return a;
 }
@@ -104,7 +132,7 @@ export function reapDead(): Ally[] {
       events.emit('ally:dead', { id: a.id });
     }
   }
-  if (out.length) syncCount();
+  if (out.length) { syncCount(); persistAllies(); }
   return out;
 }
 

@@ -126,7 +126,7 @@ export class LabPanel {
             : `<div class="al-empty">아직 아군이 없다.<br>좀비를 쏴서 <b>기절</b>시킨 뒤<br>가까이 가서 <b>E</b>를 길게 눌러 백신을 놓자!</div>`}
         </section>
       </div>
-      <footer>Esc 닫기 · L = 이 창 다시 열기 · C = 백신 선택 · Q = 아군 역할 · 연구 보조가 있으면 제작이 빨라진다</footer>
+      <footer>Esc 닫기 · L = 이 창 다시 열기 · C = 백신 선택 · Q = 아군 역할 · 아군은 체력이 남을 때까지 다음 판에도 남음 · 백신은 이번 판 소모품</footer>
     </div>`;
     const body = this.ov.querySelector('.al-body');
     if (body) body.scrollTop = keep;
@@ -144,7 +144,7 @@ export class LabPanel {
       <div class="al-bd t${t}">${TIER_LBL[t]}</div>
       <div><div class="al-vn">${d.name}<small>기본 성공률 ${Math.round(d.rate * 100)}%</small></div>
         <div class="al-ch">${chips.join('')}</div>
-        <div class="al-own">내구도 <b>${state.vaccines[t] ?? 0}</b> · 제작 시 +${d.uses} · 다음 판에도 남음</div></div>
+        <div class="al-own">보유 <b>${state.vaccines[t] ?? 0}</b>개 · 제작 시 +${d.uses} · 주사 1회에 1개 · 이번 판만</div></div>
       <button class="al-btn" data-act="craft" data-tier="${t}" ${ok ? '' : 'disabled'}>제작</button>
     </div>`;
   }

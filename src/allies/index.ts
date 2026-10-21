@@ -8,9 +8,9 @@ import { input } from '../core/input';
 import { addInteractable } from '../core/interact';
 import { resolveObstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
-import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
+import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, restoreAllies, persistAllies, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
 import { injector, stunnedNear, advance, resetInject, activeTier, blockReason, chanceFor } from './logic/inject';
-import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue, loadVaccines } from './logic/vaccine';
+import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue } from './logic/vaccine';
 import { AllyView } from './view/allyView';
 import { Fx } from './view/fx';
 import { Camp } from './view/camp';
@@ -62,7 +62,7 @@ function convert(z: ZombieRef, tier: number, chance: number) {
   fx.burst(z.x, 1, z.z, 0x66ff88, 40, 6);
   fx.burst(z.x, 2, z.z, 0xe9ff7a, 14, 4);
   hud.flash('아군 영입!', `${VACCINES[tier].name} 성공 (${Math.round(chance * 100)}%) · ${ALLY_ROLES[a.role].name} 배치`, '#7dffa0');
-  toast(`좀비가 우리 편이 됐다! (${ALLY_ROLES[a.role].name})`);
+  toast(`좀비가 우리 편이 됐다! (${ALLY_ROLES[a.role].name}) · 체력이 남을 때까지 다음 판에도 남음`);
 }
 
 function fail(z: ZombieRef, tier: number, chance: number) {
@@ -110,7 +110,7 @@ export const AlliesSystem: System = {
       close: closePanel,
     });
     addInteractable(injectable);
-    loadVaccines();
+    restoreAllies();
     events.on('interact:lab', openPanel);
     events.on('building:placed', ({ kind }) => { if (kind === 'lab') labBuilt = true; });
     events.on('wave:prep', ({ wave }) => {
@@ -121,22 +121,18 @@ export const AlliesSystem: System = {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
       resetInject();
     });
-    // 새 런: 아군·백신·샘플·제작 대기열을 모두 비운다 (docs/COORDINATION.md 1-e)
+    // 새 런: 백신·샘플·제작은 비우고, 체력이 남은 아군은 남긴다
     events.on('run:start', () => {
       closePanel();
       labBuilt = false;
       resetInject();
       injector.tier = -1;
       craftQueue.length = 0;
-      for (const a of allies as Ally[]) a.dead = true;
-      allies.length = 0;
-      for (const v of views.values()) v.dispose();
-      views.clear();
-      for (const d of dying) d.v.dispose();
-      dying.length = 0;
-      state.allyCount = 0;
-      loadVaccines();
+      for (const a of allies as Ally[]) { a.carry = null; a.nodeId = 0; }
+      state.vaccines = [0, 0, 0];
       state.samples = 0; state.samplesSp = 0;
+      persistAllies();
+      syncCount();
       changed();
     });
     addEventListener('keydown', (e) => { if (e.code === 'Escape') closePanel(); });
@@ -158,7 +154,7 @@ export const AlliesSystem: System = {
       if (input.pressed.has('KeyC')) {
         const t = nextOwnedTier(injector.tier < 0 ? -1 : injector.tier);
         if (t < 0) toast('보유한 백신이 없다');
-        else { injector.tier = t; toast(`${VACCINES[t].name} 선택 · 내구도 ${state.vaccines[t]}`); }
+        else { injector.tier = t; toast(`${VACCINES[t].name} 선택 · 보유 ${state.vaccines[t]}`); }
       }
       if (input.pressed.has('KeyQ')) {
         let best: Ally | undefined, bd = 36;
@@ -178,7 +174,7 @@ export const AlliesSystem: System = {
     }
 
     for (const tier of updateCraft(dt, researchers())) {
-      toast(`${VACCINES[tier].name} 완성 · 내구도 +${VACCINES[tier].uses} (다음 판에도 남음)`);
+      toast(`${VACCINES[tier].name} 완성 · ${VACCINES[tier].uses}개 (주사하면 소모, 이번 판만)`);
       fx.burst(ctx.player.x, 2, ctx.player.z, 0x9dffb5, 10, 3);
     }
 

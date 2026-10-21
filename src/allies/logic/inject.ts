@@ -3,7 +3,7 @@ import { INJECT, VACCINES } from '../../data';
 import { state, changed } from '../../core/state';
 import { zombies, nearest, type ZombieRef } from '../../core/entities';
 import { events } from '../../core/events';
-import { bestOwnedTier, conversionChance, syncVaccines } from './vaccine';
+import { bestOwnedTier, conversionChance } from './vaccine';
 import { allyCap } from './ally';
 
 export type InjectBlock = 'none' | 'nostock' | 'cap';
@@ -50,8 +50,7 @@ export function advance(dt: number, z: ZombieRef, roll: number): InjectResult {
   const tier = activeTier();
   const chance = chanceFor(z);
   state.vaccines[tier] = Math.max(0, (state.vaccines[tier] ?? 0) - 1);
-  if (state.vaccines[tier] <= 0) events.emit('toast', { text: `${VACCINES[tier].name} 내구도가 떨어져 파괴됐다` });
-  syncVaccines();
+  if (state.vaccines[tier] <= 0) events.emit('toast', { text: `${VACCINES[tier].name}을 다 썼다` });
   changed();
   resetInject();
   return { kind: roll < chance ? 'success' : 'fail', tier, chance };
