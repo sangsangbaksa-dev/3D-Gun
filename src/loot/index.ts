@@ -58,6 +58,7 @@ export const LootSystem: System = {
     bindLootEvents(mgr, rng);
     ui = new LootUI();
     fx = new BurstFx(ctx.scene);
+    events.on('run:start', () => ui.clear());
     events.on('chest:opened', ({ tier, rarity, text }) => ui.reveal(tier, rarity, text));
   },
 

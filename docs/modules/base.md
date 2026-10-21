@@ -55,3 +55,6 @@ GRID, CORE_CLEARANCE, DEMOLISH_REFUND, BARRACKS_CAP, KEY_PRICE{iron,gold}
 
 ## C# 메모
 `createBase` → `BaseService` 클래스(생성자에 `IObstacleSink`, `Func<float> rng`). `Fx` 큐 → 이벤트(`ShotFired` 등)로 바꿔 파티클/라인을 재생. `Slowable.slowMul` → 좀비 컴포넌트의 `speedMultiplier`. `view/models.ts`는 프리팹 제작 참고용(치수·색).
+
+## 런 흐름 (`run:start`)
+`run:start`를 받으면 `model.reset()`: 건물 전부 철거(`structures`·`obstacles` 정리, `building:destroyed` 발행), 핵 강화 0단계, 최대 체력 = `CORE.hp[0] + state.start.coreHp`로 완전 회복, `allyCapBonus` 0. 건설 모드와 상점 창도 닫는다. `phase==='ended'`에서는 핵 자동 복구를 하지 않고 reset 이 복구한다.

@@ -61,6 +61,14 @@ export class LootUI {
     this.odds.classList.add('on');
   }
 
+  /** 새 런 시작 시 열려 있던 확률표·보상 카드를 치운다 */
+  clear() {
+    this.oddsKey = '';
+    this.odds.classList.remove('on');
+    this.card.classList.remove('on');
+    this.flash.classList.remove('on');
+  }
+
   reveal(tier: number, rarity: number, text: string) {
     const c = COLORS[rarity];
     this.card.style.setProperty('--c', c);

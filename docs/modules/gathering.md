@@ -60,6 +60,7 @@ SAMPLE_DROPS: Record<ZType 문자열, { chance, min, max, special }>
 | `harvest(model, node, dt, speedMul, extraChance, rng)` | 채집 진행. 끝나면 `{ id, res, amount, extra }`, 아니면 null. **지급은 호출한 쪽이 한다** |
 | `blockRadius(node)` | 지금 충돌 반경 (고갈되면 그루터기/잔해 크기) |
 | `rollSampleDrop(type, rng)` | 좀비 처치 샘플 드롭 `{ special, amount }` 또는 null |
+| `resetGathering(model)` | `run:start` 수신 시 모든 노드를 ready 로, 진행도·타이머 초기화 |
 | `saveGathering` / `loadGathering` | 고갈 상태와 남은 재생 시간만 저장 (Phase 2 localStorage 용) |
 
 `model.events`(`hit` / `done` / `respawn`)는 view가 소비하고 매 프레임 비운다 → C# `event Action<GatherEvent>`.
