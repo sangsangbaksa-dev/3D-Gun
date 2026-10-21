@@ -51,6 +51,7 @@
 | 발행 | `ally:dead {id}` | |
 | 발행 | `resource:gathered`, `toast`, `ui:modal` | 채집병 운반 완료 / 안내 / 연구소 창 열고 닫음 |
 | 구독 | `interact:lab`, `player:hit` | 창 열기 / 주사 취소 |
+| 구독 | `run:start` | 아군 전부 제거(`allies` 비움, 모델 정리), `allyCount`·백신·샘플·제작 대기열 초기화, 열린 연구소 창 닫기 |
 
 ## 다른 모듈과의 연결 (후속 작업 필요)
 - **enemies**: `zombie:converted` 시 `zombies`에서 제거, `zombie:inject-failed` 시 분노 상태로 깨우기. `ZombieRef.view`는 `core/humanoid`의 `Humanoid` 또는 `THREE.Object3D`면 된다. 좀비가 `allies`를 `hit(dmg)`로 공격한다.
