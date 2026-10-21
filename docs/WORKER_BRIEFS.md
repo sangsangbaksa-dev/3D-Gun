@@ -8,6 +8,8 @@
 
 **배포 규칙(전원 필수):** Vercel 정적 배포입니다. 서버·환경 변수 없이 `npm run build`의 `dist/`로 동작해야 하고, 에셋은 상대 경로로 번들에 포함하며, 큰 외부 에셋·무거운 의존성은 추가하지 않습니다(오디오는 WebAudio 합성).
 
+**맵 규칙(전원 필수):** 맵은 크고 3D입니다. 위치는 하드코딩하지 말고 `src/data/map.ts`의 `MAP`(zones, lanes, resourceNodes, chests, core, buildRadius)을 읽으세요. 높이는 `getGroundY(x, z)`(없으면 0). 자세한 내용은 `docs/COORDINATION.md` 1-d.
+
 ## W1 무기/전투 (`feat/player`, `src/player/`)
 좌클릭 히트스캔 사격(`zombies` 목록 대상 레이캐스트, `hit(dmg*state.stats.dmgMul, false)`), 무기 3종(`WEAPONS`, 권총만 시작 보유, 1/2/3 교체), R 재장전(`reloadMul`, `magMul` 반영), 트레이서·총구 이펙트. `player:hit` 이벤트로 체력 감소(대시 무적 `iframes` 존중), 0이면 `player:dead`. `state.mode`가 build/modal이면 사격 정지. `weapon:fired` 발행. 무기 획득 방식(상자 보상 등)은 `state`에 보유 무기 필드를 추가해 W4와 맞춥니다.
 
