@@ -52,10 +52,13 @@ export class PlayerController {
   private pendingHits: { dmg: number; x: number; z: number }[] = [];
   private lastHp = -1;
   private lastMaxHp = -1;
+  private pendingRun = false;
+  /** 단발 총기의 입력 버퍼: 쿨다운이 끝나기 직전에 누른 클릭도 놓치지 않는다 */
+  private fireBuf = 0;
 
   constructor() {
     this.player = createPlayerState(state.stats.maxHp);
-    this.weapons = createWeaponState(state.stats, state.weaponLv);
+    this.weapons = createWeaponState(state.stats, state.weaponLv, state.weaponLvBonus);
     events.on('player:hit', (h) => this.pendingHits.push(h));
     events.on('weapon:unlock', ({ weapon }) => {
       if (!(weapon in GUNS) || state.weapons.includes(weapon)) return;
@@ -63,6 +66,8 @@ export class PlayerController {
       events.emit('toast', { text: `${GUNS[weapon as GunId].name} 획득!` });
       this.emitAmmo();
     });
+    // 새 런: 무기 보유·강화·탄약·체력을 초기화한다 (스탯 보정이 먼저 반영되도록 다음 프레임에 채운다)
+    events.on('run:start', () => { this.pendingRun = true; });
     events.on('weapon:upgrade', ({ weapon }) => this.upgrade(weapon as GunId));
   }
 
@@ -93,6 +98,8 @@ export class PlayerController {
   update(dt: number, it: FrameIntent, env: FrameEnv): FrameOut {
     const p = this.player, w = this.weapons, stats = state.stats;
     const out: FrameOut = { pose: null as unknown as CameraPose, shot: null, hurt: null, died: false, respawned: false, dashed: false, dryFire: false, reloadStarted: false, reloadDone: false, switched: false };
+
+    if (this.pendingRun) this.resetRun(out);
 
     // 스킬로 최대 체력이 늘면 늘어난 만큼 현재 체력도 채운다
     if (p.maxHp !== stats.maxHp) {
@@ -159,7 +166,8 @@ export class PlayerController {
         }
       }
       if (it.reload && startReload(w, stats)) this.beginReload(out);
-      const wantFire = GUNS[w.current].auto ? it.fire : it.firePressed;
+      this.fireBuf = it.firePressed ? 0.2 : Math.max(0, this.fireBuf - dt);
+      const wantFire = GUNS[w.current].auto ? it.fire : this.fireBuf > 0;
       if (wantFire && !isReloading(w)) {
         if (w.ammo[w.current] <= 0) {
           if (startReload(w, stats)) this.beginReload(out); // 빈 총이면 자동 재장전
@@ -172,6 +180,7 @@ export class PlayerController {
           });
           if (shot) {
             out.shot = shot;
+            this.fireBuf = 0;
             p.kick = Math.min(0.3, p.kick + GUNS[shot.weapon].recoil * (p.aiming ? 0.6 : 1));
             events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(w, stats) });
             events.emit('weapon:sound', { weapon: shot.weapon, kind: 'fire' });
@@ -188,6 +197,24 @@ export class PlayerController {
       events.emit('player:hp', { hp: p.hp, maxHp: p.maxHp });
     }
     return out;
+  }
+
+  private resetRun(out: FrameOut) {
+    this.pendingRun = false;
+    const p = this.player, w = this.weapons;
+    state.weapons.length = 0; state.weapons.push('pistol');
+    // 영구 업그레이드(W8)가 `state.start.weapons` 에 시작 무기를 넣어 두면 함께 지급한다
+    for (const id of (state.start as { weapons?: string[] }).weapons ?? []) if (id in GUNS && !state.weapons.includes(id)) state.weapons.push(id);
+    for (const k of Object.keys(state.weaponLv)) delete state.weaponLv[k];
+    w.current = 'pistol'; w.reloadLeft = 0; w.cooldown = 0.3; w.bloom = 0;
+    for (const id of GUN_ORDER) w.ammo[id] = magSize(w, state.stats, id);
+    p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0;
+    p.x = MAP.playerStart.x; p.z = MAP.playerStart.z;
+    this.pendingHits.length = 0;
+    out.respawned = true;
+    events.emit('weapon:switched', { weapon: 'pistol' });
+    events.emit('player:respawn', { x: p.x, z: p.z });
+    this.emitAmmo();
   }
 
   private beginReload(out: FrameOut) {

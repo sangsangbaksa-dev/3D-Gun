@@ -87,8 +87,8 @@ export class Effects {
   }
 
   /** 탄피: 총 오른쪽으로 튀고 바닥에서 튕긴다. */
-  casing(at: THREE.Vector3, rightX: number, rightZ: number, big: boolean) {
-    this.spawn(at.x, at.y, at.z, rightX * (2 + Math.random() * 1.5), 2.2 + Math.random(), rightZ * (2 + Math.random() * 1.5), big ? 0xc0392b : 0xd9a441, big ? 0.07 : 0.045, 1.1, 16, true);
+  casing(at: THREE.Vector3, rightX: number, rightZ: number, big: boolean, scale = 1) {
+    this.spawn(at.x, at.y, at.z, rightX * (2 + Math.random() * 1.5), 2.2 + Math.random(), rightZ * (2 + Math.random() * 1.5), big ? 0xc0392b : 0xd9a441, (big ? 0.07 : 0.045) * scale, 1.1, 16, true);
   }
 
   update(dt: number) {

@@ -17,14 +17,14 @@ export interface GunModel {
 
 // ── 재질 (모든 총이 공유) ────────────────────────────────────────────────────────────────
 const mat = (color: number, metal = 0.25, rough = 0.5, emissive = 0x000000, ei = 0) =>
-  new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough, emissive, emissiveIntensity: ei });
+  new THREE.MeshStandardMaterial({ color, metalness: metal * 0.45, roughness: rough, emissive, emissiveIntensity: ei });
 let MATS: ReturnType<typeof makeMats> | null = null;
 function makeMats() {
   return {
-    steel: mat(0x8a9098, 0.7, 0.35),
-    dark: mat(0x23262b, 0.5, 0.45),
-    black: mat(0x131417, 0.3, 0.6),
-    poly: mat(0x2c2f34, 0.05, 0.8),
+    steel: mat(0xa4abb4, 0.7, 0.4),
+    dark: mat(0x3a3f47, 0.5, 0.5),
+    black: mat(0x1d1f23, 0.3, 0.6),
+    poly: mat(0x3d4148, 0.05, 0.8),
     wood: mat(0x7b4a28, 0.0, 0.7),
     woodDk: mat(0x55331b, 0.0, 0.75),
     brass: mat(0xc9a14a, 0.8, 0.3),

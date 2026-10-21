@@ -22,6 +22,8 @@ export const state = {
   weapons: ['pistol'] as string[], // 보유 무기 (상자 보상으로 늘어남. 소유: player 가 읽고 loot 가 추가)
   /** 총기별 강화 레벨 (소유: player) */
   weaponLv: {} as Record<string, number>,
+  /** 영구 업그레이드(W8)가 런 시작 때 채우는 총기 레벨 보너스. '*' 는 모든 총기. 구매 레벨과 합산된다 */
+  weaponLvBonus: {} as Record<string, number>,
   costumes: [] as string[],        // 모은 아군 코스튬 (꾸미기용, 소유: loot)
   /** 기지 핵(디펜스 목표). 소유: base. 0이 되면 패배 처리는 enemies 가 한다 */
   coreHp: 500,

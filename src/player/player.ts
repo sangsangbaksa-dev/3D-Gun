@@ -6,12 +6,14 @@ import { input } from '../core/input';
 import { state } from '../core/state';
 import { zombies } from '../core/entities';
 import { resolveObstacles } from '../core/world';
-import { WEAPONS, WEAPON_ORDER } from '../data';
+import { GUNS } from '../data';
 import { PlayerController, type FrameIntent } from './logic/controller';
 import { createRng } from './logic/math';
 import { magSize } from './logic/weapons';
 import { Effects } from './view/effects';
-import { CombatHud } from './view/hud';
+import { CombatHud, UpgradePanel } from './view/hud';
+import { GunSfx } from './view/sfx';
+import { events } from '../core/events';
 import { PlayerView } from './view/playerView';
 import type { System } from '../core/types';
 import type { Player } from './logic/player';
@@ -29,11 +31,11 @@ export const playerOptions = { combat: true };
 let ctrl: PlayerController | null = null;
 function controller() { return (ctrl ??= new PlayerController()); }
 
-const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3'];
+const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
 // TODO(맵 담당): core/world.ts 에 getGroundY 가 생기면 교체
 const groundY = (_x: number, _z: number) => 0;
 
-let view: PlayerView, fx: Effects, hud: CombatHud;
+let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
 let shake = 0;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -42,10 +44,19 @@ export const PlayerSystem: System = {
   init(ctx) {
     view = new PlayerView(ctx.scene);
     fx = new Effects(ctx.scene);
-    if (playerOptions.combat) hud = new CombatHud();
     const c = controller();
     const w = c.weapons;
-    hud?.setWeapon(w.current, w.ammo[w.current], magSize(w.current, state.stats), state.weapons);
+    if (!playerOptions.combat) return;
+    hud = new CombatHud();
+    new GunSfx();
+    panel = new UpgradePanel((id) => events.emit('weapon:upgrade', { weapon: id }), closePanel);
+    const refresh = () => panel?.refresh();
+    events.on('state:changed', refresh);
+    events.on('weapon:upgraded', () => { refresh(); hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons); });
+    events.on('weapon:switched', () => hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons));
+    events.on('run:start', () => { if (panel?.open) closePanel(); });
+    addEventListener('keydown', (e) => { if (e.code === 'Escape' && panel?.open) closePanel(); });
+    hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons);
   },
 
   update(dt, ctx) {
@@ -63,9 +74,12 @@ export const PlayerSystem: System = {
       dash: playing && input.pressed.has('ShiftLeft'),
       aim: playing && input.mouseRightDown,
       fire: playing && input.mouseDown,
+      firePressed: playing && input.mouseDown && !prevFire,
       reload: playing && input.pressed.has('KeyR'),
       slot: null,
     };
+    prevFire = input.mouseDown;
+    if (panel && input.pressed.has('KeyV') && (state.mode === 'play' || panel.open)) togglePanel();
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
 
     const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat });
@@ -87,19 +101,20 @@ export const PlayerSystem: System = {
 
     // 사격 연출
     if (out.shot) {
-      const def = WEAPONS[out.shot.weapon];
+      const def = GUNS[out.shot.weapon];
       view.fired(w);
       const muzzle = view.muzzleWorld(w, v0);
       const mdir = view.muzzleDir(w, v1);
-      shake = Math.min(1, shake + (def.pellets > 1 ? 0.6 : out.shot.weapon === 'smg' ? 0.18 : 0.3));
+      shake = Math.min(1, shake + (def.kind === 'shotgun' ? 0.6 : def.kind === 'sniper' ? 0.7 : def.kind === 'revolver' ? 0.45 : def.kind === 'smg' ? 0.15 : 0.28));
       fx.sparks(muzzle, mdir, def.pellets > 1 ? 6 : 3);
       view.ejectWorld(w, v2);
-      if (out.shot.weapon !== 'shotgun') fx.casing(v2, Math.cos(p.yaw), -Math.sin(p.yaw), false);
+      if (def.kind !== 'revolver') fx.casing(v2, Math.cos(p.yaw), -Math.sin(p.yaw), def.kind === 'shotgun', def.kind === 'sniper' || def.kind === 'rifle' ? 1.3 : 1);
       let best: 'hit' | 'head' | 'kill' | null = null;
       for (const pl of out.shot.pellets) {
-        fx.tracer(muzzle, pl.end, def.tracer, def.pellets > 1 ? 0.025 : 0.04);
+        fx.tracer(muzzle, pl.end, def.tracer, def.kind === 'shotgun' ? 0.025 : def.kind === 'sniper' ? 0.07 : 0.04, def.kind === 'sniper' ? 400 : 220);
         if (pl.kind === 'zombie') {
           fx.blood(pl.end, { x: -out.pose.dir.x, y: 0, z: -out.pose.dir.z }, pl.kill ? 12 : 5);
+          for (const a of pl.also) fx.blood(a, { x: -out.pose.dir.x, y: 0, z: -out.pose.dir.z }, a.kill ? 10 : 4);
           if (pl.kill) best = 'kill';
           else if (pl.headshot && best !== 'kill') best = 'head';
           else if (!best) best = 'hit';
@@ -108,7 +123,7 @@ export const PlayerSystem: System = {
       if (best) hud.hitmarker(best);
     }
     if (out.switched || out.reloadDone || out.reloadStarted || out.shot) {
-      hud.setWeapon(w.current, w.ammo[w.current], magSize(w.current, state.stats), state.weapons);
+      hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons);
     }
     if (out.hurt) { hud.hurt(Math.min(0.4, out.hurt.dmg / 60)); shake = Math.min(1, shake + 0.55); }
     if (out.died) shake = 1;
@@ -118,6 +133,7 @@ export const PlayerSystem: System = {
     // HUD 갱신 (매 프레임 가벼운 값만)
     const rad = c.spreadNow();
     const px = Math.tan(rad) / Math.tan((out.pose.fov * Math.PI) / 360) * (innerHeight / 2);
+    hud.setScope(p.aimT, GUNS[w.current].scope);
     hud.setSpread(Math.min(80, px), !p.dead);
     hud.setReload(w.reloadLeft > 0 ? 1 - w.reloadLeft / w.reloadTotal : null);
     hud.setLowHp(!p.dead && p.hp / p.maxHp <= 0.3);
@@ -125,4 +141,18 @@ export const PlayerSystem: System = {
   },
 };
 
-export { WEAPON_ORDER };
+
+function togglePanel() {
+  if (!panel) return;
+  if (panel.open) return closePanel();
+  panel.show(true);
+  state.mode = 'modal'; input.modalOpen = true;
+  document.exitPointerLock?.();
+  events.emit('ui:modal', { open: true });
+}
+function closePanel() {
+  panel?.show(false);
+  state.mode = 'play'; input.modalOpen = false;
+  events.emit('ui:modal', { open: false });
+}
+

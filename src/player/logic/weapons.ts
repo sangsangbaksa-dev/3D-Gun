@@ -9,6 +9,8 @@ export interface WeaponState {
   ammo: Record<GunId, number>;
   /** 총기별 강화 레벨. state.weaponLv 와 같은 객체를 공유한다 */
   lv: Record<string, number>;
+  /** state.weaponLvBonus 와 같은 객체 (영구 보너스) */
+  bonus: Record<string, number>;
   /** 남은 재장전 시간. 0 이면 재장전 중 아님 */
   reloadLeft: number;
   reloadTotal: number;
@@ -19,7 +21,7 @@ export interface WeaponState {
   sinceShot: number;
 }
 
-export interface GunStats { dmg: number; mag: number; reload: number; spread: number }
+export interface GunStats { dmg: number; mag: number; reload: number; spread: number; rate: number; pellets: number }
 
 /** 강화 레벨과 스킬(`state.stats`)까지 반영한 실제 수치. */
 export function gunStats(id: GunId, lv: number, stats: Stats): GunStats {
@@ -29,14 +31,17 @@ export function gunStats(id: GunId, lv: number, stats: Stats): GunStats {
     mag: Math.max(1, Math.round(d.mag * stats.magMul * (1 + u.mag * lv))),
     reload: d.reload * stats.reloadMul * (1 - u.reload * lv),
     spread: d.spread * (1 - u.spread * lv),
+    rate: d.rate * (1 - u.rate * lv),
+    pellets: d.pellets > 1 ? d.pellets + Math.floor(lv / u.pelletEvery) : d.pellets,
   };
 }
 
-export const levelOf = (w: WeaponState, id: GunId = w.current) => w.lv[id] ?? 0;
+/** 구매 강화 + 영구 보너스 */
+export const levelOf = (w: WeaponState, id: GunId = w.current) => (w.lv[id] ?? 0) + (w.bonus[id] ?? 0) + (w.bonus['*'] ?? 0);
 export const magSize = (w: WeaponState, stats: Stats, id: GunId = w.current) => gunStats(id, levelOf(w, id), stats).mag;
 
-export function createWeaponState(stats: Stats, lv: Record<string, number>): WeaponState {
-  const w: WeaponState = { current: 'pistol', ammo: {} as Record<GunId, number>, lv, reloadLeft: 0, reloadTotal: 0, cooldown: 0, bloom: 0, sinceShot: 9 };
+export function createWeaponState(stats: Stats, lv: Record<string, number>, bonus: Record<string, number>): WeaponState {
+  const w: WeaponState = { current: 'pistol', ammo: {} as Record<GunId, number>, lv, bonus, reloadLeft: 0, reloadTotal: 0, cooldown: 0, bloom: 0, sinceShot: 9 };
   for (const id of GUN_ORDER) w.ammo[id] = magSize(w, stats, id);
   return w;
 }
@@ -109,7 +114,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
   const def = GUNS[w.current];
   const gs = gunStats(w.current, levelOf(w), env.stats);
   w.ammo[w.current]--;
-  w.cooldown = def.rate;
+  w.cooldown = gs.rate;
   w.sinceShot = 0;
 
   const spread = currentSpread(w, env.stats, env.moving, env.aiming);
@@ -122,7 +127,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
   const ux = { x: rx.y * d0.z - rx.z * d0.y, y: rx.z * d0.x - rx.x * d0.z, z: rx.x * d0.y - rx.y * d0.x };
 
   const pellets: Pellet[] = [];
-  for (let i = 0; i < def.pellets; i++) {
+  for (let i = 0; i < gs.pellets; i++) {
     // 원판 안 균일 분포
     const ang = env.rng() * Math.PI * 2, rad = Math.sqrt(env.rng()) * spread;
     const a = Math.cos(ang) * rad, b = Math.sin(ang) * rad;

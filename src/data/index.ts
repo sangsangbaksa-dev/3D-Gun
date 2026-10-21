@@ -140,7 +140,8 @@ export const GUNS: Record<GunId, GunDef> = {
 /** 총기 강화 (골드+부품). 레벨마다 아래 보너스가 누적된다. */
 export const GUN_UPGRADE = {
   maxLv: 5,
-  perLevel: { dmg: 0.12, mag: 0.1, reload: 0.06, spread: 0.06 }, // 피해 +12%, 탄창 +10%, 재장전 -6%, 퍼짐 -6%
+  // 피해 +12%, 연사 간격 -5%, 탄창 +10%, 재장전 -6%, 퍼짐 -6%, 산탄(pellets>1)은 pelletEvery 레벨마다 +1발
+  perLevel: { dmg: 0.12, rate: 0.05, mag: 0.1, reload: 0.06, spread: 0.06, pelletEvery: 2 },
   /** 레벨 n → n+1 비용 (배열 인덱스 = 현재 레벨) */
   gold: [60, 120, 220, 380, 600],
   parts: [1, 2, 3, 5, 8],
