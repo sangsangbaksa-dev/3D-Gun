@@ -245,11 +245,17 @@ export function createBase(deps: BaseDeps) {
     if (u) return { kind: 'upgrade', label: `${def.name} 강화 Lv${b.level + 1} (${costText(u.cost, u.gold)})`, cost: u.cost, gold: u.gold };
     return null;
   }
+  const hasLab = () => buildings.some((b) => !b.dead && b.kind === 'lab');
+
   function coreAction(): Action | null {
     if (core.dead) return null;
     if (state.coreHp < state.coreMaxHp - 0.5) return { kind: 'repair', label: `핵 수리 (${costText(CORE_REPAIR.cost)})`, cost: CORE_REPAIR.cost };
     const u = state.phase === 'prep' ? coreUpgradeInfo() : null;
     if (u) return { kind: 'upgrade', label: `핵 강화 Lv${core.level + 2} (${costText(u.cost, u.gold)})`, cost: u.cost, gold: u.gold };
+    if (state.phase === 'prep' || hasLab()) {
+      const remote = state.phase !== 'prep' && hasLab();
+      return { kind: 'open-lab', label: remote ? '연구소: 백신 제작' : '핵 실험실: 백신 제작 (E 또는 L)' };
+    }
     return null;
   }
   function perform(b: Building, a: Action): boolean {

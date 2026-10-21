@@ -14,7 +14,7 @@ export const WALLET_ICON: Record<WalletKey, string> = {
 export type Cost = Partial<Record<WalletKey, number>>;
 
 /** 첫 런부터 주던 기본 보급 */
-export const BASE_START = { wood: 14, stone: 8, herb: 2 };
+export const BASE_START = { wood: 14, stone: 8, herb: 4, parts: 3 };
 
 export type UpgradeCat = 'weapon' | 'base' | 'turret' | 'ally' | 'econ';
 export const CAT_ORDER: UpgradeCat[] = ['weapon', 'base', 'turret', 'ally', 'econ'];

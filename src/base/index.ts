@@ -49,7 +49,10 @@ export const BaseSystem: System = {
       press: () => {
         const a = model.coreAction();
         if (!a) return;
-        if (a.kind === 'repair') model.repairCore(); else model.upgradeCore();
+        if (a.kind === 'repair') model.repairCore();
+        else if (a.kind === 'upgrade') model.upgradeCore();
+        else if (a.kind === 'open-lab') events.emit('interact:lab', undefined);
+        else if (a.kind === 'open-shop') events.emit('interact:shop', undefined);
       },
     });
 

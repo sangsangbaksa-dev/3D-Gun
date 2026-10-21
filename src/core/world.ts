@@ -2,6 +2,11 @@ import * as THREE from 'three';
 
 export const WORLD_HALF = 62;
 
+/** 지형 높이(m). 맵 지형이 생기면 여기서 샘플링한다. */
+export function getGroundY(_x: number, _z: number): number {
+  return 0;
+}
+
 export interface Obstacle { x: number; z: number; r: number }
 export const obstacles: Obstacle[] = [];
 

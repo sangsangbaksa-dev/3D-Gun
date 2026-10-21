@@ -44,8 +44,13 @@ function closePanel() {
   panel.hide(); panel.closedAt = time;
   events.emit('ui:modal', { open: false });
 }
+let labBuilt = false;
 function openPanel() {
   if (panel.open || time - panel.closedAt < 0.3) return;
+  if (state.phase !== 'prep' && !labBuilt) {
+    toast('전투 중에는 연구소(건설 6번)를 지은 뒤 핵·연구소에서 제작하세요');
+    return;
+  }
   panel.show();
   document.exitPointerLock?.();
   events.emit('ui:modal', { open: true });
@@ -106,6 +111,11 @@ export const AlliesSystem: System = {
     });
     addInteractable(injectable);
     events.on('interact:lab', openPanel);
+    events.on('building:placed', ({ kind }) => { if (kind === 'lab') labBuilt = true; });
+    events.on('wave:prep', ({ wave }) => {
+      if (wave === 1) toast('준비 시간: B 로 포탑(1·2) · 핵 L 백신 제작 · 좀비 처치로 샘플');
+      else if (wave % 3 === 0 && state.vaccines.every((n) => n === 0) && state.samples >= 1) toast('백신이 비었어요 — L 키로 제작');
+    });
     events.on('player:hit', () => {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
       resetInject();
@@ -113,6 +123,7 @@ export const AlliesSystem: System = {
     // 새 런: 아군·백신·샘플·제작 대기열을 모두 비운다 (docs/COORDINATION.md 1-e)
     events.on('run:start', () => {
       closePanel();
+      labBuilt = false;
       resetInject();
       injector.tier = -1;
       craftQueue.length = 0;
@@ -142,6 +153,7 @@ export const AlliesSystem: System = {
     injector.heldThisFrame = false;
 
     if (state.mode !== 'modal' && !panel.open) {
+      if (input.pressed.has('KeyL')) openPanel();
       if (input.pressed.has('KeyC')) {
         const t = nextOwnedTier(injector.tier < 0 ? -1 : injector.tier);
         if (t < 0) toast('보유한 백신이 없다');

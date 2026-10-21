@@ -92,7 +92,7 @@ export class BasePanels {
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
     this.set(this.banner, phase === 'prep'
-      ? '🏗 <b>건설 모드</b> · 클릭 배치 · 우클릭/<b>X</b> 철거 · <b>F</b> 수리 · <b>U</b> 강화 · <b>B</b> 종료'
+      ? '🏗 <b>건설</b> · <b>1</b> 감시탑 <b>2</b> 기관포탑 · <b>6</b> 연구소 · 클릭 배치 · <b>B</b> 종료'
       : '⚔ 전투 중에는 건설할 수 없어요 (수리·보충은 E)');
     BUILDING_ORDER.forEach((id, i) => {
       const d = BUILDINGS[id];

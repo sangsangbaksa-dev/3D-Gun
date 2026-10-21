@@ -35,10 +35,18 @@ export const HudSystem: System = {
     if (wave) wave.textContent = state.phase === 'ended' ? (state.wave >= 50 ? '클리어!' : '런 종료') : `웨이브 ${state.wave}`;
     if (sub) {
       sub.textContent = state.phase === 'prep'
-        ? `준비 ${Math.ceil(state.prepLeft)}초 · N 으로 바로 시작`
+        ? `준비 ${Math.ceil(state.prepLeft)}초 · B 건설 · L 백신 · N 시작`
         : `남은 좀비 ${state.waveRemaining} · 핵 ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
     }
-    if (res) res.textContent = RES_KEYS.map((k) => `${RES_LABEL[k]} ${state.res[k]}`).join('  ') + `  · 코인 ${state.gold}`;
+    if (res) {
+      const vac = state.vaccines.reduce((s, n) => s + n, 0);
+      res.textContent = [
+        ...RES_KEYS.map((k) => `${RES_LABEL[k]} ${state.res[k]}`),
+        `샘플 ${state.samples}`,
+        vac ? `백신 ${vac}` : '',
+        `코인 ${state.gold}`,
+      ].filter(Boolean).join('  ');
+    }
   },
 };
 

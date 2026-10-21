@@ -197,7 +197,7 @@ export interface BuildingDef {
 }
 export const BUILDING_ORDER: BuildingId[] = ['tower', 'mgtower', 'barricade', 'trap', 'lab', 'barracks', 'shop'];
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작' },
+  lab: { name: '연구소', cost: { wood: 8, stone: 8, parts: 2 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작 · 준비 중 핵에서도 제작 가능' },
   barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
   barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
   tower: {
@@ -293,7 +293,7 @@ export function calcStats(l: Record<string, number>): Stats {
 
 export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number }
 export const VACCINES: VaccineDef[] = [
-  { name: '초급 백신', herb: 3, sample: 2, sampleSp: 0, parts: 0, iron: 0, rate: 0.4 },
+  { name: '초급 백신', herb: 2, sample: 1, sampleSp: 0, parts: 0, iron: 0, rate: 0.4 },
   { name: '중급 백신', herb: 5, sample: 3, sampleSp: 0, parts: 1, iron: 0, rate: 0.6 },
   { name: '고급 백신', herb: 8, sample: 0, sampleSp: 2, parts: 0, iron: 2, rate: 0.8 },
 ];

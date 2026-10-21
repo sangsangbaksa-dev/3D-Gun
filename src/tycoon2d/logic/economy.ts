@@ -90,8 +90,8 @@ export function refundSkills(m: Meta): number {
 
 export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
-    startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: 0 },
-    startSamples: 0, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
+    startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: BASE_START.parts },
+    startSamples: 2, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
     weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE,
     skillLv: { ...m.skills },
   };

@@ -33,7 +33,7 @@ const CSS = `
 
 const KEYS_HTML = `<b>조작</b>
 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 이동 · <kbd>Shift</kbd> 대시 · 클릭 사격 · <kbd>R</kbd> 재장전 · <kbd>1</kbd>~<kbd>6</kbd> 무기 · <kbd>V</kbd> 무기 상점<br>
-<kbd>E</kbd> 상호작용 · <kbd>C</kbd> 백신 · <kbd>Q</kbd> 아군 · <kbd>B</kbd> 건설 · <kbd>Tab</kbd> 스킬 · <kbd>N</kbd> 웨이브 시작`;
+<kbd>B</kbd> 건설(<kbd>1</kbd> 포탑·<kbd>6</kbd> 연구소) · 핵 <kbd>E</kbd>/<kbd>L</kbd> 백신 제작 · <kbd>C</kbd> 백신 선택 · <kbd>E</kbd> 주사 · <kbd>N</kbd> 웨이브`;
 
 export function mountAttract(onStart: () => void): { show(): void; hide(): void; visible(): boolean } {
   if (!document.getElementById('attract-style')) {

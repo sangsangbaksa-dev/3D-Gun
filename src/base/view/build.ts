@@ -30,6 +30,7 @@ export class BuildController {
   private tipT = 0;
   private t = 0;
   private lockedByOther = false;
+  private buildTipShown = false;
 
   constructor(private scene: THREE.Scene, private model: BaseModel, private panels: BasePanels, private overlay: BuildOverlay) {
     this.ghostRoot.visible = false;
@@ -50,6 +51,10 @@ export class BuildController {
     if (state.mode !== 'play') return;
     if (state.phase !== 'prep') { this.toast('전투 중에는 건설할 수 없어요 (수리·보충은 E)'); return; }
     this.active = true; state.mode = 'build'; this.overlay.setBuilding(true);
+    if (!this.buildTipShown) {
+      this.buildTipShown = true;
+      this.toast('1·2 포탑 배치 후 6 연구소(선택) · 준비 중 핵에서 L 로 백신 제작');
+    }
   }
   exit(msg?: string) {
     if (!this.active) return;

@@ -126,7 +126,7 @@ export class LabPanel {
             : `<div class="al-empty">아직 아군이 없다.<br>좀비를 쏴서 <b>기절</b>시킨 뒤<br>가까이 가서 <b>E</b>를 길게 눌러 백신을 놓자!</div>`}
         </section>
       </div>
-      <footer>Esc 닫기 · 필드에서 C = 백신 바꾸기 · Q = 가까운 아군 역할 바꾸기 · 연구 보조가 있으면 제작이 빨라진다</footer>
+      <footer>Esc 닫기 · L = 이 창 다시 열기 · C = 백신 선택 · Q = 아군 역할 · 연구 보조가 있으면 제작이 빨라진다</footer>
     </div>`;
     const body = this.ov.querySelector('.al-body');
     if (body) body.scrollTop = keep;
