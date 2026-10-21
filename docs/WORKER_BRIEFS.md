@@ -32,3 +32,16 @@ B로 건설 모드(`state.mode='build'`), 격자 스냅 배치 미리보기, 1~5
 
 ## W7 스킬/UI/오디오 (`feat/ui`, `src/skills/`, `src/ui/`, `src/audio/`, `index.html`)
 HUD(체력/탄약/웨이브·단계/핵 체력바/자원/골드/열쇠/아군 수, `state:changed`와 이벤트로 갱신), `interact:prompt` 안내, `toast`, 보스 체력바, Tab 스킬트리 창(4가지 가지, `SKILLS`, 포인트 소모, 리스펙, `recalcStats()`), `xp:gain`→스킬 포인트, 게임오버·엔딩 화면(`game:end`), `ui:modal` 처리(포인터 락 해제/복귀, `state.mode`). WebAudio 합성 효과음(사격, 피격, 웨이브, 상자). 다른 모듈의 전용 창은 각 작업자가 만들므로 공용 모달 스타일(CSS 클래스)만 제공.
+
+## W8 2D 업그레이드 타이쿤 (`feat/tycoon2d`, `src/tycoon2d/`, `src/core/meta.ts`, `src/data/tycoon2d.ts`)
+**런 흐름은 `docs/COORDINATION.md` 1-e를 먼저 읽으세요.** 플레이어 사망/핵 파괴 → `run:over` → 당신의 2D 화면 → "출격" → `run:start`.
+- `run:over` 수신: 도달 웨이브, 처치 수, 골드, 보스 처치로 화폐 계산 → `meta.currency` 증가, `meta.bestWave/bestCheckpoint/totalRuns` 갱신, `saveMeta()`. `state.mode='modal'`, `ui:modal`로 포인터 락 해제.
+- 2D 화면(Canvas 2D 또는 DOM, Three.js 사용 금지): 시설(연구소, 공장, 병원 등)이 시간당 화폐를 생산(`meta.lastSeen` 방치 수익, 상한), 영구 업그레이드 구매: 총 품질(무기별 레벨), 최대 체력, 핵 체력, 채집 효율, 시작 골드·자원, 아군 상한, 준비 시간 +, 시작 웨이브(`bestCheckpoint`까지), 상자 운. 비용은 단계마다 증가. 구매 효과가 보이는 UI, 누른 느낌이 있는 연출.
+- 출격: 업그레이드를 `state.statMods`(recalcStats가 적용)와 `state.start`(시작 골드/자원/시작 웨이브/핵 체력/준비 시간 보너스)에 반영하고 `run:start` 발행. `loadMeta()`는 게임 시작 때 한 번.
+- 첫 실행(`meta`가 비어 있을 때)에는 바로 3D 런을 시작하고, 죽은 뒤부터 2D 화면을 보여줍니다.
+- 수치는 전부 `src/data/tycoon2d.ts`의 직렬화 가능한 표. logic/view 분리와 `docs/modules/tycoon2d.md` 작성은 다른 모듈과 같습니다.
+
+## 추가 후속 작업
+- **W2**: (1) `run:over`/`run:start` 흐름으로 `defeat()` 교체(제자리 체크포인트 복귀 삭제, `phase='ended'`로 멈추고 `run:over` 발행, `run:start` 수신 시 `state.start.startWave`부터 새 런), (2) `prepTime`을 모든 웨이브 30초(+`state.start.prepBonus`)로, (3) 몬스터 6종 추가(스피터, 자폭병, 크롤러, 중장갑, 스크리머, 독성 좀비) 데이터·AI·모델.
+- **W1**: 총 품질 강화. 무기별 레벨(`state.weaponLv`)이 공격력·연사·탄창·재장전·산탄에 반영되고, 총기 모델/반동/총구 화염/탄피/사운드 연동으로 사격감을 제대로 만들기. `run:start`에서 무기 보유 초기화.
+- **W3~W7 공통**: `run:start`를 받으면 자기 런 상태(자원, 건물, 아군, 스킬 포인트, 상자 천장 등)를 초기화.
