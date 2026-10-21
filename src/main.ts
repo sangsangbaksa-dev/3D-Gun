@@ -1,5 +1,6 @@
 import { startGame } from './core/game';
 import { PlayerSystem, playerOptions } from './player/player';
+import { GatheringSystem } from './gathering';
 import { InteractSystem } from './core/interact';
 import { EnemiesSystem } from './enemies';
 import { PlaytestSystem } from './playtest';
@@ -13,6 +14,7 @@ const useEnemies = new URLSearchParams(location.search).has('enemies');
 // 테스트 빌드가 자체 사격/체력을 쓰는 동안 W1 전투는 꺼 둔다. `?enemies` 로 W1 전투 + W2 좀비 조합을 미리 볼 수 있다.
 playerOptions.combat = useEnemies;
 startGame(document.getElementById('c') as HTMLCanvasElement, [
+  GatheringSystem,
   PlayerSystem,
   ...(useEnemies ? [EnemiesSystem] : []),
   InteractSystem,

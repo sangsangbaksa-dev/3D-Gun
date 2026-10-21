@@ -7,6 +7,83 @@ export const RES_KEYS: ResKey[] = ['wood', 'stone', 'iron', 'herb', 'parts'];
 export const RES_LABEL: Record<ResKey, string> = { wood: '나무', stone: '돌', iron: '철', herb: '약초', parts: '부품' };
 export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, herb: 4, parts: 10 };
 
+// ── 채집 (소유: gathering) ─────────────────────────────────────────────
+// NodeKind 는 data/map.ts 의 ResNodeKind 와 같은 이름을 쓴다.
+export type NodeKind = 'tree' | 'rock' | 'iron' | 'herb' | 'wreck';
+export const NODE_KINDS: NodeKind[] = ['tree', 'rock', 'iron', 'herb', 'wreck'];
+export interface GatherNodeDef {
+  name: string;
+  /** 안내 문구 동사 (예: 'E 길게 눌러 나무 베기') */
+  verb: string;
+  res: ResKey;
+  /** 속도 1.0 기준 채집에 걸리는 초 (state.stats.gatherSpeed 로 나눈다) */
+  work: number;
+  yieldMin: number; yieldMax: number;
+  /** 고갈 뒤 재생성까지 걸리는 초 (기획: 60~180초) */
+  respawnMin: number; respawnMax: number;
+  /** 충돌 반경(m). 개체마다 scale 이 곱해진다 */
+  radius: number;
+  /** 고갈된 뒤 남는 충돌 비율 (그루터기, 잔해) */
+  depletedBlock: number;
+}
+export const GATHER_NODES: Record<NodeKind, GatherNodeDef> = {
+  tree:  { name: '나무', verb: '나무 베기', res: 'wood', work: 2.2, yieldMin: 3, yieldMax: 5, respawnMin: 80, respawnMax: 120, radius: 0.7, depletedBlock: 0.4 },
+  rock:  { name: '바위', verb: '바위 깨기', res: 'stone', work: 2.8, yieldMin: 2, yieldMax: 4, respawnMin: 90, respawnMax: 140, radius: 1.1, depletedBlock: 0.35 },
+  iron:  { name: '철광석', verb: '철광석 캐기', res: 'iron', work: 4.0, yieldMin: 1, yieldMax: 2, respawnMin: 150, respawnMax: 180, radius: 1.0, depletedBlock: 0.35 },
+  herb:  { name: '약초 덤불', verb: '약초 뜯기', res: 'herb', work: 1.0, yieldMin: 2, yieldMax: 3, respawnMin: 60, respawnMax: 90, radius: 0.55, depletedBlock: 0 },
+  wreck: { name: '폐차', verb: '부품 뜯기', res: 'parts', work: 3.2, yieldMin: 1, yieldMax: 2, respawnMin: 150, respawnMax: 180, radius: 1.5, depletedBlock: 0.8 },
+};
+
+/**
+ * MAP.resourceNodes 가 비어 있을 때 절차적으로 채우는 밀도: 구역 종류별, 100㎡당 노드 수.
+ * 키는 data/map.ts 의 ZoneKind. 없는 종류(base, boss)는 비어 있다.
+ */
+export const GATHER_ZONE_DENSITY: Record<string, Partial<Record<NodeKind, number>>> = {
+  forest:    { tree: 3.2, herb: 0.4 },
+  quarry:    { rock: 1.6, iron: 0.7 },
+  mine:      { iron: 1.4, rock: 1.0 },
+  field:     { herb: 1.2, tree: 0.3 },
+  ruins:     { wreck: 0.9, rock: 0.3, herb: 0.2 },
+  wasteland: { wreck: 0.25, rock: 0.3 },
+};
+/** 구역 밖 빈 땅에 흩뿌리는 밀도: 맵 10,000㎡당 노드 수 (약초와 폐차가 구역이 없어도 어디서든 보이게) */
+export const GATHER_OPEN_DENSITY: Partial<Record<NodeKind, number>> = { tree: 6, rock: 3, iron: 1.2, herb: 12, wreck: 4 };
+export const GATHER_LAYOUT = {
+  seed: 20240607,
+  /** 기지 건설 반경 바깥으로 더 띄울 거리 */
+  baseMargin: 2,
+  /** 좀비 레인(경로) 양옆으로 비울 반폭(m) */
+  laneHalfWidth: 4,
+  /** 노드 사이 최소 간격(m) */
+  gap: 1.4,
+  /** 맵 가장자리에서 띄울 거리 */
+  edgeMargin: 4,
+  /** 플레이어 시작 위치 주변 */
+  startClear: 6,
+  /** 구역 안에서 노드를 놓을 때 중심 쪽으로 몰리는 정도 (0 = 균등, 클수록 가운데에 몰림) */
+  zoneBias: 0.35,
+  /** 시도 횟수 상한 (노드 1개당) */
+  tries: 30,
+};
+/** 화면에서 이 거리(m) 넘게 떨어진 노드는 그리기/애니메이션을 건너뛴다 (넓은 맵 성능) */
+export const GATHER_VIEW_DIST = 95;
+/** 노드까지 이 거리(노드 반경 + 값) 안이면 E 를 쓸 수 있다 */
+export const GATHER_REACH = 2.2;
+/** 채집 중 이 시간(초) 안에 다시 누르지 않으면 진행도가 줄기 시작한다 */
+export const GATHER_IDLE_GRACE = 0.6;
+/** 진행도가 줄어드는 속도 (초당 비율) */
+export const GATHER_DECAY = 0.9;
+
+/** 좀비 처치 샘플 드롭. special=true 면 특수 샘플(state.samplesSp). type 은 ZType 문자열 */
+export interface SampleDropDef { chance: number; min: number; max: number; special: boolean }
+export const SAMPLE_DROPS: Record<string, SampleDropDef> = {
+  normal: { chance: 0.3, min: 1, max: 1, special: false },
+  runner: { chance: 0.25, min: 1, max: 1, special: false },
+  fatty:  { chance: 0.6, min: 1, max: 2, special: false },
+  boss:   { chance: 1, min: 2, max: 3, special: true },
+  king:   { chance: 1, min: 5, max: 5, special: true },
+};
+
 export type WeaponId = 'pistol' | 'shotgun' | 'smg';
 export interface WeaponDef {
   name: string; dmg: number; rate: number; mag: number; reload: number; pellets: number; spread: number; range: number;

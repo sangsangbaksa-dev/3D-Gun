@@ -139,7 +139,8 @@ export function createSim(rng: Rng, best = 0, externalChests = false): Sim {
 }
 
 function placeNodes(s: Sim) {
-  const counts: [NodeKind, number][] = [['tree', 28], ['rock', 14], ['iron', 5], ['herb', 12], ['car', 6]];
+  // 채집 노드는 src/gathering 모듈이 맡는다(배치, 채집, 재생성, 모델). 임시 슬라이스는 노드를 만들지 않는다.
+  const counts: [NodeKind, number][] = [];
   for (const [kind, n] of counts) {
     for (let i = 0, tries = 0; i < n && tries < 400; tries++) {
       const x = (s.rng() * 2 - 1) * 56, z = (s.rng() * 2 - 1) * 56;
