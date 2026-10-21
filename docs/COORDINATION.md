@@ -29,6 +29,14 @@
 - 수치는 `src/data/index.ts`에서만 바꾸고, **자기 구역만** 고칩니다. 새 수치는 자기 구역 바로 아래에 추가합니다.
 - 각 기능 패널(제작 창, 건설 메뉴, 상자 열기 연출 등)은 **그 기능 작업자가 자기 폴더 안에서** DOM으로 만듭니다. W7은 HUD, 토스트, 스킬트리 창, 엔딩/게임오버 화면, 모달 공통 동작(`ui:modal`)을 맡습니다. 이렇게 해야 W7을 기다리지 않고 각자 끝까지 만들 수 있습니다.
 
+## 1-a. 디펜스 요소 (확정)
+
+타워 디펜스 느낌을 낸다: **기지 중앙의 핵(core)을 지키는 것**이 전투의 중심이다.
+- 핵은 base가 만든 `structures`의 한 개체(`kind: 'core'`)이고 체력은 `state.coreHp/coreMaxHp`. 좀비는 가까운 위협(플레이어, 아군)이 없으면 **핵과 방어 건물을 향해** 간다. 핵이 파괴되면 `core:destroyed` → enemies가 체크포인트 복귀를 처리한다(플레이어 사망과 같은 규칙).
+- 웨이브는 4개 스폰 지점에서 레인을 따라 핵으로 몰려온다. 준비 단계(`phase: 'prep'`)에 자원으로 포탑·바리케이드를 배치하고, 전투 단계에는 수리·보충만 가능하다.
+- 방어 건물: 바리케이드(좀비가 먼저 부숨), 감시탑(자동 사격, 레벨업), 추가 포탑 종류(기관포탑, 슬로우 트랩 등 base가 `data`에 추가), 핵 수리. 아군 경비병은 핵 주변을 지킨다.
+- 웨이브 사이 준비 시간이 있고, 다음 웨이브로 바로 넘기는(E 호출) 선택지도 둔다.
+
 ## 1-b. Unity 이식 대비 규칙 (필수)
 
 이 게임은 나중에 Unity(C#)로 옮깁니다. 그래서 **로직과 표현을 분리**합니다.
@@ -95,6 +103,7 @@ export const XxxSystem: System = { init?(ctx) {}, update(dt, ctx) {}, dispose?()
 | `zombie:converted` / `ally:dead` | W5 | W2, W7 |
 | `resource:gathered` | W3 | W7 |
 | `chest:opened` | W4 | W7 |
+| `core:damaged` / `core:destroyed` | W6(핵 피해는 좀비가 `structures` 의 `hit()` 로 줌) | W7(핵 체력바), W2(패배 처리) |
 | `building:placed` / `building:destroyed` | W6 | W5(숙소 = 아군 상한), W7 |
 | `interact:lab` / `interact:shop` | W6 | W5(백신 제작 창) / W6 |
 | `xp:gain` | 누구나 | W7(스킬 포인트) |

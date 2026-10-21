@@ -29,6 +29,8 @@ export interface GameEvents {
   // base
   'building:placed': { id: number; kind: string };
   'building:destroyed': { id: number; kind: string };
+  'core:damaged': { hp: number; maxHp: number };     // 기지 핵 피해 → UI 체력바
+  'core:destroyed': undefined;                       // 핵 파괴 → enemies 가 체크포인트 복귀 처리
   'interact:lab': undefined;                         // 연구소에서 E → allies 가 백신 제작 창을 연다
   'interact:shop': undefined;                        // 상점에서 E → base 가 판매/열쇠 구매 창을 연다
   // skills

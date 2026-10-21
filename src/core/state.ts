@@ -19,6 +19,9 @@ export const state = {
   skillPoints: 0,
   skillLv: {} as Record<string, number>,
   pity: 0,        // 상자 천장 카운터
+  /** 기지 핵(디펜스 목표). 소유: base. 0이 되면 패배 처리는 enemies 가 한다 */
+  coreHp: 500,
+  coreMaxHp: 500,
   allyCount: 0,
   allyCapBonus: 0, // 건물(숙소) 보너스. 최종 상한 = stats.allyCap + allyCapBonus
   stats: calcStats({}) as Stats,
