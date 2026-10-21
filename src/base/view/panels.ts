@@ -1,5 +1,5 @@
 // DOM 창: 상점 창, 건설 HUD. 스타일은 이 파일이 직접 주입한다 (index.html 은 W7 소유).
-import { BUILDINGS, BUILDING_ORDER, RES_BUY_PRICE, RES_KEYS, RES_LABEL, RES_PRICE, type BuildingId } from '../../data';
+import { BUILDINGS, BUILDING_ORDER, RES_BUY_PRICE, RES_KEYS, RES_LABEL, RES_PRICE, exchangeSellUnit, type BuildingId } from '../../data';
 import { state } from '../../core/state';
 import { costText, canAfford, type Building, type Cost } from '../logic/base';
 import { buy, sell, sellAll, sellValue } from '../logic/shop';
@@ -135,8 +135,9 @@ export class BasePanels {
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
     el('h2', '', c, '교환소');
     el('div', 'bz-sub', c, '전투에서 얻은 코인으로 자원을 사고, 가진 자원은 코인으로 팔아요. (E / Esc 로 닫기)');
+    const sellBonus = state.start.exchangeSellBonus ?? 0;
     for (const k of RES_KEYS) {
-      const sellP = RES_PRICE[k], buyP = RES_BUY_PRICE[k];
+      const sellP = exchangeSellUnit(k, sellBonus), buyP = RES_BUY_PRICE[k];
       const row = el('div', 'bz-xrow', c);
       el('div', 'n', row, `${RES_LABEL[k]} <small>보유 ${state.res[k]} · 판매 ${sellP} · 구매 ${buyP}</small>`);
       const btns = el('div', 'btns', row);

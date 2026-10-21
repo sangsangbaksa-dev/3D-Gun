@@ -42,6 +42,8 @@ export const state = {
     weaponLv: {} as Record<string, number>,
     /** 포탑 피해 배율에 더하는 값 (0.2 = +20%). base 가 반영한다 */
     turretDmgMul: 0,
+    /** 메타 업그레이드 교환 협상: 인런 교환소 판매가 보너스(자원당 골드) */
+    exchangeSellBonus: 0,
   },
   // enemies 가 갱신: 준비 단계 남은 시간(초), 이번 웨이브에서 남은 좀비 수(스폰 대기 포함), 마지막 체크포인트 웨이브
   prepLeft: 0,

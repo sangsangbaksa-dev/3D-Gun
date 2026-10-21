@@ -1,6 +1,6 @@
 // 2D 업그레이드 타이쿤 규칙. 순수 TS: three/DOM/localStorage 를 쓰지 않는다.
 import type { Meta } from '../../core/meta';
-import { SKILLS, type ResKey } from '../../data';
+import { RES_BUY_PRICE, RES_PRICE, SKILLS, exchangeSellUnit, type ResKey } from '../../data';
 import {
   UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START,
   type Cost, type WalletKey, type UpgradeDef, type ProducerDef,
@@ -12,7 +12,7 @@ export interface Bonuses {
   startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSkillPoints: number;
   coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number; turretDmgMul: number;
   weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number;
-  clickGold: number; incomeMul: number; keepRatio: number; skillLv: Record<string, number>;
+  clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; skillLv: Record<string, number>;
 }
 
 export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);
@@ -92,7 +92,7 @@ export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
     startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: 0 },
     startSamples: 0, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
-    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, incomeMul: 1, keepRatio: KEEP_BASE,
+    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE,
     skillLv: { ...m.skills },
   };
   let waveLv = 0;
@@ -115,7 +115,7 @@ export function bonuses(m: Meta): Bonuses {
       case 'weapon': if (!b.weapons.includes(e.id)) b.weapons.push(e.id); break;
       case 'prepBonus': b.prepBonus += e.per * lv; break;
       case 'startWave': waveLv += e.per * lv; break;
-      case 'clickGold': b.clickGold += e.per * lv; break;
+      case 'clickGold': b.exchangeSellBonus += e.per * lv; break;
       case 'incomeMul': b.incomeMul += e.per * lv; break;
       case 'keepRatio': b.keepRatio = Math.min(1, b.keepRatio + e.per * lv); break;
     }
@@ -163,6 +163,30 @@ export function clickIncome(m: Meta): number {
   add(m, { gold: g });
   m.currency += g;
   return g;
+}
+
+/** 메타 지갑 교환소: 자원 → 골드 (인런 교환소와 동일 단가) */
+export function metaSell(m: Meta, res: ResKey, n: number): number {
+  const c = Math.max(0, Math.min(Math.floor(n), Math.floor(bal(m, res))));
+  if (c <= 0) return 0;
+  const unit = exchangeSellUnit(res, bonuses(m).exchangeSellBonus);
+  m.wallet[res] = bal(m, res) - c;
+  m.wallet.gold = bal(m, 'gold') + c * unit;
+  return c;
+}
+
+export const metaSellUnit = (m: Meta, res: ResKey) => exchangeSellUnit(res, bonuses(m).exchangeSellBonus);
+
+/** 메타 지갑 교환소: 골드 → 자원 */
+export function metaBuy(m: Meta, res: ResKey, n: number): number {
+  const want = Math.max(0, Math.floor(n));
+  if (want <= 0) return 0;
+  const price = RES_BUY_PRICE[res];
+  const c = Math.min(want, Math.floor(bal(m, 'gold') / price));
+  if (c <= 0) return 0;
+  m.wallet.gold = bal(m, 'gold') - c * price;
+  m.wallet[res] = bal(m, res) + c;
+  return c;
 }
 
 export interface RunSnapshot {

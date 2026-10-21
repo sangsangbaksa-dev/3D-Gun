@@ -5,14 +5,24 @@ import { events } from './events';
 import { RES_KEYS, RES_LABEL } from '../data';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
+let hpFill: HTMLElement | null, hpText: HTMLElement | null;
 let acc = 0;
+
+function applyHpBar(hp: number, maxHp: number) {
+  const pct = maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0;
+  if (hpFill) hpFill.style.width = `${pct}%`;
+  if (hpText) hpText.textContent = `${Math.ceil(hp)}/${Math.ceil(maxHp)}`;
+}
 
 export const HudSystem: System = {
   init() {
     wave = document.getElementById('wave'); sub = document.getElementById('sub');
     res = document.getElementById('res'); help = document.getElementById('help');
+    hpFill = document.getElementById('hpFill');
+    hpText = document.getElementById('hpText');
     if (help) help.style.display = 'none';
     events.on('toast', ({ text }) => showToast(text));
+    events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
   },
   update(dt) {
     acc += dt;

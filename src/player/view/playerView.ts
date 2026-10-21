@@ -48,6 +48,12 @@ export class PlayerView {
 
     this.pivot.position.set(0.11, 1.47, -0.5);
     g.add(this.pivot);
+    // 팔은 몸통이 아니라 총 피벗에 붙여, 흔들림·반동·걸음 밥이 손과 총을 같이 움직인다
+    for (const arm of this.model.arms) {
+      g.remove(arm);
+      this.pivot.add(arm);
+      arm.position.sub(this.pivot.position);
+    }
     for (const id of GUN_ORDER) {
       const gun = buildGun(id);
       gun.root.visible = false;
@@ -199,10 +205,10 @@ export class PlayerView {
     this.pivot.rotation.set(a + recoilPitch - dip + this.swayY * 0.8, this.swayX * 1.2, roll + this.swayX * 0.5);
     this.pivot.position.set(0.11 + adsX + bobX + this.swayX * 0.4, 1.47 - dip * 0.14 + bobY + breath - this.swayY * 0.3, -0.5 + recoilBack + handShift);
 
-    const arm = Math.PI / 2 + a + recoilPitch - dip + this.swayY * 0.8;
+    // 조준·흔들림·반동은 피벗이 이미 적용한다. 손은 그 축에 붙어 총을 쥔 자세만 유지한다
     const [left, right] = this.model.arms;
-    right.rotation.set(arm, 0, -0.5 + this.swayX);
-    left.rotation.set(arm, 0, 0.95 + this.swayX * 0.6);
+    right.rotation.set(Math.PI / 2, 0, -0.5);
+    left.rotation.set(Math.PI / 2, 0, 0.95);
 
     // 불꽃 수명
     if (this.flashT > 0) {

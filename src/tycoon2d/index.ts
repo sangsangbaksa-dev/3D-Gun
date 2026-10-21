@@ -29,6 +29,7 @@ function applyToState() {
   Object.assign(state.start, {
     gold: b.startGold, startWave: b.startWave, res: { ...b.startRes }, coreHp: b.coreHp, prepBonus: b.prepBonus,
     samples: b.startSamples, skillPoints: b.startSkillPoints, weapons: [...b.weapons], weaponLv: { ...b.weaponLv }, turretDmgMul: b.turretDmgMul,
+    exchangeSellBonus: b.exchangeSellBonus,
   });
   // 총 품질(영구): player 가 같은 객체를 참조하므로 키만 갈아 끼운다 ('*' = 모든 총기)
   for (const k of Object.keys(state.weaponLvBonus)) delete state.weaponLvBonus[k];

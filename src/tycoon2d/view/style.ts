@@ -51,9 +51,15 @@ export const CSS = `
 #t2d .buy:active:not(:disabled){transform:translateY(3px);box-shadow:0 0 0 #164a2e}
 #t2d .buy:disabled{background:#2b3440;color:#8b96a5;box-shadow:0 3px 0 #1b222b;cursor:not-allowed}
 #t2d aside{width:270px;padding:14px;border-left:1px solid #ffffff10;background:#0a0e1477;display:flex;flex-direction:column;gap:12px;overflow:auto}
-#t2d .crate{border:0;border-radius:18px;padding:16px 10px;cursor:pointer;font:inherit;color:#fff;font-size:15px;font-weight:700;background:radial-gradient(circle at 50% 30%,#d9a441,#8a5a14);box-shadow:0 6px 0 #5b3a0b,0 0 24px #d9a44155;transition:.08s;position:relative}
-#t2d .crate:active{transform:translateY(5px);box-shadow:0 1px 0 #5b3a0b}
-#t2d .crate .big{font-size:42px;display:block}
+#t2d .exchange{background:#131b27;border:1px solid #ffffff14;border-radius:12px;padding:10px 12px}
+#t2d .exchange h3{margin:0 0 4px;font-size:14px;color:#9cc8ff}
+#t2d .exchange .ex-sub{margin:0 0 8px;font-size:11px;line-height:1.45;color:#8a96a8}
+#t2d .ex-row{padding:6px 0;border-bottom:1px solid #ffffff12;font-size:11.5px}
+#t2d .ex-row .n{margin-bottom:4px;color:#c5d3dc}
+#t2d .ex-row .btns{display:flex;flex-wrap:wrap;gap:3px}
+#t2d .ex-btn{background:#2f6f4e;color:#fff;border:0;border-radius:6px;padding:3px 7px;font:inherit;font-size:11px;cursor:pointer}
+#t2d .ex-btn:hover{filter:brightness(1.15)}
+#t2d .ex-btn:nth-child(3),#t2d .ex-btn:nth-child(4){background:#44505f}
 #t2d .panelbox{background:#131b27;border:1px solid #ffffff14;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.7}
 #t2d .panelbox h3{margin:0 0 4px;font-size:13px;color:#9cc8ff}
 #t2d .panelbox div{display:flex;justify-content:space-between;gap:8px}

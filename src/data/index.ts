@@ -9,6 +9,12 @@ export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, h
 /** 코인으로 자원을 살 때. 판매가의 3배라 팔고 다시 사면 코인이 늘지 않는다 */
 export const RES_BUY_PRICE: Record<ResKey, number> = { wood: 6, stone: 9, iron: 24, herb: 12, parts: 30 };
 
+/** 교환소 판매 단가 = 기본가 + 보너스. 항상 구매가보다 낮게 캡한다 (차익거래 방지) */
+export function exchangeSellUnit(res: ResKey, sellBonus = 0): number {
+  const cap = Math.max(0, RES_BUY_PRICE[res] - RES_PRICE[res] - 1);
+  return RES_PRICE[res] + Math.min(Math.max(0, sellBonus), cap);
+}
+
 // ── 채집 (소유: gathering) ─────────────────────────────────────────────
 // NodeKind 는 data/map.ts 의 ResNodeKind 와 같은 이름을 쓴다.
 export type NodeKind = 'tree' | 'rock' | 'iron' | 'herb' | 'wreck';
