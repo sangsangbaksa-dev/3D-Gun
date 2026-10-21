@@ -86,6 +86,10 @@ export const GatheringSystem: System = {
   update(dt, ctx) {
     tick(model, dt);
 
+    // 다른 시스템(임시 playtest)이 obstacles 를 비우고 다시 만들 수 있으므로 빠졌으면 다시 등록한다
+    const first = obstacleOf.get(model.nodes[0]?.id ?? -1);
+    if (first && !obstacles.includes(first)) for (const ob of obstacleOf.values()) obstacles.push(ob);
+
     // 고갈/재생성에 따라 충돌 반경 갱신
     for (const n of model.nodes) {
       const ob = obstacleOf.get(n.id)!;

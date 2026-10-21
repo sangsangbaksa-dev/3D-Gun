@@ -19,6 +19,8 @@ export const state = {
   skillPoints: 0,
   skillLv: {} as Record<string, number>,
   pity: 0,        // 상자 천장 카운터
+  weapons: ['pistol'] as string[], // 보유 무기 (상자 보상으로 늘어남. 소유: player 가 읽고 loot 가 추가)
+  costumes: [] as string[],        // 모은 아군 코스튬 (꾸미기용, 소유: loot)
   /** 기지 핵(디펜스 목표). 소유: base. 0이 되면 패배 처리는 enemies 가 한다 */
   coreHp: 500,
   coreMaxHp: 500,
