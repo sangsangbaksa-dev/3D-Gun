@@ -18,6 +18,7 @@ export class PlayerView {
   readonly model: Humanoid;
   private pivot = new THREE.Group();        // 무기와 양팔이 함께 조준 각도로 기우는 축
   private guns = {} as Record<GunId, GunModel>;
+  private gunBaseScales = {} as Record<GunId, number>;
   private flash: THREE.Group;
   private flashMats: THREE.MeshBasicMaterial[] = [];
   private light: THREE.PointLight;
@@ -53,6 +54,7 @@ export class PlayerView {
       gun.root.visible = false;
       this.pivot.add(gun.root);
       this.guns[id] = gun;
+      this.gunBaseScales[id] = gun.root.scale.x;
     }
 
     // 총구 불꽃: 십자 판 두 장 + 순간 조명
@@ -111,7 +113,12 @@ export class PlayerView {
     const showBody = viewMode !== 'first';
     for (const part of this.fpsHide) part.visible = showBody;
     this.time += dt;
-    for (const id of GUN_ORDER) this.guns[id].root.visible = id === w.current;
+    for (const id of GUN_ORDER) {
+      this.guns[id].root.visible = id === w.current;
+      // 1인칭은 무기만 약 22% 축소해 시야를 덜 가린다. 3인칭 모델 크기는 유지한다.
+      this.guns[id].root.scale.setScalar(this.gunBaseScales[id] * (showBody ? 1 : 0.78));
+    }
+    for (const arm of this.model.arms) arm.scale.setScalar(showBody ? 1 : 0.84);
     const gun = this.guns[w.current], def = GUNS[w.current];
 
     g.position.set(p.x, p.y, p.z);
@@ -195,9 +202,13 @@ export class PlayerView {
 
     // ── 조준 각도: 카메라 시선(pitch - kick)에 맞춰 팔과 총이 위아래로 ──
     const a = -(p.pitch - p.kick) + 0.1;
-    const adsX = -0.07 * p.aimT;
+    const firstPerson = viewMode === 'first';
+    const adsX = firstPerson ? -0.17 * p.aimT : -0.07 * p.aimT;
     this.pivot.rotation.set(a + recoilPitch - dip + this.swayY * 0.8, this.swayX * 1.2, roll + this.swayX * 0.5);
-    this.pivot.position.set(0.11 + adsX + bobX + this.swayX * 0.4, 1.47 - dip * 0.14 + bobY + breath - this.swayY * 0.3, -0.5 + recoilBack + handShift);
+    const weaponX = firstPerson ? 0.27 : 0.11;
+    const weaponY = firstPerson ? 1.34 + 0.09 * p.aimT : 1.47;
+    const weaponZ = firstPerson ? -0.82 + 0.08 * p.aimT : -0.5;
+    this.pivot.position.set(weaponX + adsX + bobX + this.swayX * 0.4, weaponY - dip * 0.14 + bobY + breath - this.swayY * 0.3, weaponZ + recoilBack + handShift);
 
     const arm = Math.PI / 2 + a + recoilPitch - dip + this.swayY * 0.8;
     const [left, right] = this.model.arms;
