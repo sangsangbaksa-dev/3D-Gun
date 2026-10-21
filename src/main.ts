@@ -8,6 +8,7 @@ import { LootSystem } from './loot';
 import { BaseSystem } from './base';
 import { AlliesSystem } from './allies';
 import { HudSystem } from './core/hud';
+import { Tycoon2dSystem } from './tycoon2d';
 
 // 기능 모듈은 System 을 만들어 이 배열에 한 줄씩 등록한다. (실행 순서 = 배열 순서)
 // 기본은 모듈 조합(W1~W6). `?playtest` 를 붙이면 예전 통합 슬라이스(playtest)로 실행한다.
@@ -16,6 +17,7 @@ playerOptions.combat = !usePlaytest;
 startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
   ? [PlayerSystem, InteractSystem, PlaytestSystem, LootSystem]
   : [
+    Tycoon2dSystem, // 런 간 영구 진행(사망 → 2D 업그레이드). 다른 모듈보다 먼저 init 해서 state.start 를 채운다
     GatheringSystem,
     BaseSystem,
     PlayerSystem,

@@ -34,7 +34,15 @@ export const state = {
   /** 런 간 영구 보정. tycoon2d 가 런 시작 때 등록한다. recalcStats() 가 skillLv 계산 뒤에 적용 */
   statMods: [] as Array<(s: Stats) => void>,
   /** 런 시작 보너스. tycoon2d 가 채우고 각 모듈이 `run:start` 때 읽는다 */
-  start: { gold: 0, startWave: 1, res: {} as Partial<Record<ResKey, number>>, coreHp: 0, prepBonus: 0 },
+  start: {
+    gold: 0, startWave: 1, res: {} as Partial<Record<ResKey, number>>, coreHp: 0, prepBonus: 0,
+    // 아래는 tycoon2d 가 추가한 시작 보너스 (모듈이 필요할 때 읽는다)
+    samples: 0, skillPoints: 0, weapons: ['pistol'] as string[],
+    /** 총 품질: 무기 id → 시작 강화 레벨. player 가 공격력·연사·탄창 등에 반영한다 */
+    weaponLv: {} as Record<string, number>,
+    /** 포탑 피해 배율에 더하는 값 (0.2 = +20%). base 가 반영한다 */
+    turretDmgMul: 0,
+  },
   // enemies 가 갱신: 준비 단계 남은 시간(초), 이번 웨이브에서 남은 좀비 수(스폰 대기 포함), 마지막 체크포인트 웨이브
   prepLeft: 0,
   waveRemaining: 0,
