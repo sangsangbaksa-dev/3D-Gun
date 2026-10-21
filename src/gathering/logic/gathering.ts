@@ -70,6 +70,12 @@ export function rollSampleDrop(type: string, rng: Rng): { special: boolean; amou
   return { special: d.special, amount: randInt(rng, d.min, d.max) };
 }
 
+/** 새 런 시작: 모든 노드를 채집 가능 상태로 되돌린다 (배치는 같은 시드라 그대로). */
+export function resetGathering(m: GatheringModel): void {
+  for (const n of m.nodes) { n.state = 'ready'; n.progress = 0; n.idle = 99; n.hitT = 0; n.respawnT = 0; }
+  m.events.length = 0;
+}
+
 // ── 저장/불러오기 (Phase 2 에서 localStorage 에 연결) ─────────────────
 export interface GatheringSave { nodes: { id: number; depleted: boolean; respawnT: number }[] }
 
