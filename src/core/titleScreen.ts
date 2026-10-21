@@ -71,7 +71,7 @@ export class TitleScreen {
     if (page === 'controls') body.innerHTML = '<div class="key-grid">'
       + '<div class="key-row"><span>이동</span><kbd>W A S D</kbd></div><div class="key-row"><span>시점 회전</span><kbd>마우스</kbd></div>'
       + '<div class="key-row"><span>사격</span><kbd>좌클릭</kbd></div><div class="key-row"><span>조준</span><kbd>우클릭</kbd></div>'
-      + '<div class="key-row"><span>대시</span><kbd>Shift</kbd></div><div class="key-row"><span>재장전</span><kbd>R</kbd></div>'
+      + '<div class="key-row"><span>대시</span><kbd>Shift</kbd></div><div class="key-row"><span>재장전</span><kbd>R</kbd></div><div class="key-row"><span>점프</span><kbd>Space</kbd></div>'
       + '<div class="key-row"><span>상호작용 / 채집</span><kbd>E</kbd></div><div class="key-row"><span>무기 교체</span><kbd>1–6</kbd></div>'
       + '<div class="key-row"><span>건설 모드</span><kbd>B</kbd></div><div class="key-row"><span>시점 전환</span><kbd>F3</kbd></div>'
       + '<div class="key-row"><span>일시정지</span><kbd>Esc / P</kbd></div><div class="key-row"><span>웨이브 시작</span><kbd>N</kbd></div></div>'
