@@ -103,6 +103,10 @@ export const PlayerSystem: System = {
     view.update(dt, p, w, cameraView);
     if (!playerOptions.combat) return;
 
+    const hudOn = state.mode === 'play' && state.phase !== 'ended';
+    hud.setVisible(hudOn);
+    if (!hudOn) return;
+
     // 사격 연출
     if (out.shot) {
       const def = GUNS[out.shot.weapon];

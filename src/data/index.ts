@@ -441,7 +441,7 @@ export function zombieStats(wave: number, t: ZType): ZStats {
   }
 }
 export const MAX_ALIVE = 40;
-export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
+export const waveCount = (w: number) => Math.floor(5 + w * 1.45);
 
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;
@@ -537,12 +537,13 @@ export const BOSS_KIT: Record<string, BossKit> = {
 export const ELITE = { fromWave: 20, chanceBase: 0.08, chancePerWave: 0.01, chanceMax: 0.35, hp: 2.5, dmg: 1.4, scale: 1.15, reward: 3 };
 export const eliteChance = (wave: number) => (wave < ELITE.fromWave ? 0 : Math.min(ELITE.chanceMax, ELITE.chanceBase + (wave - ELITE.fromWave) * ELITE.chancePerWave));
 
+/** 처치 코인 (상자 보상 대체 — 전투가 주 수입) */
 export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
-  normal: { gold: 2, xp: 5 }, runner: { gold: 2, xp: 7 }, fatty: { gold: 5, xp: 14 },
-  crawler: { gold: 2, xp: 5 }, swarmer: { gold: 1, xp: 2 }, leaper: { gold: 4, xp: 12 },
-  spitter: { gold: 6, xp: 16 }, bomber: { gold: 5, xp: 14 }, screamer: { gold: 8, xp: 20 }, tank: { gold: 12, xp: 28 },
-  boss: { gold: 80, xp: 150 }, bossBomb: { gold: 100, xp: 200 }, bossAcid: { gold: 120, xp: 250 }, bossLord: { gold: 160, xp: 350 },
-  king: { gold: 500, xp: 1000 },
+  normal: { gold: 4, xp: 5 }, runner: { gold: 4, xp: 7 }, fatty: { gold: 8, xp: 14 },
+  crawler: { gold: 3, xp: 5 }, swarmer: { gold: 2, xp: 2 }, leaper: { gold: 7, xp: 12 },
+  spitter: { gold: 10, xp: 16 }, bomber: { gold: 8, xp: 14 }, screamer: { gold: 13, xp: 20 }, tank: { gold: 18, xp: 28 },
+  boss: { gold: 120, xp: 150 }, bossBomb: { gold: 150, xp: 200 }, bossAcid: { gold: 180, xp: 250 }, bossLord: { gold: 240, xp: 350 },
+  king: { gold: 750, xp: 1000 },
 };
 
 /** 모든 웨이브 준비 시간 30초 + 영구 업그레이드 보너스(state.start.prepBonus) */

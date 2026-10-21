@@ -146,6 +146,8 @@ export class CombatHud {
     (this.dash.firstElementChild as HTMLElement).style.width = `${Math.round(ready01 * 100)}%`;
   }
 
+  setVisible(on: boolean) { this.root.style.display = on ? '' : 'none'; }
+
   dispose() { this.root.remove(); if (this.oldCross) this.oldCross.style.display = ''; }
 }
 

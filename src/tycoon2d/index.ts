@@ -9,9 +9,11 @@ import { state, recalcStats } from '../core/state';
 import { RES_KEYS } from '../data';
 import { bankRun, bonuses, settleOffline, tick, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
+import { mountAttract } from './view/attract';
 
 const BASE_CORE_HP = 500;
 let panel: TycoonPanel;
+let attract: ReturnType<typeof mountAttract>;
 let overSeen = false;
 let pending: { snap: RunSnapshot; t: number } | null = null;
 let acc = 0;
@@ -70,6 +72,7 @@ function handleOver(snap: RunSnapshot) {
 function launch() {
   applyToState();
   const startWave = state.start.startWave;
+  attract.hide();
   panel.close();
   state.mode = 'play';
   input.modalOpen = false;
@@ -92,6 +95,11 @@ export const Tycoon2dSystem: System = {
       onChanged: () => { applyToState(); saveMeta(); },
       onReset: () => { resetMeta(); applyToState(); },
     });
+    attract = mountAttract(() => showPanel(null));
+    state.mode = 'modal';
+    input.modalOpen = true;
+    events.emit('ui:modal', { open: true });
+    attract.show();
     if (off.secs > 0) events.emit('toast', { text: `부재 중 수익: 🪙 +${Math.floor(off.gains.gold ?? 0)}` });
 
     // W2 가 run:over 를 내면 그대로 쓰고, 아직 없으면 사망/핵 파괴 이벤트로 대신 감지한다 (같은 프레임 안 호출 순서상 먼저 스냅샷)

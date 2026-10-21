@@ -23,6 +23,10 @@ export const HudSystem: System = {
     if (help) help.style.display = 'none';
     events.on('toast', ({ text }) => showToast(text));
     events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
+    events.on('ui:modal', ({ open }) => {
+      const hud = document.getElementById('hud');
+      if (hud) hud.style.display = open ? 'none' : '';
+    });
   },
   update(dt) {
     acc += dt;
