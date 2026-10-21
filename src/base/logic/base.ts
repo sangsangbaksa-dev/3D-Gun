@@ -69,6 +69,8 @@ export function createBase(deps: BaseDeps) {
   const slowed = new Set<ZombieRef>();
   let coreDeadT = -1;
   let regenT = 0;
+  /** 런 시작 보너스(영구 업그레이드)로 늘어난 핵 최대 체력 */
+  let coreBonus = 0;
   let selfToast: (t: string) => void = (text) => events.emit('toast', { text });
 
   // ---- 핵 ----
@@ -97,7 +99,7 @@ export function createBase(deps: BaseDeps) {
   function setCoreLevel(lv: number, healDiff: boolean) {
     core.level = lv;
     const old = state.coreMaxHp;
-    state.coreMaxHp = core.maxHp = CORE.hp[lv];
+    state.coreMaxHp = core.maxHp = CORE.hp[lv] + coreBonus;
     if (healDiff) state.coreHp = Math.min(state.coreMaxHp, state.coreHp + (state.coreMaxHp - old));
     core.hp = state.coreHp;
   }
@@ -268,7 +270,8 @@ export function createBase(deps: BaseDeps) {
     // 핵 복구 / 준비 단계 자연 회복
     if (core.dead) {
       coreDeadT += dt;
-      if (coreDeadT > 1.2) {
+      // 런이 끝난 상태(phase 'ended')면 다음 run:start 의 reset() 이 복구한다
+      if (coreDeadT > 1.2 && state.phase !== 'ended') {
         core.dead = false; coreDeadT = -1;
         state.coreHp = Math.max(state.coreHp, state.coreMaxHp * CORE_REBUILD_PCT);
         core.hp = state.coreHp;
@@ -331,6 +334,21 @@ export function createBase(deps: BaseDeps) {
     for (const [z, m] of slowNow) { (z as Slowable).slowMul = m; slowed.add(z); }
   }
 
+  /** 새 런: 건물 전부 철거, 핵을 처음 상태로(시작 보너스 반영) */
+  function reset() {
+    for (const b of [...buildings]) remove(b, false);
+    fx.length = 0;
+    for (const z of slowed) delete (z as Slowable).slowMul;
+    slowed.clear();
+    coreBonus = state.start.coreHp;
+    core.dead = false; coreDeadT = -1; core.hitFlash = 0;
+    setCoreLevel(0, false);
+    state.coreHp = state.coreMaxHp; core.hp = state.coreHp;
+    state.allyCapBonus = 0;
+    events.emit('core:damaged', { hp: state.coreHp, maxHp: state.coreMaxHp });
+    changed();
+  }
+
   // ---- 저장 / 불러오기 (직렬화 가능한 데이터만) ----
   interface SavedBuilding { kind: BuildingId; x: number; z: number; level: number; hp: number; ammo: number }
   interface BaseSave { coreLevel: number; coreHp: number; buildings: SavedBuilding[] }
@@ -359,7 +377,7 @@ export function createBase(deps: BaseDeps) {
     core, buildings, fx,
     checkPlace, place, demolish, repair, refill, upgrade, repairCore, upgradeCore,
     repairCost, refillCost, upgradeInfo, maxLevel, coreRepairCost, coreUpgradeInfo,
-    actionFor, coreAction, perform, update, save, load,
+    actionFor, coreAction, perform, update, save, load, reset,
     setToast(f: (t: string) => void) { selfToast = f; },
   };
 }

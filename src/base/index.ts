@@ -60,6 +60,11 @@ export const BaseSystem: System = {
       events.emit('ui:modal', { open: true });
     });
     panels.onShopClose = () => { if (state.mode === 'modal') state.mode = 'play'; events.emit('ui:modal', { open: false }); canvas?.requestPointerLock?.(); };
+    events.on('run:start', () => {
+      build.exit();
+      panels.closeShop();
+      model.reset();
+    });
     events.on('state:changed', () => panels.refreshShop());
     events.on('building:placed', ({ kind }) => { if (kind === 'barracks') events.emit('toast', { text: '숙소 완공! 아군 상한 +3' }); });
   },
