@@ -1,6 +1,6 @@
 // 여러 모듈이 서로 찾아야 하는 개체 목록. 각 목록은 주인 모듈만 넣고 뺀다.
 //   zombies: enemies,  allies: allies,  structures: base,  pickups: loot/gathering
-import type * as THREE from 'three';
+// 로직 계층이라 Three.js 타입을 쓰지 않는다 (Unity 이식). 피격은 x/z/radius 원기둥 판정.
 
 /** 맞을 수 있는 개체 공용 형태. */
 export interface Target {
@@ -8,8 +8,10 @@ export interface Target {
   x: number; z: number;
   radius: number;
   hp: number; maxHp: number;
-  /** 피격 판정용 루트 오브젝트 (레이캐스트 대상) */
-  obj: THREE.Object3D;
+  /** 지면에서 머리 끝까지 높이. 사격 판정용 원기둥 높이 */
+  height: number;
+  /** 화면 표현(Three 오브젝트 등)을 가리키는 불투명 핸들. 만든 모듈만 해석한다 */
+  view?: unknown;
   dead: boolean;
 }
 

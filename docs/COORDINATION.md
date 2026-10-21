@@ -29,6 +29,17 @@
 - 수치는 `src/data/index.ts`에서만 바꾸고, **자기 구역만** 고칩니다. 새 수치는 자기 구역 바로 아래에 추가합니다.
 - 각 기능 패널(제작 창, 건설 메뉴, 상자 열기 연출 등)은 **그 기능 작업자가 자기 폴더 안에서** DOM으로 만듭니다. W7은 HUD, 토스트, 스킬트리 창, 엔딩/게임오버 화면, 모달 공통 동작(`ui:modal`)을 맡습니다. 이렇게 해야 W7을 기다리지 않고 각자 끝까지 만들 수 있습니다.
 
+## 1-b. Unity 이식 대비 규칙 (필수)
+
+이 게임은 나중에 Unity(C#)로 옮깁니다. 그래서 **로직과 표현을 분리**합니다.
+
+- 각 모듈은 `src/<모듈>/logic/`(규칙·AI·계산·상태)과 `src/<모듈>/view/`(Three.js 메시, 카메라, DOM)로 나눕니다. **`logic/`에서는 `three`를 import 하지 않고 `document`/`window`도 쓰지 않습니다.** 위치는 `{x, y, z}` 숫자, 회전은 yaw 숫자로 다룹니다.
+- `logic/`은 `dt`와 입력 값을 받아 상태를 바꾸고 이벤트를 내는 순수 TS입니다. `view/`가 그 상태를 읽어 그립니다. 랜덤은 시드를 넣을 수 있는 함수(`rng()`)를 주입받아 씁니다.
+- 밸런스, 적, 아이템, 건물, 스킬, 웨이브 표는 `src/data/`의 **직렬화 가능한 객체**(숫자·문자열·배열·객체만, 함수·클래스 없음)로 둡니다. Unity에서 ScriptableObject나 JSON으로 그대로 옮길 수 있어야 합니다. 공식은 `data`에 순수 함수로 두되 입력과 출력이 숫자인 것만 허용합니다.
+- 외부 의존성(DOM, localStorage, WebAudio)은 `view/`나 `src/core/platform/` 뒤에 숨깁니다.
+- 각 모듈은 PR에 `docs/modules/<모듈>.md`를 추가해 **데이터 모델**(상태 필드, 데이터 표 스키마, 발행/구독 이벤트, 상태 전이)을 적습니다. C# 클래스·ScriptableObject·이벤트로 어떻게 옮길지 한 줄 메모를 붙입니다. 상세 이식 메모는 [UNITY_PORT.md](./UNITY_PORT.md).
+- 기존 스캐폴드(`player.ts`, `core/world.ts` 등)는 W1, 총괄 조율이 같은 규칙으로 점차 나눕니다.
+
 ## 2. 공용 계약 (src/core/)
 
 이미 `main`에 있는 것: `Ctx`/`System`(types.ts), `events`(events.ts), `input`, `world`(씬·`obstacles`·`resolveObstacles`), `humanoid`(사람형 모델).
@@ -58,7 +69,7 @@ export const XxxSystem: System = { init?(ctx) {}, update(dt, ctx) {}, dispose?()
 | `allies: AllyRef[]` | W5 | W2(좀비가 아군을 공격) |
 | `structures: StructureRef[]` | W6 | W2(좀비가 건물을 공격) |
 
-- 피해는 항상 대상의 `hit()`을 부릅니다. `ZombieRef.hit(dmg, byAlly)`는 W2가 구현하며, 체력이 낮을 때 `state.stats.stunBonus`를 반영해 기절시키고 `zombie:stunned`를 냅니다.
+- 피격 판정은 `x, z, radius, height` 원기둥 수학으로 합니다(Three 레이캐스트 금지, `view`는 불투명 핸들). 피해는 항상 대상의 `hit()`을 부릅니다. `ZombieRef.hit(dmg, byAlly)`는 W2가 구현하며, 체력이 낮을 때 `state.stats.stunBonus`를 반영해 기절시키고 `zombie:stunned`를 냅니다.
 - 좀비 아군화: W5가 기절 좀비에 백신을 쓰고 성공하면 `zombie:converted { id }`를 냅니다. W2는 그 좀비를 `zombies`에서 빼고 메시를 씬에 남겨 둡니다. W5는 같은 `obj`를 가져와 아군으로 씁니다.
 - `nearest(list, x, z, maxDist)`로 가장 가까운 대상을 찾습니다. ID는 `newId()`.
 
