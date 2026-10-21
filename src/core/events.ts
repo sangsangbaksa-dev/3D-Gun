@@ -27,7 +27,7 @@ export interface GameEvents {
   'weapon:upgraded': { weapon: string; level: number };
   /** 효과음 훅: W7 오디오가 구독해 실제 소리로 바꿀 수 있다. 기본 합성음은 player/view/sfx.ts */
   'weapon:sound': { weapon: string; kind: 'fire' | 'dry' | 'reload' | 'reloadDone' | 'switch' | 'hit' | 'kill' | 'headshot' };
-  'weapon:unlock': { weapon: string };               // 무기 획득 (loot 가 낸다). player 가 state.weapons 에 넣는다
+  'weapon:unlock': { weapon: string };               // 무기 획득 (강화창이 코인으로 산다). player 가 state.weapons 에 넣는다
   // enemies
   'zombie:stunned': { id: number };
   'boss:spawn': { wave: number; type: string };
@@ -50,7 +50,7 @@ export interface GameEvents {
   'core:damaged': { hp: number; maxHp: number };     // 기지 핵 피해 → UI 체력바
   'core:destroyed': undefined;                       // 핵 파괴 → enemies 가 체크포인트 복귀 처리
   'interact:lab': undefined;                         // 연구소에서 E → allies 가 백신 제작 창을 연다
-  'interact:shop': undefined;                        // 상점에서 E → base 가 판매/열쇠 구매 창을 연다
+  'interact:shop': undefined;                        // 상점에서 E → base 가 교환소를 연다
   // skills
   'xp:gain': { amount: number; reason: string };
 }
