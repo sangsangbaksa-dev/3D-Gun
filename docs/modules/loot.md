@@ -54,7 +54,7 @@ src/loot/
 ## 이벤트
 | 방향 | 이벤트 |
 |------|--------|
-| 구독 | `enemy:killed`, `wave:clear`, `boss:dead` |
+| 구독 | `enemy:killed`, `wave:clear`, `boss:dead`, `run:start` (상자·타이머 초기화, `pity`·`keys`·`goldKeys`=0, `weapons`=['pistol']. 코스튬은 유지) |
 | 발행 | `chest:opened { tier, rarity, text }`, `toast` |
 
 ## 저장
