@@ -14,6 +14,7 @@ import { Effects } from './view/effects';
 import { CombatHud, UpgradePanel } from './view/hud';
 import { GunSfx } from './view/sfx';
 import { events } from '../core/events';
+import type { CameraView } from './logic/camera';
 import { PlayerView } from './view/playerView';
 import type { System } from '../core/types';
 import type { Player } from './logic/player';
@@ -36,6 +37,8 @@ const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
 const groundY = (_x: number, _z: number) => 0;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
+/** F3 으로 토글. 기본은 1인칭. pressed 는 가장자리 한 번만 담기므로 누르고 있어도 반복되지 않는다 */
+let cameraView: CameraView = 'first';
 let shake = 0;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -81,8 +84,9 @@ export const PlayerSystem: System = {
     prevFire = input.mouseDown;
     if (panel && input.pressed.has('KeyV') && (state.mode === 'play' || panel.open)) togglePanel();
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
+    if (state.mode === 'play' && input.pressed.has('F3')) cameraView = cameraView === 'first' ? 'third' : 'first';
 
-    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat });
+    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: cameraView });
 
     // 카메라
     const cam = ctx.camera;
@@ -96,7 +100,7 @@ export const PlayerSystem: System = {
     ctx.world.sun.position.set(p.x + 30, 50, p.z + 20);
     ctx.world.sun.target.position.set(p.x, 0, p.z);
 
-    view.update(dt, p, w);
+    view.update(dt, p, w, cameraView);
     if (!playerOptions.combat) return;
 
     // 사격 연출

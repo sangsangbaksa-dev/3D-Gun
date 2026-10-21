@@ -5,7 +5,7 @@ import { MAP } from '../../data/map';
 import { events } from '../../core/events';
 import { state, spend } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
-import { aimOrigin, cameraPose, type CameraPose } from './camera';
+import { aimOrigin, cameraPose, type CameraPose, type CameraView } from './camera';
 import { stepMovement, type MoveIntent } from './movement';
 import { createPlayerState, type Player } from './player';
 import { createWeaponState, currentSpread, isReloading, magSize, startReload, switchWeapon, tickWeapon, tryFire, type FireResult, type WeaponState } from './weapons';
@@ -30,6 +30,8 @@ export interface FrameEnv {
   canShoot: boolean;
   /** false 면 사격·피격·무기·체력 처리를 건너뛰고 이동/카메라만 한다 (테스트 빌드가 전투를 자체 처리하는 동안) */
   combat: boolean;
+  /** 1인칭 눈 또는 3인칭 어깨 카메라 */
+  view: CameraView;
 }
 
 export interface FrameOut {
@@ -115,7 +117,7 @@ export class PlayerController {
       this.pendingHits.length = 0;
       stepMovement(p, dt, it, stats.dashCd, env.collide);
       p.y = env.groundY(p.x, p.z);
-      out.pose = cameraPose(p, GUNS[w.current].adsFov);
+      out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
       return out;
     }
 
@@ -149,7 +151,7 @@ export class PlayerController {
     if (!wasDashing && p.dashT > 0 && dashReady) out.dashed = true;
     p.y = env.groundY(p.x, p.z);
 
-    out.pose = cameraPose(p, GUNS[w.current].adsFov);
+    out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
     // 무기
     if (tickWeapon(w, dt, stats) === 'reloaded') { out.reloadDone = true; events.emit('weapon:sound', { weapon: w.current, kind: 'reloadDone' }); this.emitAmmo(); }
@@ -175,7 +177,7 @@ export class PlayerController {
           if (it.firePressed) events.emit('weapon:sound', { weapon: w.current, kind: 'dry' });
         } else {
           const shot = tryFire(w, {
-            origin: aimOrigin(out.pose, p), dir: out.pose.dir,
+            origin: aimOrigin(out.pose, p, env.view), dir: out.pose.dir,
             targets: env.zombies, stats, aiming: p.aiming, moving: p.moving, rng: env.rng,
           });
           if (shot) {

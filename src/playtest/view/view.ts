@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { makeHumanoid, animateWalk, Humanoid } from '../../core/humanoid';
 import { obstacles } from '../../core/world';
 import { input } from '../../core/input';
-import { WEAPONS, WEAPON_ORDER, RES_KEYS, RES_LABEL, REWARD_NAMES, FINAL_WAVE } from '../../data';
+import { WEAPONS, WEAPON_ORDER, RES_KEYS, RES_LABEL, FINAL_WAVE } from '../../data';
 import type { Ctx } from '../../core/types';
-import { Sim, SimInput, ResNode, Chest, Zed, Struct, STRUCT_DEF, MAX_TURRETS, createSim, mulberry32, stepSim, interactTarget, continueEndless, forward, MAX_DMG_LEVEL } from '../logic/sim';
+import { Sim, SimInput, ResNode, Zed, Struct, STRUCT_DEF, MAX_TURRETS, createSim, mulberry32, stepSim, interactTarget, continueEndless, forward, MAX_DMG_LEVEL } from '../logic/sim';
 
 import { sfx } from './sfx';
 import { state } from '../../core/state';
@@ -60,21 +60,6 @@ function nodeMesh(n: ResNode): THREE.Group {
   return g;
 }
 
-const TIER_COLOR = [0x9a6b3a, 0x9aa6b4, 0xf0c030];
-function chestMesh(c: Chest): { g: THREE.Group; lid: THREE.Mesh } {
-  const g = new THREE.Group();
-  const col = TIER_COLOR[c.tier];
-  g.add(mesh(new THREE.BoxGeometry(1.1, 0.6, 0.75), col, 0, 0.3, 0));
-  const lid = mesh(new THREE.BoxGeometry(1.1, 0.25, 0.75), col, 0, 0.72, 0);
-  g.add(lid);
-  g.add(mesh(new THREE.BoxGeometry(0.16, 0.9, 0.8), 0x2a2a2a, 0, 0.45, 0));
-  const light = new THREE.PointLight(col, 1.2, 5);
-  light.position.y = 1.2;
-  g.add(light);
-  g.position.set(c.x, 0, c.z);
-  return { g, lid };
-}
-
 function structMesh(t: Struct): THREE.Group {
   const g = new THREE.Group();
   if (t.kind === 'turret') {
@@ -100,7 +85,6 @@ export class PlaytestView {
   sim: Sim;
   private ctx!: Ctx;
   private nodeViews = new Map<number, THREE.Group>();
-  private chestViews = new Map<number, { g: THREE.Group; lid: THREE.Mesh; open: number }>();
   private zViews = new Map<number, ZView>();
   private structViews = new Map<number, { g: THREE.Group; ob: { x: number; z: number; r: number } }>();
   private coreFill!: HTMLElement;
@@ -120,7 +104,7 @@ export class PlaytestView {
   constructor() {
     let best = 0;
     try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch { /* 저장소 불가 */ }
-    this.sim = createSim(mulberry32(this.seed), best, true);
+    this.sim = createSim(mulberry32(this.seed), best);
     this.flashEl = document.createElement('div');
     this.flashEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;background:radial-gradient(transparent 40%,#c00a);opacity:0;transition:opacity .25s;z-index:3';
     document.body.appendChild(this.flashEl);
@@ -129,7 +113,7 @@ export class PlaytestView {
   init(ctx: Ctx) {
     this.ctx = ctx;
     this.buildWorld();
-    $('help').innerHTML = 'WASD 이동 · Shift 대시 · 클릭 사격 · R 재장전 · 1/2/3 무기<br>E 길게: 채집 / E: 상자 열기 · U 공격력 강화(나무20 돌10) · H 치료(약초5) · N 웨이브 바로 시작<br>T 포탑 설치(나무10 돌8) · Y 바리케이드 설치(나무4) — 기지 코어를 지켜라!';
+    $('help').innerHTML = 'WASD 이동 · Shift 대시 · 클릭 사격 · R 재장전 · 1/2/3 무기<br>E 길게: 채집 · U 공격력 강화(나무20 돌10) · H 치료(약초5) · N 웨이브 바로 시작<br>T 포탑 설치(나무10 돌8) · Y 바리케이드 설치(나무4) · V 코인으로 무기 구매 — 기지 코어를 지켜라!';
     $('xpFill').parentElement!.style.display = 'none';
     const cb = document.createElement('div');
     cb.style.cssText = 'margin-top:6px;width:360px;font-size:12px';
@@ -138,6 +122,7 @@ export class PlaytestView {
     this.coreFill = $('coreFill');
     events.on('interact:prompt', (e) => { this.extPrompt = e.text; });
     events.on('ui:modal', (e) => { this.extModal = e.open; input.modalOpen = e.open || this.overlayOpen; });
+    events.on('toast', (e) => this.toast(e.text));
     if (debug) (window as unknown as Record<string, unknown>).__zt = { view: this, ctx };
   }
 
@@ -167,9 +152,7 @@ export class PlaytestView {
   private newGame() {
     this.seed = Math.floor(Math.random() * 1e9);
     const best = this.sim.best;
-    this.sim = createSim(mulberry32(this.seed), best, true);
-    this.chestViews.forEach((c) => { this.ctx.scene.remove(c.g); disposeObj(c.g); });
-    this.chestViews.clear();
+    this.sim = createSim(mulberry32(this.seed), best);
     this.structViews.forEach((v) => { this.ctx.scene.remove(v.g); disposeObj(v.g); });
     this.structViews.clear();
     if (this.coreMesh) { this.ctx.scene.remove(this.coreMesh); disposeObj(this.coreMesh); }
@@ -184,7 +167,7 @@ export class PlaytestView {
     const p = ctx.player;
     const canPlay = !this.overlayOpen && !this.extModal;
     let slot = input.pressed.has('Digit1') ? 0 : input.pressed.has('Digit2') ? 1 : input.pressed.has('Digit3') ? 2 : -1;
-    if (slot >= 0 && !state.weapons.includes(WEAPON_ORDER[slot])) { slot = -1; if (canPlay) this.toast('아직 없는 무기입니다 (상자에서 획득)'); }
+    if (slot >= 0 && !state.weapons.includes(WEAPON_ORDER[slot])) { slot = -1; if (canPlay) this.toast('아직 없는 무기입니다 (V 에서 코인으로 구매)'); }
     const o = ctx.camera.position, d = ctx.aimDir;
     const inp: SimInput = {
       px: p.x, pz: p.z, iframes: p.iframes, yaw: p.yaw,
@@ -216,14 +199,6 @@ export class PlaytestView {
 
   private syncEntities(dt: number) {
     const s = this.sim, sc = this.ctx.scene;
-    for (const c of s.chests) {
-      let v = this.chestViews.get(c.id);
-      if (!v) { const m = chestMesh(c); sc.add(m.g); v = { ...m, open: 0 }; this.chestViews.set(c.id, v); }
-      if (c.opened) { v.open = Math.min(1, v.open + dt * 3); v.lid.rotation.x = -v.open * 1.8; v.lid.position.y = 0.72 + v.open * 0.1; }
-    }
-    for (const [id, v] of this.chestViews) {
-      if (!s.chests.some((c) => c.id === id)) { sc.remove(v.g); disposeObj(v.g); this.chestViews.delete(id); }
-    }
     for (const n of s.nodes) {
       const g = this.nodeViews.get(n.id);
       if (g) g.scale.setScalar(n.cooldown > 0 ? 0.35 : 1);
@@ -314,7 +289,6 @@ export class PlaytestView {
         case 'hurt': this.flashEl.style.opacity = '0.9'; setTimeout(() => (this.flashEl.style.opacity = '0'), 120); sfx.hurt(); break;
         case 'reload': sfx.reload(); break;
         case 'gather': sfx.gather(); break;
-        case 'chest': this.toast(e.text, 6000); this.banner(`[${REWARD_NAMES[e.reward]}]`); sfx.chest(e.reward); break;
         case 'turretShot': {
           const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(e.sx, 0.85, e.sz), new THREE.Vector3(e.ex, e.ey, e.ez)]);
           const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x7fe0ff, transparent: true }));
@@ -369,7 +343,7 @@ export class PlaytestView {
       ? `준비 ${Math.ceil(s.phaseT)}초 (N: 바로 시작) · 최고 ${s.best}`
       : s.phase === 'combat' ? `남은 좀비 ${left}` : '';
     $('res').innerHTML = RES_KEYS.map((k) => `${RES_LABEL[k]} ${s.res[k]}`).join(' · ')
-      + `<br>골드 ${s.gold} · 열쇠 ${state.keys}/${state.goldKeys} · 포탑 ${s.structs.filter((t) => t.kind === 'turret').length}/${MAX_TURRETS} · 공격력 강화 Lv${s.dmgLevel}/${MAX_DMG_LEVEL} · 처치 ${s.kills}`;
+      + `<br>코인 ${s.gold} · 포탑 ${s.structs.filter((t) => t.kind === 'turret').length}/${MAX_TURRETS} · 공격력 강화 Lv${s.dmgLevel}/${MAX_DMG_LEVEL} · 처치 ${s.kills}`;
     const boss = s.zombies.find((z) => z.boss);
     const be = $('boss');
     be.style.display = boss ? 'block' : 'none';
@@ -379,7 +353,7 @@ export class PlaytestView {
     if (!t && this.extPrompt && this.sim.phase !== 'dead') { pr.style.display = 'block'; pr.textContent = this.extPrompt; }
     else if (t && this.sim.phase !== 'dead') {
       pr.style.display = 'block';
-      pr.textContent = t.kind === 'node' ? `[E 길게] ${RES_LABEL[t.node.res]} 채집` : `[E] ${['나무', '철', '황금'][t.chest.tier]} 상자 열기`;
+      pr.textContent = `[E 길게] ${RES_LABEL[t.node.res]} 채집`;
     } else pr.style.display = 'none';
     pg.style.display = s.gatherProg > 0 ? 'block' : 'none';
     (pg.firstElementChild as HTMLElement).style.width = `${s.gatherProg * 100}%`;

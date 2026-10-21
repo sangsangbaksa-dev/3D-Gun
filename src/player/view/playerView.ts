@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { makeHumanoid, animateWalk, type Humanoid } from '../../core/humanoid';
 import { GUNS, GUN_ORDER, type GunId } from '../../data';
+import type { CameraView } from '../logic/camera';
 import type { Player } from '../logic/player';
 import type { WeaponState } from '../logic/weapons';
 import { buildGun, type GunModel, type GunPart } from './guns';
@@ -30,6 +31,8 @@ export class PlayerView {
   private bobT = 0;
   private time = 0;
   private lastShotAge = 9;
+  /** 1인칭에서 가릴 몸통 (머리, 상체, 다리, 모자, 배낭). 팔과 총은 남긴다 */
+  private fpsHide: THREE.Object3D[] = [];
 
   constructor(scene: THREE.Scene) {
     this.model = makeHumanoid(0xe0b48c, 0x3a6ea5);
@@ -39,6 +42,9 @@ export class PlayerView {
     cap.position.set(0, 1.94, -0.03); cap.castShadow = true; g.add(cap);
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.58, 0.22), new THREE.MeshLambertMaterial({ color: 0x4d5a3a }));
     pack.position.set(0, 1.1, 0.29); pack.castShadow = true; g.add(pack);
+    // 머리·상체는 그룹에 직접 붙은 메시. 모자·배낭도 메시. 다리 그룹과 함께 가리고 팔·총(피벗)은 둔다.
+    this.fpsHide = [...this.model.legs, ...g.children.filter((c): c is THREE.Mesh => c instanceof THREE.Mesh)];
+    for (const part of this.fpsHide) part.visible = false;
 
     this.pivot.position.set(0.11, 1.47, -0.5);
     g.add(this.pivot);
@@ -100,8 +106,10 @@ export class PlayerView {
     this.light.intensity = k === 'shotgun' || k === 'sniper' ? 6 : 3;
   }
 
-  update(dt: number, p: Player, w: WeaponState) {
+  update(dt: number, p: Player, w: WeaponState, viewMode: CameraView) {
     const g = this.model.group;
+    const showBody = viewMode !== 'first';
+    for (const part of this.fpsHide) part.visible = showBody;
     this.time += dt;
     for (const id of GUN_ORDER) this.guns[id].root.visible = id === w.current;
     const gun = this.guns[w.current], def = GUNS[w.current];

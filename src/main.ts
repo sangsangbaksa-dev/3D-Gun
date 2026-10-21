@@ -4,7 +4,6 @@ import { GatheringSystem } from './gathering';
 import { InteractSystem } from './core/interact';
 import { EnemiesSystem } from './enemies';
 import { PlaytestSystem } from './playtest';
-import { LootSystem } from './loot';
 import { BaseSystem } from './base';
 import { AlliesSystem } from './allies';
 import { HudSystem } from './core/hud';
@@ -15,7 +14,7 @@ import { Tycoon2dSystem } from './tycoon2d';
 const usePlaytest = new URLSearchParams(location.search).has('playtest');
 playerOptions.combat = !usePlaytest;
 startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
-  ? [PlayerSystem, InteractSystem, PlaytestSystem, LootSystem]
+  ? [PlayerSystem, InteractSystem, PlaytestSystem]
   : [
     Tycoon2dSystem, // 런 간 영구 진행(사망 → 2D 업그레이드). 다른 모듈보다 먼저 init 해서 state.start 를 채운다
     GatheringSystem,
@@ -24,6 +23,5 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     EnemiesSystem,
     AlliesSystem,
     InteractSystem,
-    LootSystem,
     HudSystem,
   ]);

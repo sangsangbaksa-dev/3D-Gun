@@ -1,8 +1,8 @@
 // DOM 창: 상점 창, 건설 HUD. 스타일은 이 파일이 직접 주입한다 (index.html 은 W7 소유).
-import { BUILDINGS, BUILDING_ORDER, KEY_PRICE, RES_KEYS, RES_LABEL, RES_PRICE, type BuildingId } from '../../data';
+import { BUILDINGS, BUILDING_ORDER, RES_BUY_PRICE, RES_KEYS, RES_LABEL, RES_PRICE, type BuildingId } from '../../data';
 import { state } from '../../core/state';
 import { costText, canAfford, type Building, type Cost } from '../logic/base';
-import { sell, sellAll, sellValue, buyKey } from '../logic/shop';
+import { buy, sell, sellAll, sellValue } from '../logic/shop';
 
 const CSS = `
 .bz-root{position:fixed;inset:0;pointer-events:none;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#eef3f6;z-index:4}
@@ -25,7 +25,7 @@ const CSS = `
 .bz-hover b{font-size:14px}
 .bz-hover kbd{background:#ffffff1c;border-radius:4px;padding:0 5px;font-family:inherit;font-size:11px}
 .bz-ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000b;pointer-events:auto;z-index:6}
-.bz-card{width:min(640px,94vw);max-height:88vh;overflow:auto;background:linear-gradient(160deg,#1b2530,#141b23);border:1px solid #ffffff26;border-radius:16px;padding:20px 24px 18px;box-shadow:0 20px 60px #000c}
+.bz-card{width:min(760px,96vw);max-height:88vh;overflow:auto;background:linear-gradient(160deg,#1b2530,#141b23);border:1px solid #ffffff26;border-radius:16px;padding:20px 24px 18px;box-shadow:0 20px 60px #000c}
 .bz-card h2{margin:0 0 2px;font-size:22px}
 .bz-sub{color:#9fb3c0;font-size:12.5px;margin-bottom:12px}
 .bz-gold{float:right;font-size:18px;font-weight:700;color:#f2c14e}
@@ -34,6 +34,9 @@ const CSS = `
 .bz-h{font-size:12px;color:#7fe3ff;font-weight:700;letter-spacing:.5px;margin:2px 0 6px}
 .bz-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #ffffff12;font-size:13.5px}
 .bz-row .n{flex:1}.bz-row small{color:#9fb3c0}
+.bz-xrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #ffffff12;font-size:13.5px}
+.bz-xrow .n{flex:1 1 200px}.bz-xrow small{color:#9fb3c0}
+.bz-xrow .btns{display:flex;flex-wrap:wrap;gap:4px}
 .bz-btn{background:#2f6f4e;color:#fff;border:0;border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
 .bz-btn:hover:not(:disabled){filter:brightness(1.2)}
 .bz-btn:disabled{background:#37404a;color:#8a96a0;cursor:default}
@@ -130,26 +133,25 @@ export class BasePanels {
     const c = this.card;
     c.innerHTML = '';
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
-    el('h2', '', c, '🏪 상점');
-    el('div', 'bz-sub', c, '자원을 팔아 골드를 벌고, 골드로 상자 열쇠를 사요. (E / Esc 로 닫기)');
-    const cols = el('div', 'bz-cols', c);
-    const left = el('div', '', cols), right = el('div', '', cols);
-    el('div', 'bz-h', left, '자원 판매');
+    el('h2', '', c, '교환소');
+    el('div', 'bz-sub', c, '전투에서 얻은 코인으로 자원을 사고, 가진 자원은 코인으로 팔아요. (E / Esc 로 닫기)');
     for (const k of RES_KEYS) {
-      const row = el('div', 'bz-row', left, `<span class="n">${RES_LABEL[k]} <small>×${state.res[k]} · 개당 ${RES_PRICE[k]}G</small></span>`);
-      const b1 = el('button', 'bz-btn', row, '1개'); b1.disabled = state.res[k] < 1;
-      const b2 = el('button', 'bz-btn', row, '전부'); b2.disabled = state.res[k] < 1;
-      b1.onclick = () => sell(k, 1); b2.onclick = () => sell(k, state.res[k]);
-    }
-    el('div', 'bz-h', right, '열쇠 구매');
-    const keys: { kind: 'iron' | 'gold'; name: string; desc: string; have: number }[] = [
-      { kind: 'iron', name: '🗝 철 열쇠', desc: '철 상자를 열어요', have: state.keys },
-      { kind: 'gold', name: '🔑 황금 열쇠', desc: '황금 상자를 열어요', have: state.goldKeys },
-    ];
-    for (const k of keys) {
-      const box = el('div', 'bz-keybox', right, `<div class="t">${k.name} <small style="color:#9fb3c0">보유 ${k.have}</small></div><div class="d">${k.desc}</div>`);
-      const b = el('button', 'bz-btn gold', box, `구매 ${KEY_PRICE[k.kind]}G`); b.disabled = state.gold < KEY_PRICE[k.kind];
-      b.onclick = () => buyKey(k.kind);
+      const sellP = RES_PRICE[k], buyP = RES_BUY_PRICE[k];
+      const row = el('div', 'bz-xrow', c);
+      el('div', 'n', row, `${RES_LABEL[k]} <small>보유 ${state.res[k]} · 판매 ${sellP} · 구매 ${buyP}</small>`);
+      const btns = el('div', 'btns', row);
+      const s1 = el('button', 'bz-btn', btns, '팔기 1');
+      const sa = el('button', 'bz-btn', btns, '팔기 전부');
+      const b1 = el('button', 'bz-btn gold', btns, '사기 1');
+      const b10 = el('button', 'bz-btn gold', btns, '사기 10');
+      s1.disabled = state.res[k] < 1;
+      sa.disabled = state.res[k] < 1;
+      b1.disabled = state.gold < buyP;
+      b10.disabled = state.gold < buyP * 10;
+      s1.onclick = () => sell(k, 1);
+      sa.onclick = () => sell(k, state.res[k]);
+      b1.onclick = () => buy(k, 1);
+      b10.onclick = () => buy(k, 10);
     }
     const foot = el('div', 'bz-foot', c);
     const all = el('button', 'bz-btn', foot, `전부 팔기 +${sellValue()}G`); all.disabled = sellValue() <= 0; all.onclick = () => sellAll();

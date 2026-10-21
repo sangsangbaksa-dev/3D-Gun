@@ -162,8 +162,10 @@ export class EnemySim implements DamageSink {
     events.emit('enemy:killed', { x: z.x, z: z.z, type: z.type, byAlly });
     const rw = ZOMBIE_REWARD[z.type];
     const mul = z.elite ? ELITE.reward : 1;
-    state.gold += rw.gold * mul;
+    const coins = rw.gold * mul;
+    state.gold += coins;
     events.emit('xp:gain', { amount: rw.xp * mul, reason: 'kill' });
+    events.emit('toast', { text: `코인 +${coins}` });
     changed();
     if (z.type === 'fatty') {
       this.gases.push({ x: z.x, z: z.z, r: ENEMY_RULES.gasRadius, t: ENEMY_RULES.gasTime, tick: 0, dps: ENEMY_RULES.gasDps, kind: 'gas' });

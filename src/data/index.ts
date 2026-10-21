@@ -6,6 +6,8 @@ export type ResKey = 'wood' | 'stone' | 'iron' | 'herb' | 'parts';
 export const RES_KEYS: ResKey[] = ['wood', 'stone', 'iron', 'herb', 'parts'];
 export const RES_LABEL: Record<ResKey, string> = { wood: '나무', stone: '돌', iron: '철', herb: '약초', parts: '부품' };
 export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, herb: 4, parts: 10 };
+/** 코인으로 자원을 살 때. 판매가의 3배라 팔고 다시 사면 코인이 늘지 않는다 */
+export const RES_BUY_PRICE: Record<ResKey, number> = { wood: 6, stone: 9, iron: 24, herb: 12, parts: 30 };
 
 // ── 채집 (소유: gathering) ─────────────────────────────────────────────
 // NodeKind 는 data/map.ts 의 ResNodeKind 와 같은 이름을 쓴다.
@@ -104,7 +106,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
 };
 
 // ── 총기 전체 표 (소유: player). WEAPONS/WeaponId 는 기존 모듈(loot, playtest)이 쓰므로 그대로 두고,
-// W1 은 새 총기까지 포함한 GUNS 를 쓴다. 새 총기는 상자 보상표(loot)나 상점에서 id 로 지급한다.
+// W1 은 새 총기까지 포함한 GUNS 를 쓴다. 권총은 기본 지급이고, 나머지 총기는 강화창에서 코인으로 산다.
 export type GunId = WeaponId | 'magnum' | 'rifle' | 'sniper';
 export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle' | 'sniper';
 export interface GunDef extends WeaponDef {
@@ -145,6 +147,15 @@ export const GUN_UPGRADE = {
   /** 레벨 n → n+1 비용 (배열 인덱스 = 현재 레벨) */
   gold: [60, 120, 220, 380, 600],
   parts: [1, 2, 3, 5, 8],
+};
+/** 미보유 총기 구매가(코인). 권총은 시작 지급.
+ *  매그넘 120·소총 600 = 강화 비용, 샷건 400·기관총/저격 1200 = 타이쿤 시작 보유 골드. */
+export const GUN_UNLOCK_GOLD: Partial<Record<GunId, number>> = {
+  magnum: 120,
+  shotgun: 400,
+  rifle: 600,
+  smg: 1200,
+  sniper: 1200,
 };
 
 // 플레이어 이동/전투 공통 수치 (소유: player)
@@ -192,7 +203,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       ],
     },
   },
-  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 판매, 열쇠 구매' },
+  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 교환' },
   mgtower: {
     name: '기관포탑', cost: { wood: 10, stone: 10, iron: 8, parts: 4 }, radius: 1, hp: 350, height: 2.4, desc: '빠른 연사, 탄약 소모 큼',
     turret: {

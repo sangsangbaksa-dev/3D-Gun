@@ -238,7 +238,7 @@ export function createBase(deps: BaseDeps) {
   function actionFor(b: Building): Action | null {
     const def = BUILDINGS[b.kind];
     if (b.kind === 'lab') return { kind: 'open-lab', label: `${def.name}: 백신 제작` };
-    if (b.kind === 'shop') return { kind: 'open-shop', label: `${def.name}: 판매/열쇠` };
+    if (b.kind === 'shop') return { kind: 'open-shop', label: `${def.name}: 교환소` };
     if (b.hp < b.maxHp - 0.5) { const c = repairCost(b); return { kind: 'repair', label: `${def.name} 수리 (${costText(c)})`, cost: c }; }
     if (def.turret && b.ammo < def.turret.ammo * 0.85) return { kind: 'refill', label: `${def.name} 탄약 보충 ${b.ammo}/${def.turret.ammo} (${costText(def.turret.refill)})`, cost: def.turret.refill };
     const u = state.phase === 'prep' ? upgradeInfo(b) : null;
