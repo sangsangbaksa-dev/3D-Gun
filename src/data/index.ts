@@ -7,6 +7,83 @@ export const RES_KEYS: ResKey[] = ['wood', 'stone', 'iron', 'herb', 'parts'];
 export const RES_LABEL: Record<ResKey, string> = { wood: '나무', stone: '돌', iron: '철', herb: '약초', parts: '부품' };
 export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, herb: 4, parts: 10 };
 
+// ── 채집 (소유: gathering) ─────────────────────────────────────────────
+// NodeKind 는 data/map.ts 의 ResNodeKind 와 같은 이름을 쓴다.
+export type NodeKind = 'tree' | 'rock' | 'iron' | 'herb' | 'wreck';
+export const NODE_KINDS: NodeKind[] = ['tree', 'rock', 'iron', 'herb', 'wreck'];
+export interface GatherNodeDef {
+  name: string;
+  /** 안내 문구 동사 (예: 'E 길게 눌러 나무 베기') */
+  verb: string;
+  res: ResKey;
+  /** 속도 1.0 기준 채집에 걸리는 초 (state.stats.gatherSpeed 로 나눈다) */
+  work: number;
+  yieldMin: number; yieldMax: number;
+  /** 고갈 뒤 재생성까지 걸리는 초 (기획: 60~180초) */
+  respawnMin: number; respawnMax: number;
+  /** 충돌 반경(m). 개체마다 scale 이 곱해진다 */
+  radius: number;
+  /** 고갈된 뒤 남는 충돌 비율 (그루터기, 잔해) */
+  depletedBlock: number;
+}
+export const GATHER_NODES: Record<NodeKind, GatherNodeDef> = {
+  tree:  { name: '나무', verb: '나무 베기', res: 'wood', work: 2.2, yieldMin: 3, yieldMax: 5, respawnMin: 80, respawnMax: 120, radius: 0.7, depletedBlock: 0.4 },
+  rock:  { name: '바위', verb: '바위 깨기', res: 'stone', work: 2.8, yieldMin: 2, yieldMax: 4, respawnMin: 90, respawnMax: 140, radius: 1.1, depletedBlock: 0.35 },
+  iron:  { name: '철광석', verb: '철광석 캐기', res: 'iron', work: 4.0, yieldMin: 1, yieldMax: 2, respawnMin: 150, respawnMax: 180, radius: 1.0, depletedBlock: 0.35 },
+  herb:  { name: '약초 덤불', verb: '약초 뜯기', res: 'herb', work: 1.0, yieldMin: 2, yieldMax: 3, respawnMin: 60, respawnMax: 90, radius: 0.55, depletedBlock: 0 },
+  wreck: { name: '폐차', verb: '부품 뜯기', res: 'parts', work: 3.2, yieldMin: 1, yieldMax: 2, respawnMin: 150, respawnMax: 180, radius: 1.5, depletedBlock: 0.8 },
+};
+
+/**
+ * MAP.resourceNodes 가 비어 있을 때 절차적으로 채우는 밀도: 구역 종류별, 100㎡당 노드 수.
+ * 키는 data/map.ts 의 ZoneKind. 없는 종류(base, boss)는 비어 있다.
+ */
+export const GATHER_ZONE_DENSITY: Record<string, Partial<Record<NodeKind, number>>> = {
+  forest:    { tree: 3.2, herb: 0.4 },
+  quarry:    { rock: 1.6, iron: 0.7 },
+  mine:      { iron: 1.4, rock: 1.0 },
+  field:     { herb: 1.2, tree: 0.3 },
+  ruins:     { wreck: 0.9, rock: 0.3, herb: 0.2 },
+  wasteland: { wreck: 0.25, rock: 0.3 },
+};
+/** 구역 밖 빈 땅에 흩뿌리는 밀도: 맵 10,000㎡당 노드 수 (약초와 폐차가 구역이 없어도 어디서든 보이게) */
+export const GATHER_OPEN_DENSITY: Partial<Record<NodeKind, number>> = { tree: 6, rock: 3, iron: 1.2, herb: 12, wreck: 4 };
+export const GATHER_LAYOUT = {
+  seed: 20240607,
+  /** 기지 건설 반경 바깥으로 더 띄울 거리 */
+  baseMargin: 2,
+  /** 좀비 레인(경로) 양옆으로 비울 반폭(m) */
+  laneHalfWidth: 4,
+  /** 노드 사이 최소 간격(m) */
+  gap: 1.4,
+  /** 맵 가장자리에서 띄울 거리 */
+  edgeMargin: 4,
+  /** 플레이어 시작 위치 주변 */
+  startClear: 6,
+  /** 구역 안에서 노드를 놓을 때 중심 쪽으로 몰리는 정도 (0 = 균등, 클수록 가운데에 몰림) */
+  zoneBias: 0.35,
+  /** 시도 횟수 상한 (노드 1개당) */
+  tries: 30,
+};
+/** 화면에서 이 거리(m) 넘게 떨어진 노드는 그리기/애니메이션을 건너뛴다 (넓은 맵 성능) */
+export const GATHER_VIEW_DIST = 95;
+/** 노드까지 이 거리(노드 반경 + 값) 안이면 E 를 쓸 수 있다 */
+export const GATHER_REACH = 2.2;
+/** 채집 중 이 시간(초) 안에 다시 누르지 않으면 진행도가 줄기 시작한다 */
+export const GATHER_IDLE_GRACE = 0.6;
+/** 진행도가 줄어드는 속도 (초당 비율) */
+export const GATHER_DECAY = 0.9;
+
+/** 좀비 처치 샘플 드롭. special=true 면 특수 샘플(state.samplesSp). type 은 ZType 문자열 */
+export interface SampleDropDef { chance: number; min: number; max: number; special: boolean }
+export const SAMPLE_DROPS: Record<string, SampleDropDef> = {
+  normal: { chance: 0.3, min: 1, max: 1, special: false },
+  runner: { chance: 0.25, min: 1, max: 1, special: false },
+  fatty:  { chance: 0.6, min: 1, max: 2, special: false },
+  boss:   { chance: 1, min: 2, max: 3, special: true },
+  king:   { chance: 1, min: 5, max: 5, special: true },
+};
+
 export type WeaponId = 'pistol' | 'shotgun' | 'smg';
 export interface WeaponDef {
   name: string; dmg: number; rate: number; mag: number; reload: number; pellets: number; spread: number; range: number;
@@ -42,16 +119,72 @@ export const PLAYER = {
   aimAssist: 0.15,     // 3인칭 조준 보정: 판정 반경에 더하는 여유(m)
 };
 
-export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop';
-export interface BuildingDef { name: string; cost: Partial<Record<ResKey, number>>; radius: number; hp: number; desc: string }
-export const BUILDING_ORDER: BuildingId[] = ['lab', 'barracks', 'barricade', 'tower', 'shop'];
+export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
+type Cost = Partial<Record<ResKey, number>>;
+/** 포탑 한 단계의 능력. 1단계가 기본, 이후는 업그레이드 */
+export interface TurretLevel { dmg: number; rate: number; range: number; upCost: Cost; upGold: number }
+export interface BuildingDef {
+  name: string; cost: Cost; radius: number; hp: number; desc: string;
+  /** 사격 판정용 원기둥 높이(m) */
+  height: number;
+  /** 포탑류: 탄약 수, 보충 비용(한 번에 가득), 단계별 능력 */
+  turret?: { ammo: number; refill: Cost; levels: TurretLevel[] };
+  /** 함정류: 범위 안의 좀비를 느리게 하고 지속 피해 */
+  trap?: { radius: number; slow: number; dps: number };
+}
+export const BUILDING_ORDER: BuildingId[] = ['tower', 'mgtower', 'barricade', 'trap', 'lab', 'barracks', 'shop'];
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, desc: 'E: 백신 제작' },
-  barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, desc: '아군 상한 +3' },
-  barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1.2, hp: 200, desc: '좀비를 막는다' },
-  tower: { name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1.2, hp: 300, desc: '자동 사격' },
-  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, desc: 'E: 자원 판매, 열쇠 구매' },
+  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작' },
+  barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
+  barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
+  tower: {
+    name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1, hp: 300, height: 5, desc: '자동 사격, 업그레이드',
+    turret: {
+      ammo: 40, refill: { wood: 2, stone: 1 },
+      levels: [
+        { dmg: 9, rate: 0.7, range: 15, upCost: {}, upGold: 0 },
+        { dmg: 14, rate: 0.6, range: 17, upCost: { wood: 10, stone: 10, iron: 2 }, upGold: 0 },
+        { dmg: 22, rate: 0.5, range: 19, upCost: { stone: 14, iron: 6, parts: 2 }, upGold: 30 },
+      ],
+    },
+  },
+  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 판매, 열쇠 구매' },
+  mgtower: {
+    name: '기관포탑', cost: { wood: 10, stone: 10, iron: 8, parts: 4 }, radius: 1, hp: 350, height: 2.4, desc: '빠른 연사, 탄약 소모 큼',
+    turret: {
+      ammo: 240, refill: { iron: 2, parts: 1 },
+      levels: [
+        { dmg: 4, rate: 0.11, range: 13, upCost: {}, upGold: 0 },
+        { dmg: 6, rate: 0.09, range: 14.5, upCost: { iron: 8, parts: 3 }, upGold: 0 },
+        { dmg: 9, rate: 0.08, range: 16, upCost: { iron: 14, parts: 6 }, upGold: 40 },
+      ],
+    },
+  },
+  trap: {
+    name: '슬로우 트랩', cost: { wood: 6, iron: 2 }, radius: 1, hp: 120, height: 0.4, desc: '범위 안 좀비 감속 + 지속 피해',
+    trap: { radius: 3.2, slow: 0.45, dps: 7 },
+  },
 };
+
+// ---- 기지 / 핵 (소유: base). 핵 위치·건설 반경·레인은 data/map.ts 의 MAP 을 읽는다 ----
+export const GRID = 2;                 // 건설 격자 간격(m)
+export const CORE_CLEARANCE = 4.2;     // 핵 중심에서 이 거리 안은 건설 불가
+export const DEMOLISH_REFUND = 0.5;    // 철거 환급 비율
+export const BARRACKS_CAP = 3;         // 숙소 1채당 아군 상한
+/** 핵. hp 는 업그레이드 단계별 최대 체력 */
+export const CORE = { radius: 2.2, height: 4, hp: [500, 800, 1200, 1800] };
+/** 핵 수리 1회: 최대 체력의 pct 만큼 회복 */
+export const CORE_REPAIR = { pct: 0.2, cost: { wood: 8, stone: 6 } as Cost };
+/** 핵 강화(다음 단계로). 준비 단계에만. */
+export const CORE_UPGRADES: { cost: Cost; gold: number }[] = [
+  { cost: { stone: 20, iron: 6 }, gold: 50 },
+  { cost: { stone: 40, iron: 14, parts: 5 }, gold: 150 },
+  { cost: { stone: 80, iron: 30, parts: 12 }, gold: 400 },
+];
+/** 핵이 파괴된 뒤 체크포인트에서 복구되는 체력 비율 */
+export const CORE_REBUILD_PCT = 0.6;
+/** 상점 열쇠 가격(골드) */
+export const KEY_PRICE = { iron: 80, gold: 260 };
 
 export type Branch = '생존' | '채집' | '연구' | '사령';
 export interface SkillDef { id: string; branch: Branch; name: string; desc: string; max: number }
@@ -101,6 +234,26 @@ export const VACCINES: VaccineDef[] = [
   { name: '중급 백신', herb: 5, sample: 3, sampleSp: 0, parts: 1, iron: 0, rate: 0.6 },
   { name: '고급 백신', herb: 8, sample: 0, sampleSp: 2, parts: 0, iron: 2, rate: 0.8 },
 ];
+
+// ── 백신/아군 (소유: allies). 직렬화 가능한 값만 둔다. ──
+export type AllyRole = 'fighter' | 'gatherer' | 'guard' | 'researcher';
+export const ALLY_ROLE_ORDER: AllyRole[] = ['fighter', 'guard', 'gatherer', 'researcher'];
+export interface AllyRoleDef { name: string; desc: string; color: number; max: number }
+export const ALLY_ROLES: Record<AllyRole, AllyRoleDef> = {
+  fighter: { name: '전투병', desc: '플레이어를 따라다니며 함께 싸운다 (최대 3)', color: 0xe5483f, max: 3 },
+  guard: { name: '경비병', desc: '핵 주변을 순찰하며 다가오는 좀비를 막는다', color: 0x3f8be5, max: 99 },
+  gatherer: { name: '채집병', desc: '자원을 캐서 기지로 가져온다', color: 0xe5a53f, max: 99 },
+  researcher: { name: '연구 보조', desc: '연구소 백신 제작 속도 증가', color: 0xa56be5, max: 99 },
+};
+/** 아군 기본 능력. 최종값 = 기본 * state.stats.allyDmg / allyHp */
+export const ALLY = { hp: 60, speed: 5, dmg: 9, atkRate: 0.8, atkRange: 1.7, radius: 0.45, height: 1.9, regenDelay: 5, regen: 2, aggro: 12, leash: 16 };
+/** 주사: 시간(초), 체력이 낮을수록 더해지는 성공률(최대), 보스 감산 */
+export const INJECT = { time: 1.5, range: 2.2, lowHpBonus: 0.2, bossPenalty: 0.3, minRate: 0.05, maxRate: 0.95 };
+/** 백신 제작: 1개당 기본 시간(초)과 연구 보조 1명당 가속 비율 */
+export const CRAFT = { time: 3, perResearcher: 0.35 };
+export const GATHER = { time: 3, carryRange: 2.5 };
+/** 아군 동시 상한의 절대 천장 */
+export const ALLY_HARD_CAP = 30;
 
 // 상자 등급: 0 나무(무료), 1 철(열쇠), 2 황금(황금 열쇠)
 export const CHEST_NAMES = ['나무 상자', '철 상자', '황금 상자'];
