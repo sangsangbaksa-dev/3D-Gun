@@ -60,6 +60,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'w_pistol', cat: 'weapon', name: '권총 품질', desc: '권총 강화 +1단계', icon: '🔫', max: 8, cost: { gold: 50, iron: 1 }, costGrowth: 1.55, effect: { kind: 'weaponLv', weapon: 'pistol', per: 1 } },
   { id: 'w_shotgun_q', cat: 'weapon', name: '샷건 품질', desc: '샷건 강화 +1단계', icon: '🔫', max: 8, cost: { gold: 180, iron: 4 }, costGrowth: 1.6, effect: { kind: 'weaponLv', weapon: 'shotgun', per: 1 }, requires: { id: 'w_shotgun', lv: 1 } },
   { id: 'w_smg_q', cat: 'weapon', name: '기관총 품질', desc: '기관총 강화 +1단계', icon: '🔫', max: 8, cost: { gold: 420, parts: 3 }, costGrowth: 1.65, effect: { kind: 'weaponLv', weapon: 'smg', per: 1 }, requires: { id: 'w_smg', lv: 1 } },
+  { id: 'w_all', cat: 'weapon', name: '병기 정비', desc: '모든 총기 강화 +1단계', icon: '🛠️', max: 5, cost: { gold: 300, parts: 4 }, costGrowth: 1.8, effect: { kind: 'weaponLv', weapon: '*', per: 1 } },
   { id: 'w_mul', cat: 'weapon', name: '총열 정밀 가공', desc: '모든 무기 공격력 +6%', icon: '🎯', max: 10, cost: { gold: 90, parts: 1 }, costGrowth: 1.5, effect: { kind: 'dmgMul', per: 0.06 } },
   { id: 'w_shotgun', cat: 'weapon', name: '샷건 시작 보유', desc: '매 런 샷건을 들고 시작', icon: '🔫', max: 1, cost: { gold: 400, iron: 12, parts: 2 }, costGrowth: 1, effect: { kind: 'weapon', id: 'shotgun' } },
   { id: 'w_smg', cat: 'weapon', name: '기관총 시작 보유', desc: '매 런 기관총을 들고 시작', icon: '🔫', max: 1, cost: { gold: 1200, parts: 8, samples: 6 }, costGrowth: 1, effect: { kind: 'weapon', id: 'smg' }, requires: { id: 'w_shotgun', lv: 1 } },

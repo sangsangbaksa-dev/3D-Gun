@@ -320,7 +320,7 @@ export function createBase(deps: BaseDeps) {
       b.aimYaw = turnToward(b.aimYaw, want, dt * 9);
       if (b.cooldown > 0 || b.ammo <= 0 || Math.abs(b.aimYaw - want) > 0.12) continue;
       const crit = rng() < 0.1;
-      target.hit(lv.dmg * (crit ? 2 : 1), true);
+      target.hit(lv.dmg * (1 + state.start.turretDmgMul) * (crit ? 2 : 1), true); // turretDmgMul: tycoon2d 영구 업그레이드
       b.ammo--;
       b.cooldown = lv.rate;
       const my = def.height * 0.82;

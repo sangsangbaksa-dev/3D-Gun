@@ -7,7 +7,7 @@
 - 영구 상태 `Meta`(`src/core/meta.ts`, localStorage `zt3d.meta.v1`): `wallet`(gold, wood, stone, iron, herb, parts, samples, samplesSp, skillPoints), `upgrades`, `facilities`, `skills`(SKILLS 노드 영구 레벨), `bestWave/bestCheckpoint/totalRuns/totalKills`, `lastSeen`.
 - 표 `src/data/tycoon2d.ts`: `UPGRADES`(효과 kind별 `per`), `PRODUCERS`(방치 생산), `IDLE`, `KEEP_BASE` 등. 함수 없음.
 - 스킬 노드는 `data/index.ts`의 `SKILLS`를 그대로 읽는다(복제 없음). 구매 비용은 스킬 포인트(1+현재 레벨).
-- `state.start`에 추가된 필드: `samples, skillPoints, weapons, weaponLv(총 품질), turretDmgMul`. W1은 `weaponLv`를, W6는 `turretDmgMul`/`coreHp`를 읽어 반영하면 된다.
+- `state.start`에 추가된 필드: `samples, skillPoints, weapons, turretDmgMul`. 총 품질(영구)은 `state.weaponLvBonus`에 직접 넣고(player가 같은 객체 참조), 포탑 피해는 base가 `state.start.turretDmgMul`로 곱한다.
 - 준비 시간: `prepTime()`은 30초 고정, 업그레이드 보너스는 `state.start.prepBonus`.
 
 ## 정산 규칙

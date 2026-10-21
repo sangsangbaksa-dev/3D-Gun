@@ -30,6 +30,9 @@ function applyToState() {
     gold: b.startGold, startWave: b.startWave, res: { ...b.startRes }, coreHp: b.coreHp, prepBonus: b.prepBonus,
     samples: b.startSamples, skillPoints: b.startSkillPoints, weapons: [...b.weapons], weaponLv: { ...b.weaponLv }, turretDmgMul: b.turretDmgMul,
   });
+  // 총 품질(영구): player 가 같은 객체를 참조하므로 키만 갈아 끼운다 ('*' = 모든 총기)
+  for (const k of Object.keys(state.weaponLvBonus)) delete state.weaponLvBonus[k];
+  Object.assign(state.weaponLvBonus, b.weaponLv);
 }
 
 /** 런 시작 직후 호출: 다른 모듈이 run:start 로 자기 상태를 비운 뒤에 시작 보너스를 얹는다 */
