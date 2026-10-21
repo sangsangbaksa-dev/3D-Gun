@@ -24,8 +24,10 @@ export interface FrameEnv {
   /** 지형 높이. 지형이 없으면 () => 0 */
   groundY: (x: number, z: number) => number;
   rng: Rng;
-  /** state.mode 가 'play' 이고 포인터가 잠겨 있을 때만 사격 허용 */
+  /** 조작 가능 상태(state.mode 가 'play', 일시정지/엔딩 아님)일 때만 사격 허용 */
   canShoot: boolean;
+  /** false 면 사격·피격·무기·체력 처리를 건너뛰고 이동/카메라만 한다 (테스트 빌드가 전투를 자체 처리하는 동안) */
+  combat: boolean;
 }
 
 export interface FrameOut {
@@ -82,6 +84,14 @@ export class PlayerController {
 
     // 다른 모듈(enemies)이 사망 후 hp 를 채워 되살린 경우
     if (p.dead && p.hp > 0) this.revive(out);
+
+    if (!env.combat) {
+      this.pendingHits.length = 0;
+      stepMovement(p, dt, it, stats.dashCd, env.collide);
+      p.y = env.groundY(p.x, p.z);
+      out.pose = cameraPose(p);
+      return out;
+    }
 
     // 피격 처리: 무적이면 무시. 한 프레임에 여러 건이면 순서대로
     for (const h of this.pendingHits) {

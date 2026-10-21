@@ -23,6 +23,9 @@ export function createPlayer(_scene?: THREE.Scene): Player {
   return controller().player;
 }
 
+/** combat=false 면 이동/카메라/모델만 동작한다. 테스트 빌드(playtest)가 자체 사격을 쓰는 동안 main.ts 에서 끈다. */
+export const playerOptions = { combat: true };
+
 let ctrl: PlayerController | null = null;
 function controller() { return (ctrl ??= new PlayerController()); }
 
@@ -39,16 +42,17 @@ export const PlayerSystem: System = {
   init(ctx) {
     view = new PlayerView(ctx.scene);
     fx = new Effects(ctx.scene);
-    hud = new CombatHud();
+    if (playerOptions.combat) hud = new CombatHud();
     const c = controller();
     const w = c.weapons;
-    hud.setWeapon(w.current, w.ammo[w.current], magSize(w.current, state.stats), state.weapons);
+    hud?.setWeapon(w.current, w.ammo[w.current], magSize(w.current, state.stats), state.weapons);
   },
 
   update(dt, ctx) {
     const c = controller();
     const p = c.player, w = c.weapons;
-    const playing = state.mode === 'play' && input.locked && state.phase !== 'ended';
+    // 포인터 잠금은 선택 사항: 잠금이 없어도 조작된다. 일시정지 중에는 core 가 update 를 호출하지 않는다.
+    const playing = state.mode === 'play' && state.phase !== 'ended';
 
     const k = input.keys;
     const intent: FrameIntent = {
@@ -64,7 +68,7 @@ export const PlayerSystem: System = {
     };
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
 
-    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing });
+    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat });
 
     // 카메라
     const cam = ctx.camera;
@@ -79,6 +83,7 @@ export const PlayerSystem: System = {
     ctx.world.sun.target.position.set(p.x, 0, p.z);
 
     view.update(dt, p, w);
+    if (!playerOptions.combat) return;
 
     // 사격 연출
     if (out.shot) {
