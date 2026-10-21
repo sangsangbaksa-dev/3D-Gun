@@ -7,6 +7,7 @@ import { PlaytestSystem } from './playtest';
 import { LootSystem } from './loot';
 import { BaseSystem } from './base';
 import { AlliesSystem } from './allies';
+import { HudSystem } from './core/hud';
 
 // 기능 모듈은 System 을 만들어 이 배열에 한 줄씩 등록한다. (실행 순서 = 배열 순서)
 // 기본은 모듈 조합(W1~W6). `?playtest` 를 붙이면 예전 통합 슬라이스(playtest)로 실행한다.
@@ -22,4 +23,5 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     AlliesSystem,
     InteractSystem,
     LootSystem,
+    HudSystem,
   ]);
