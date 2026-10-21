@@ -79,7 +79,7 @@ export class BuildController {
     // 토글
     if (input.pressed.has('KeyB') && !this.panels.shopOpen) { if (this.active) this.exit(); else this.enter(); }
     if (this.active && state.mode !== 'build') { this.exit(); }
-    if (!this.active) { this.panels.buildHud(false, 0, state.phase, null, null, '', null); this.prevLeft = input.mouseDown; this.prevRight = input.mouseRightDown; return; }
+    if (!this.active) { this.panels.buildHud(false, 0, state.phase, null, null, '', null); this.prevLeft = input.mouseDown; this.prevRight = false; return; }
 
     DIGITS.forEach((d, i) => { if (input.pressed.has(d) && i < BUILDING_ORDER.length) this.sel = i; });
     const kind = BUILDING_ORDER[this.sel];
@@ -117,7 +117,8 @@ export class BuildController {
     }
 
     // 입력
-    const left = input.mouseDown && input.locked, right = input.mouseRightDown && input.locked;
+    // 시점 대체 모드(우클릭 드래그로 회전)에서는 우클릭을 철거로 쓰지 않고 X 를 쓴다
+    const left = input.mouseDown, right = (input.mouseRightDown && !input.fallback) || input.pressed.has('KeyX');
     const cell = `${kind}:${sx},${sz}`;
     if (hit && !hover && (left && (!this.prevLeft || (kind === 'barricade' && cell !== this.lastCell)))) {
       this.lastCell = cell;

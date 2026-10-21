@@ -89,7 +89,7 @@ export class BasePanels {
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
     this.set(this.banner, phase === 'prep'
-      ? '🏗 <b>건설 모드</b> · 클릭 배치 · 우클릭 철거 · <b>F</b> 수리 · <b>U</b> 강화 · <b>B</b> 종료'
+      ? '🏗 <b>건설 모드</b> · 클릭 배치 · 우클릭/<b>X</b> 철거 · <b>F</b> 수리 · <b>U</b> 강화 · <b>B</b> 종료'
       : '⚔ 전투 중에는 건설할 수 없어요 (수리·보충은 E)');
     BUILDING_ORDER.forEach((id, i) => {
       const d = BUILDINGS[id];
@@ -164,7 +164,7 @@ export const hoverText = (b: Building, repair: Cost | null, up: { cost: Cost; go
   const keys: string[] = [];
   if (repair) keys.push(`<kbd>F</kbd> 수리 (${costText(repair)})`);
   if (up) keys.push(`<kbd>U</kbd> 강화 (${costText(up.cost, up.gold)})`);
-  keys.push(`<kbd>우클릭</kbd> 철거 (${refund})`);
+  keys.push(`<kbd>우클릭/X</kbd> 철거 (${refund})`);
   lines.push(keys.join('<br>'));
   return lines.join('<br>');
 };
