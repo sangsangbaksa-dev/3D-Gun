@@ -1,7 +1,9 @@
 // 2D 타이쿤 화면 스타일 (DOM/CSS). 한 번만 <style>로 붙인다.
 export const CSS = `
-#t2d{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;color:#e9eef5;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
-  background:radial-gradient(1200px 700px at 20% -10%,#24344a 0,#121923 55%,#0b0f15 100%);overflow:hidden;user-select:none}
+#t2d{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;color:var(--zt-text,#e9eef5);font-family:var(--zt-font,system-ui,sans-serif);
+  background:
+    radial-gradient(ellipse 70% 50% at 85% 0%,rgba(61,186,122,.08) 0%,transparent 50%),
+    radial-gradient(1200px 700px at 20% -10%,#24344a 0,#121923 55%,var(--zt-bg,#0b0f15) 100%);overflow:hidden;user-select:none}
 #t2d.open{display:flex;animation:t2dIn .35s ease-out}
 @keyframes t2dIn{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:none}}
 #t2d .bgfx{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:44px 44px;animation:t2dGrid 24s linear infinite;pointer-events:none}
@@ -24,7 +26,7 @@ export const CSS = `
 #t2d nav{width:150px;padding:12px 8px;display:flex;flex-direction:column;gap:6px;border-right:1px solid #ffffff10;background:#0a0e1477;overflow:auto}
 #t2d nav button{background:#18222f;color:#cfd8e3;border:1px solid transparent;border-radius:10px;padding:10px 8px;text-align:left;cursor:pointer;font:inherit;font-size:14px;transition:.15s}
 #t2d nav button:hover{background:#223245;transform:translateX(2px)}
-#t2d nav button.on{background:linear-gradient(90deg,#2f6f4e,#245a40);color:#fff;border-color:#6fe0a055;box-shadow:0 0 14px #2f6f4e66}
+#t2d nav button.on{background:linear-gradient(90deg,var(--zt-accent,#3dba7a),var(--zt-accent-dim,#245a40));color:#fff;border-color:rgba(61,186,122,.4);box-shadow:0 0 14px rgba(61,186,122,.4)}
 #t2d .content{flex:1;overflow:auto;padding:16px 18px;min-width:0}
 #t2d .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 #t2d .card{position:relative;background:linear-gradient(160deg,#1a2535,#131b27);border:1px solid #ffffff17;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;transition:transform .15s,box-shadow .2s,border-color .2s;animation:t2dPop .4s both}
@@ -46,7 +48,7 @@ export const CSS = `
 #t2d .costs{display:flex;gap:5px;flex-wrap:wrap}
 #t2d .cost{background:#0c121a;border-radius:8px;padding:2px 8px;font-size:12px;font-variant-numeric:tabular-nums}
 #t2d .cost.bad{color:#ff8e8e;background:#2a1414}
-#t2d .buy{background:linear-gradient(#35a56e,#27824f);color:#fff;border:0;border-radius:10px;padding:8px 10px;font:inherit;font-weight:700;cursor:pointer;transition:.1s;box-shadow:0 3px 0 #164a2e}
+#t2d .buy{background:linear-gradient(180deg,var(--zt-accent,#3dba7a),var(--zt-accent-dim,#245a40));color:#fff;border:0;border-radius:10px;padding:8px 10px;font:inherit;font-weight:700;cursor:pointer;transition:.1s;box-shadow:0 3px 0 #143d2a}
 #t2d .buy:hover:not(:disabled){filter:brightness(1.12)}
 #t2d .buy:active:not(:disabled){transform:translateY(3px);box-shadow:0 0 0 #164a2e}
 #t2d .buy:disabled{background:#2b3440;color:#8b96a5;box-shadow:0 3px 0 #1b222b;cursor:not-allowed}
@@ -57,14 +59,14 @@ export const CSS = `
 #t2d .ex-row{padding:6px 0;border-bottom:1px solid #ffffff12;font-size:11.5px}
 #t2d .ex-row .n{margin-bottom:4px;color:#c5d3dc}
 #t2d .ex-row .btns{display:flex;flex-wrap:wrap;gap:3px}
-#t2d .ex-btn{background:#2f6f4e;color:#fff;border:0;border-radius:6px;padding:3px 7px;font:inherit;font-size:11px;cursor:pointer}
+#t2d .ex-btn{background:var(--zt-accent-dim,#245a40);color:#fff;border:1px solid rgba(61,186,122,.35);border-radius:6px;padding:4px 8px;font:inherit;font-size:11px;cursor:pointer;font-weight:600}
 #t2d .ex-btn:hover{filter:brightness(1.15)}
 #t2d .ex-btn:nth-child(3),#t2d .ex-btn:nth-child(4){background:#44505f}
 #t2d .panelbox{background:#131b27;border:1px solid #ffffff14;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.7}
 #t2d .panelbox h3{margin:0 0 4px;font-size:13px;color:#9cc8ff}
 #t2d .panelbox div{display:flex;justify-content:space-between;gap:8px}
 #t2d footer{position:relative;padding:12px 22px;display:flex;gap:12px;align-items:center;justify-content:space-between;border-top:1px solid #ffffff14;background:#0b0f15cc}
-#t2d .launch{background:linear-gradient(#e4513d,#b52a1c);color:#fff;border:0;border-radius:14px;padding:14px 38px;font:inherit;font-size:20px;font-weight:800;letter-spacing:1px;cursor:pointer;box-shadow:0 5px 0 #6b1409,0 0 26px #e4513d66;animation:t2dBeat 1.8s infinite}
+#t2d .launch{background:linear-gradient(180deg,#f06a52,var(--zt-warn,#e4513d));color:#fff;border:0;border-radius:14px;padding:14px 38px;font:inherit;font-size:20px;font-weight:800;letter-spacing:1px;cursor:pointer;box-shadow:0 5px 0 #6b1409,0 0 26px rgba(228,81,61,.45);animation:t2dBeat 1.8s infinite}
 #t2d .launch:hover{filter:brightness(1.1)}
 #t2d .launch:active{transform:translateY(4px);box-shadow:0 1px 0 #6b1409}
 @keyframes t2dBeat{50%{box-shadow:0 5px 0 #6b1409,0 0 42px #ff6a52aa}}

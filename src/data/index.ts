@@ -177,7 +177,9 @@ export const PLAYER = {
   sens: 0.0025,        // 마우스 감도 (라디안/픽셀)
   respawnDelay: 3,     // 사망 후 아무도 되살리지 않을 때 자동 부활까지 (초)
   headshotMul: 1.8,    // 머리(키의 78% 이상) 명중 배율
-  aimAssist: 0.15,     // 3인칭 조준 보정: 판정 반경에 더하는 여유(m)
+  aimAssist: 0.15,     // 조준 보정: 판정 반경에 더하는 여유(m)
+  /** 비행 거리 t(m)마다 y -= bulletDrop * t² (아주 약한 낙차) */
+  bulletDrop: 0.00005,
 };
 
 export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
@@ -441,7 +443,7 @@ export function zombieStats(wave: number, t: ZType): ZStats {
   }
 }
 export const MAX_ALIVE = 40;
-export const waveCount = (w: number) => Math.floor(5 + w * 1.45);
+export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
 
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;
@@ -457,7 +459,7 @@ export const ENEMY_RULES = {
   windup: 0.45,           // 공격 준비 동작
   waveClearGold: 10,      // 웨이브 클리어 골드 = 이 값 + 웨이브 × 2
   gasRadius: 3.2, gasTime: 4, gasDps: 7, // 뚱보 사망 독가스
-  roamAggro: 14, roamPerDanger: 2, roamRespawn: 45, // 구역 배회 좀비 (zones[].danger 기준)
+  roamAggro: 14, roamPerDanger: 1.25, roamRespawn: 45, // 구역 배회 좀비: 위험도×이 값 ≈ 구역 최대 마리 (웨이브 스폰과 별개)
   laneSpread: 3,          // 레인 경유점 좌우 흩어짐(m)
 };
 

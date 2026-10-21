@@ -131,12 +131,14 @@ export function createGatheringView(scene: THREE.Scene, model: GatheringModel, g
       burst(n.x, gy + m.top * n.scale * 0.35, n.z, m.chips, 3, 2.6);
     } else if (e.t === 'done') {
       v.anim = { kind: 'fall', t: 0, dir: Math.random() * Math.PI * 2 };
+      m.ready.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = false; });
       burst(n.x, gy + m.top * n.scale * 0.4, n.z, m.chips, 16, 4.2);
       floatText(n.x, gy + m.top * n.scale + 0.6, n.z, `+${e.amount} ${RES_LABEL[e.res]}${e.extra ? ' ✦' : ''}`, RES_COLOR[e.res]);
     } else if (e.t === 'respawn') {
       v.anim = { kind: 'grow', t: 0 };
       m.ready.visible = true;
       m.ready.scale.setScalar(0.001);
+      m.ready.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
     }
   }
 

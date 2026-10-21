@@ -158,13 +158,6 @@ export function settleOffline(m: Meta, nowMs: number): { secs: number; gains: Ga
   return { secs, gains: tick(m, secs, IDLE.offlineRatio) };
 }
 
-export function clickIncome(m: Meta): number {
-  const g = bonuses(m).clickGold;
-  add(m, { gold: g });
-  m.currency += g;
-  return g;
-}
-
 /** 메타 지갑 교환소: 자원 → 골드 (인런 교환소와 동일 단가) */
 export function metaSell(m: Meta, res: ResKey, n: number): number {
   const c = Math.max(0, Math.min(Math.floor(n), Math.floor(bal(m, res))));

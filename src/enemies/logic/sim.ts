@@ -638,7 +638,7 @@ export class EnemySim implements DamageSink {
     const p = this.deps.player;
     for (const zone of MAP.zones) {
       if (zone.kind === 'base' || zone.danger < 2) continue;
-      const want = ENEMY_RULES.roamPerDanger * zone.danger;
+      const want = Math.max(0, Math.floor(ENEMY_RULES.roamPerDanger * zone.danger));
       let have = 0;
       for (const z of this.list) if (z.home?.zone === zone.id && !z.dead) have++;
       if (have >= want) continue;

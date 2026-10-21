@@ -1,4 +1,7 @@
+import { injectTheme } from './ui/theme';
 import { startGame } from './core/game';
+
+injectTheme();
 import { PlayerSystem, playerOptions } from './player/player';
 import { GatheringSystem } from './gathering';
 import { InteractSystem } from './core/interact';
