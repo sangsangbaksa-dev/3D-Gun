@@ -36,7 +36,7 @@ export class WaveDirector {
 
   private enterPrep() {
     state.phase = 'prep';
-    state.prepLeft = prepTime(state.wave);
+    state.prepLeft = prepTime(state.wave) + state.start.prepBonus;
     state.waveRemaining = 0;
     this.queue.length = 0;
     changed();

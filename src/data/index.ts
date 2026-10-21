@@ -396,7 +396,8 @@ export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
   boss: { gold: 80, xp: 150 },
   king: { gold: 500, xp: 1000 },
 };
-export const prepTime = (wave: number) => (wave <= 1 ? ENEMY_RULES.prepFirst : Math.min(ENEMY_RULES.prepMax, 20 + wave));
+/** 모든 웨이브의 준비 시간은 30초 (+ 영구 업그레이드 보너스는 호출 쪽에서 state.start.prepBonus 를 더한다) */
+export const prepTime = (_wave: number) => ENEMY_RULES.prepFirst;
 /** 웨이브별 종류 비율(합 1). 달리기는 3웨이브부터, 뚱보는 5웨이브부터 섞인다 */
 export function waveMix(wave: number): { normal: number; runner: number; fatty: number } {
   const runner = wave < 3 ? 0 : Math.min(0.4, 0.08 + (wave - 3) * 0.02);
