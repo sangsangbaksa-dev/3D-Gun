@@ -19,6 +19,8 @@ export interface GameEvents {
   'zombie:stunned': { id: number };
   'boss:spawn': { wave: number; type: string };
   'boss:dead': { wave: number; type: string };
+  'wave:prep': { wave: number; time: number };        // 준비 단계 시작 (다음에 올 웨이브 번호와 준비 시간)
+  'checkpoint:reset': { wave: number };               // 죽어서 체크포인트로 복귀 (wave = 다시 시작할 웨이브)
   // allies
   'zombie:converted': { id: number; type: string };  // enemies 는 이 좀비를 목록에서 빼고 메시를 넘겨준다
   'ally:dead': { id: number };

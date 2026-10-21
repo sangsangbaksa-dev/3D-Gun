@@ -25,6 +25,10 @@ export const state = {
   allyCount: 0,
   allyCapBonus: 0, // 건물(숙소) 보너스. 최종 상한 = stats.allyCap + allyCapBonus
   stats: calcStats({}) as Stats,
+  // enemies 가 갱신: 준비 단계 남은 시간(초), 이번 웨이브에서 남은 좀비 수(스폰 대기 포함), 마지막 체크포인트 웨이브
+  prepLeft: 0,
+  waveRemaining: 0,
+  checkpoint: 0,
 };
 
 /** 스킬 레벨이 바뀐 뒤 호출. state.stats 를 다시 계산한다. */

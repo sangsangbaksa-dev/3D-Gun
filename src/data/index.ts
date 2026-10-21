@@ -102,3 +102,47 @@ export function zombieStats(wave: number, t: ZType): ZStats {
 }
 export const MAX_ALIVE = 40;
 export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
+
+// ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
+export const CHECKPOINT_EVERY = 5;
+/** 상태 이름 표기용이 아니라 밸런스 상수 모음 */
+export const ENEMY_RULES = {
+  prepFirst: 30,          // 첫 웨이브 준비 시간(초)
+  prepMax: 45,            // 준비 시간 상한
+  stunHpRatio: 0.3,       // 체력이 이 비율 이하일 때 기절 판정
+  stunBase: 0.35,         // 기본 기절 확률 (+ stats.stunBonus)
+  stunTime: 8,            // 기절 유지 시간
+  rageSpeed: 1.3,         // 기절에서 깨어난 좀비 속도 배수
+  lossOnDeath: 0.3,       // 체크포인트 복귀 때 잃는 자원 비율
+  aggroPlayer: 16, aggroAlly: 11, aggroStructure: 7,
+  reach: 0.9,             // 근접 공격 여유 거리
+  windup: 0.45,           // 공격 준비 동작
+  waveClearGold: 10,      // 웨이브 클리어 골드 = 이 값 + 웨이브 × 2
+  gasRadius: 3.2, gasTime: 4, gasDps: 7, // 뚱보 사망 독가스
+  roamAggro: 14, roamPerDanger: 2, roamRespawn: 45, // 구역 배회 좀비 (zones[].danger 기준)
+  laneSpread: 3,          // 레인 경유점 좌우 흩어짐(m)
+};
+/** 좀비 종류별 공격 간격(초)과 체형 */
+export const ZOMBIE_TUNING: Record<ZType, { atkCd: number; radius: number; height: number; reach: number }> = {
+  normal: { atkCd: 1.1, radius: 0.45, height: 1.9, reach: 0 },
+  runner: { atkCd: 0.8, radius: 0.4, height: 1.8, reach: 0 },
+  fatty: { atkCd: 1.6, radius: 0.75, height: 2.2, reach: 0.3 },
+  boss: { atkCd: 1.3, radius: 1.0, height: 3.4, reach: 0.8 },
+  king: { atkCd: 1.1, radius: 1.5, height: 5.0, reach: 1.2 },
+};
+export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
+  normal: { gold: 2, xp: 5 },
+  runner: { gold: 2, xp: 7 },
+  fatty: { gold: 5, xp: 14 },
+  boss: { gold: 80, xp: 150 },
+  king: { gold: 500, xp: 1000 },
+};
+export const prepTime = (wave: number) => (wave <= 1 ? ENEMY_RULES.prepFirst : Math.min(ENEMY_RULES.prepMax, 20 + wave));
+/** 웨이브별 종류 비율(합 1). 달리기는 3웨이브부터, 뚱보는 5웨이브부터 섞인다 */
+export function waveMix(wave: number): { normal: number; runner: number; fatty: number } {
+  const runner = wave < 3 ? 0 : Math.min(0.4, 0.08 + (wave - 3) * 0.02);
+  const fatty = wave < 5 ? 0 : Math.min(0.25, 0.05 + (wave - 5) * 0.01);
+  return { normal: 1 - runner - fatty, runner, fatty };
+}
+/** 10의 배수 웨이브는 보스, 50웨이브는 좀비 왕. 50 이후 무한 모드에서도 10의 배수마다 보스가 나온다 */
+export const isBossWave = (wave: number) => wave > 0 && wave % 10 === 0;
