@@ -23,7 +23,7 @@ export interface Ally extends AllyRef {
   zType: string;       // 원래 좀비 종류
   born: number;        // 생성 후 경과 시간 (등장 연출)
   carry: { res: ResKey; amount: number } | null;
-  nodeId: number;      // 맡은 채집 노드
+  nodeId: number;      // 맡은 채집 노드 (0 = 없음)
   deadT: number;       // 사망 후 경과 시간 (view 가 쓰러지는 연출 후 정리)
 }
 
@@ -70,7 +70,7 @@ export function canSetRole(a: Ally, r: AllyRole): boolean {
 }
 export function setRole(a: Ally, r: AllyRole): boolean {
   if (!canSetRole(a, r)) return false;
-  a.role = r; a.carry = null; a.nodeId = -1; a.act = 'idle'; a.actT = 0;
+  a.role = r; a.carry = null; a.nodeId = 0; a.act = 'idle'; a.actT = 0;
   return true;
 }
 
@@ -79,7 +79,7 @@ export function spawnAlly(x: number, z: number, zType: string, view: unknown, ro
   const a: Ally = {
     id: newId(), x, z, radius: ALLY.radius, height: ALLY.height, hp: maxHp, maxHp, view, dead: false,
     role, yaw: 0, speed: 0, act: 'idle', actT: 0, atkCd: 0, swing: 0, hurtT: 0, sinceHit: 99,
-    slot: allies.length, patrol: Math.random() * Math.PI * 2, zType, born: 0, carry: null, nodeId: -1, deadT: 0,
+    slot: allies.length, patrol: Math.random() * Math.PI * 2, zType, born: 0, carry: null, nodeId: 0, deadT: 0,
     hit(dmg: number) {
       if (a.dead || dmg <= 0) return;
       a.hp -= dmg; a.hurtT = 0.25; a.sinceHit = 0;
@@ -190,7 +190,7 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     if (moveTo(a, c.x, c.z, ALLY.speed * 0.9, dt, GATHER.carryRange, env) <= GATHER.carryRange + 0.3) {
       gain(a.carry.res, a.carry.amount);
       events.emit('resource:gathered', { res: a.carry.res, amount: a.carry.amount });
-      a.carry = null; a.nodeId = -1; a.act = 'idle';
+      a.carry = null; a.nodeId = 0; a.act = 'idle';
     }
     return;
   }
@@ -205,7 +205,7 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
       const d = dist(n.x, n.z, c.x, c.z);
       if (d < bd) { bd = d; node = n; }
     }
-    a.nodeId = node ? node.id : -1;
+    a.nodeId = node ? node.id : 0;
     a.actT = 0;
   }
   if (!node) { a.act = 'idle'; return; }

@@ -47,7 +47,7 @@ export function startDevHarness(ctx: Ctx) {
     giveAllies: (n = 5) => { for (let i = 0; i < n; i++) spawnAlly(ctx.player.x + 2 + i, ctx.player.z + 2, 'normal', undefined); },
     giveVaccines: () => { state.vaccines = [5, 5, 5]; changed(); },
     state, zombies, allies, ctx, input,
-    allyList: () => (allies as Ally[]).map((a) => ({ id: a.id, role: a.role, x: +a.x.toFixed(1), z: +a.z.toFixed(1), hp: Math.round(a.hp), act: a.act })),
+    allyList: () => (allies as Ally[]).map((a) => ({ id: a.id, role: a.role, x: +a.x.toFixed(1), z: +a.z.toFixed(1), hp: Math.round(a.hp), act: a.act, n: a.nodeId })),
   };
   (window as unknown as { __dev: typeof api }).__dev = api;
 
