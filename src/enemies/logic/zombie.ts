@@ -1,10 +1,11 @@
 // 좀비 한 마리의 상태. 엔진을 모르는 순수 데이터 + hit(). AI 는 sim.ts 가 돌린다.
 import type { ZombieRef } from '../../core/entities';
 import { newId } from '../../core/entities';
-import { zombieStats, ZOMBIE_TUNING, type ZType } from '../../data';
+import { zombieStats, ZOMBIE_TUNING, ELITE, isBossType, type ZType } from '../../data';
 
 export type ZState = 'spawn' | 'chase' | 'windup' | 'stunned' | 'dying';
-export type BossMove = 'none' | 'slam' | 'charge' | 'summon';
+/** 진행 중인 특수 동작. 보스 패턴과 일반 좀비 능력이 함께 쓴다 */
+export type Act = 'none' | 'slam' | 'charge' | 'summon' | 'volley' | 'bombRain' | 'scream' | 'leap' | 'spit' | 'fuse';
 
 export interface TargetRefLike { x: number; z: number; radius: number; dead: boolean; hit(dmg: number, sx?: number, sz?: number): void }
 
@@ -32,7 +33,16 @@ export class Zombie implements ZombieRef {
   target: TargetRefLike | null = null;
   moveSpeed = 0;          // 애니메이션용 실제 이동 속도
   // 보스 패턴
-  move: BossMove = 'none';
+  move: Act = 'none';
+  phase = 0;              // 동작 단계 (예: 점프 0 웅크림 → 1 비행, 돌진 0 조준 → 1 질주)
+  abilityCd = 2;          // 일반 좀비 능력 재사용 대기
+  frenzy = 0;             // 비명으로 빨라진 남은 시간
+  fuseT = 0;
+  exploded = false;
+  elite = false;
+  armor = 0;
+  sx = 0; sz = 0; tx = 0; tz = 0; // 점프 출발/도착
+  aimX = 0; aimZ = 0;     // 침/폭격 조준점
   moveT = 0;              // 패턴 진행 시간
   moveCd = 3;             // 다음 패턴까지
   chargeDx = 0; chargeDz = 0;
@@ -43,21 +53,24 @@ export class Zombie implements ZombieRef {
   offset = 0;             // 레인 좌우 흩어짐 (-1..1)
   home?: { x: number; z: number; r: number; zone: string };
   wanderX = 0; wanderZ = 0;
-  charging = false; hitOnce = false;
+  hitOnce = false;
 
-  constructor(private sink: DamageSink, type: ZType, wave: number, x: number, z: number, lane: number) {
+  constructor(private sink: DamageSink, type: ZType, wave: number, x: number, z: number, lane: number, elite = false) {
     const s = zombieStats(wave, type);
     const t = ZOMBIE_TUNING[type];
     this.type = type;
     this.wave = wave;
     this.x = x; this.z = z; this.lane = lane;
-    this.hp = this.maxHp = Math.round(s.hp);
-    this.speed = s.speed; this.dmg = s.dmg; this.scale = s.scale;
-    this.radius = t.radius; this.height = t.height;
+    this.elite = elite;
+    const e = elite ? ELITE : { hp: 1, dmg: 1, scale: 1 };
+    this.hp = this.maxHp = Math.round(s.hp * e.hp);
+    this.speed = s.speed; this.dmg = s.dmg * e.dmg; this.scale = s.scale * e.scale;
+    this.radius = t.radius * e.scale; this.height = t.height * e.scale;
     this.atkCd = t.atkCd;
+    this.armor = t.armor ?? 0;
   }
 
-  get isBoss() { return this.type === 'boss' || this.type === 'king'; }
+  get isBoss() { return isBossType(this.type); }
 
   hit(dmg: number, byAlly: boolean) {
     if (this.dead) return;

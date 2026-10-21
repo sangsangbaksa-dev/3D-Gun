@@ -2,6 +2,7 @@
 // Unity: 이벤트(UnityEvent/Action) 또는 VFX 호출 지점.
 import type { Zombie } from './zombie';
 
+export type RingColor = 'warn' | 'impact' | 'scream' | 'acid';
 export type Fx =
   | { k: 'spawn'; z: Zombie }
   | { k: 'hit'; z: Zombie; dmg: number }
@@ -10,6 +11,8 @@ export type Fx =
   | { k: 'die'; z: Zombie; byAlly: boolean; silent?: boolean }
   | { k: 'converted'; z: Zombie }
   | { k: 'swing'; z: Zombie }
-  | { k: 'ring'; x: number; z: number; r: number; t: number; color: 'warn' | 'impact' }
-  | { k: 'gas'; x: number; z: number; r: number; t: number }
+  | { k: 'ring'; x: number; z: number; r: number; t: number; color: RingColor }
+  | { k: 'gas'; x: number; z: number; r: number; t: number; kind: 'gas' | 'acid' }
+  | { k: 'proj'; x: number; z: number; tx: number; tz: number; t: number; kind: 'acid' }
+  | { k: 'blast'; x: number; z: number; r: number; kind: 'bomb' | 'acid' | 'slam' }
   | { k: 'roar'; z: Zombie };

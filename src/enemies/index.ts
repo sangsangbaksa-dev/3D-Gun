@@ -27,8 +27,7 @@ export const EnemiesSystem: System = {
     if (state.mode !== 'modal') {
       if (input.pressed.has('KeyN')) director.callNext();
       director.update(dt);
-      sim.updateRoamers(dt);
-      sim.update(dt);
+      if (state.phase !== 'ended') { sim.updateRoamers(dt); sim.update(dt); }
     }
     view.update(state.mode === 'modal' ? 0 : dt);
   },
