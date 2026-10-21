@@ -15,6 +15,12 @@ export interface GameEvents {
   // player
   'player:hit': { dmg: number; x: number; z: number }; // 누군가 플레이어를 공격 → player 가 무적/체력 처리
   'weapon:fired': { weapon: string; ammo: number; mag: number };
+  'player:hp': { hp: number; maxHp: number };          // 체력이 바뀔 때마다 (HUD)
+  'player:respawn': { x: number; z: number };          // 되살아남 (자동 부활 또는 enemies 가 hp 를 채웠을 때)
+  'weapon:ammo': { weapon: string; ammo: number; mag: number; reloading: boolean }; // 교체/재장전/발사 후 탄약 표시용
+  'weapon:reload': { weapon: string; duration: number };
+  'weapon:switched': { weapon: string };
+  'weapon:unlock': { weapon: string };               // 무기 획득 (loot 가 낸다). player 가 state.weapons 에 넣는다
   // enemies
   'zombie:stunned': { id: number };
   'boss:spawn': { wave: number; type: string };

@@ -8,12 +8,38 @@ export const RES_LABEL: Record<ResKey, string> = { wood: '나무', stone: '돌',
 export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, herb: 4, parts: 10 };
 
 export type WeaponId = 'pistol' | 'shotgun' | 'smg';
-export interface WeaponDef { name: string; dmg: number; rate: number; mag: number; reload: number; pellets: number; spread: number; range: number }
+export interface WeaponDef {
+  name: string; dmg: number; rate: number; mag: number; reload: number; pellets: number; spread: number; range: number;
+  /** 한 발마다 카메라가 튀는 정도(라디안) */
+  recoil: number;
+  /** 발사 시 퍼짐이 커지는 양(연사할수록 벌어짐) */
+  bloom: number;
+  /** 최대 사거리에서 피해가 줄어드는 비율 (0.5 = 절반) */
+  falloff: number;
+  /** 트레이서 색 (0xRRGGBB) */
+  tracer: number;
+}
 export const WEAPON_ORDER: WeaponId[] = ['pistol', 'shotgun', 'smg'];
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
-  pistol: { name: '권총', dmg: 14, rate: 0.34, mag: 12, reload: 1.5, pellets: 1, spread: 0.004, range: 80 },
-  shotgun: { name: '샷건', dmg: 9, rate: 0.85, mag: 6, reload: 2.3, pellets: 7, spread: 0.075, range: 28 },
-  smg: { name: '기관총', dmg: 7, rate: 0.085, mag: 35, reload: 2.0, pellets: 1, spread: 0.035, range: 60 },
+  pistol: { name: '권총', dmg: 14, rate: 0.34, mag: 12, reload: 1.5, pellets: 1, spread: 0.004, range: 80, recoil: 0.035, bloom: 0.6, falloff: 0.2, tracer: 0xffe6a0 },
+  shotgun: { name: '샷건', dmg: 9, rate: 0.85, mag: 6, reload: 2.3, pellets: 7, spread: 0.075, range: 28, recoil: 0.11, bloom: 0.15, falloff: 0.6, tracer: 0xffb060 },
+  smg: { name: '기관총', dmg: 7, rate: 0.085, mag: 35, reload: 2.0, pellets: 1, spread: 0.035, range: 60, recoil: 0.018, bloom: 0.12, falloff: 0.35, tracer: 0xa8e0ff },
+};
+
+// 플레이어 이동/전투 공통 수치 (소유: player)
+export const PLAYER = {
+  hp: 100,
+  speed: 6.5,          // m/s
+  aimSpeedMul: 0.65,   // 우클릭 조준 중 이동 속도 배율
+  dashSpeed: 17,
+  dashTime: 0.18,
+  dashIframes: 0.3,
+  hurtIframes: 0.15,   // 피격 직후 짧은 무적 (한 프레임에 여러 마리가 겹쳐 맞는 것 방지)
+  radius: 0.4,
+  sens: 0.0025,        // 마우스 감도 (라디안/픽셀)
+  respawnDelay: 3,     // 사망 후 아무도 되살리지 않을 때 자동 부활까지 (초)
+  headshotMul: 1.8,    // 머리(키의 78% 이상) 명중 배율
+  aimAssist: 0.15,     // 3인칭 조준 보정: 판정 반경에 더하는 여유(m)
 };
 
 export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop';
