@@ -10,12 +10,16 @@
   html, body { margin:0; height:100%; overflow:hidden; background:#10141a; font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif; color:#eee; user-select:none; }
   canvas { display:block; width:100%; height:100%; }
   #hud { position:fixed; inset:0; pointer-events:none; }
-  .bar { position:absolute; left:16px; bottom:16px; width:260px; }
+  .bar { position:absolute; left:16px; bottom:16px; width:min(324px,calc(100vw - 32px)); }
   .bar .track { height:16px; background:#0008; border:1px solid #fff4; border-radius:4px; overflow:hidden; }
-  .bar .fill { height:100%; background:linear-gradient(#e24,#a12); width:100%; }
+  .bar .fill { height:100%; width:100%; transition:width .12s linear; }
+  #hpFill { background:linear-gradient(#f43b55,#b20e2d); }
+  .core-health { margin-top:9px; }
+  .core-health .track { height:10px; border-color:#fff3; }
+  #coreHpFill { background:linear-gradient(#51d5c0,#18796f); }
   .bar .xp { height:6px; margin-top:4px; background:#0008; border-radius:3px; overflow:hidden; }
   .bar .xp div { height:100%; background:#4cf; width:0; }
-  #hpText { font-size:13px; margin-bottom:3px; text-shadow:0 1px 2px #000; }
+  #hpText, #coreHpText { font-size:13px; margin-bottom:3px; text-shadow:0 1px 2px #000; font-variant-numeric:tabular-nums; }
   #top { position:absolute; top:12px; left:50%; transform:translateX(-50%); text-align:center; text-shadow:0 2px 4px #000; }
   #wave { font-size:22px; font-weight:bold; }
   #sub { font-size:14px; opacity:.9; }
@@ -61,7 +65,7 @@
   <div id="prompt"></div><div id="prog"><div></div></div>
   <div id="toasts"></div>
   <div id="banner"></div>
-  <div class="bar"><div id="hpText"></div><div class="track"><div class="fill" id="hpFill"></div></div><div class="xp"><div id="xpFill"></div></div></div>
+  <div class="bar"><div id="hpText"></div><div class="track"><div class="fill" id="hpFill"></div></div><div class="xp"><div id="xpFill"></div></div><div class="core-health"><div id="coreHpText"></div><div class="track"><div class="fill" id="coreHpFill"></div></div></div></div>
   <div id="ammo"></div>
 </div>
 <div id="pauseBanner">일시정지 — P 또는 Esc, 화면 클릭으로 계속</div>
