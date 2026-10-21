@@ -103,6 +103,50 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   smg: { name: '기관총', dmg: 7, rate: 0.085, mag: 35, reload: 2.0, pellets: 1, spread: 0.035, range: 60, recoil: 0.018, bloom: 0.12, falloff: 0.35, tracer: 0xa8e0ff },
 };
 
+// ── 총기 전체 표 (소유: player). WEAPONS/WeaponId 는 기존 모듈(loot, playtest)이 쓰므로 그대로 두고,
+// W1 은 새 총기까지 포함한 GUNS 를 쓴다. 새 총기는 상자 보상표(loot)나 상점에서 id 로 지급한다.
+export type GunId = WeaponId | 'magnum' | 'rifle' | 'sniper';
+export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle' | 'sniper';
+export interface GunDef extends WeaponDef {
+  kind: GunKind;
+  /** true 면 버튼을 누르고 있는 동안 연사, false 면 한 번 누를 때 한 발 */
+  auto: boolean;
+  /** 한 발이 뚫고 지나가 맞히는 좀비 수 (2 = 첫 대상 + 한 마리 더). 관통할 때마다 피해 70% */
+  pierce: number;
+  /** 우클릭 조준 시 시야각(작을수록 확대). 70 이 기본 */
+  adsFov: number;
+  /** 조준경(스코프) 오버레이를 띄운다 */
+  scope: boolean;
+  /** 흔들림 정도 배율 (무거운 총일수록 작다) */
+  sway: number;
+  /** 합성 효과음 파라미터: 피치(Hz), 길이(s), 잡음 비율 0~1, 저음 쿵 세기 0~1 */
+  snd: { pitch: number; len: number; noise: number; thump: number };
+  /** 설명 (강화창 등에 표시) */
+  desc: string;
+}
+export const GUN_ORDER: GunId[] = ['pistol', 'magnum', 'smg', 'shotgun', 'rifle', 'sniper'];
+export const GUNS: Record<GunId, GunDef> = {
+  pistol: { ...WEAPONS.pistol, kind: 'pistol', auto: true, pierce: 1, adsFov: 58, scope: false, sway: 1, snd: { pitch: 170, len: 0.16, noise: 0.6, thump: 0.5 }, desc: '가볍고 안정적인 기본 권총' },
+  shotgun: { ...WEAPONS.shotgun, kind: 'shotgun', auto: false, pierce: 1, adsFov: 62, scope: false, sway: 0.7, snd: { pitch: 95, len: 0.3, noise: 0.85, thump: 1 }, desc: '근거리에서 압도적인 산탄' },
+  smg: { ...WEAPONS.smg, kind: 'smg', auto: true, pierce: 1, adsFov: 56, scope: false, sway: 1.2, snd: { pitch: 220, len: 0.11, noise: 0.7, thump: 0.35 }, desc: '빠른 연사, 탄이 퍼진다' },
+  magnum: { name: '매그넘', dmg: 42, rate: 0.55, mag: 6, reload: 2.2, pellets: 1, spread: 0.006, range: 95, recoil: 0.1, bloom: 0.9, falloff: 0.15, tracer: 0xffd070,
+    kind: 'revolver', auto: false, pierce: 2, adsFov: 54, scope: false, sway: 0.8, snd: { pitch: 120, len: 0.26, noise: 0.65, thump: 0.9 }, desc: '한 방이 묵직하고 관통한다' },
+  rifle: { name: '돌격소총', dmg: 12, rate: 0.105, mag: 30, reload: 2.3, pellets: 1, spread: 0.014, range: 110, recoil: 0.024, bloom: 0.1, falloff: 0.25, tracer: 0xffe29a,
+    kind: 'rifle', auto: true, pierce: 1, adsFov: 50, scope: false, sway: 0.8, snd: { pitch: 150, len: 0.14, noise: 0.7, thump: 0.6 }, desc: '정확한 연사, 만능 주력 무기' },
+  sniper: { name: '저격총', dmg: 130, rate: 1.25, mag: 5, reload: 2.9, pellets: 1, spread: 0.0004, range: 220, recoil: 0.17, bloom: 0.5, falloff: 0, tracer: 0xbfe8ff,
+    kind: 'sniper', auto: false, pierce: 3, adsFov: 24, scope: true, sway: 0.45, snd: { pitch: 75, len: 0.42, noise: 0.55, thump: 1 }, desc: '조준경으로 멀리서 관통 저격' },
+};
+
+/** 총기 강화 (골드+부품). 레벨마다 아래 보너스가 누적된다. */
+export const GUN_UPGRADE = {
+  maxLv: 5,
+  // 피해 +12%, 연사 간격 -5%, 탄창 +10%, 재장전 -6%, 퍼짐 -6%, 산탄(pellets>1)은 pelletEvery 레벨마다 +1발
+  perLevel: { dmg: 0.12, rate: 0.05, mag: 0.1, reload: 0.06, spread: 0.06, pelletEvery: 2 },
+  /** 레벨 n → n+1 비용 (배열 인덱스 = 현재 레벨) */
+  gold: [60, 120, 220, 380, 600],
+  parts: [1, 2, 3, 5, 8],
+};
+
 // 플레이어 이동/전투 공통 수치 (소유: player)
 export const PLAYER = {
   hp: 100,

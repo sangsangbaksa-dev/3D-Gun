@@ -6,7 +6,8 @@ export interface CameraPose { pos: Vec3; dir: Vec3; fov: number }
 
 const BACK = 4.8, BACK_AIM = 3.5, SIDE = 1.3, SIDE_AIM = 1.1, FOV = 70, FOV_AIM = 56, DASH_FOV = 9;
 
-export function cameraPose(p: Player): CameraPose {
+/** adsFov: 지금 든 총의 조준 시야각 */
+export function cameraPose(p: Player, adsFov = FOV_AIM): CameraPose {
   // pitch 양수 = 아래로 내려다봄. kick 은 반동으로 시선이 위로 튀는 양
   const pitch = p.pitch - p.kick;
   const cp = Math.cos(pitch);
@@ -18,7 +19,7 @@ export function cameraPose(p: Player): CameraPose {
     y: Math.max(p.y + 0.5, p.y + 1.6 - dir.y * back),
     z: p.z - dir.z * back + rz * side,
   };
-  const fov = lerp(FOV, FOV_AIM, p.aimT) + (p.dashT > 0 ? DASH_FOV : 0);
+  const fov = lerp(FOV, adsFov, p.aimT) + (p.dashT > 0 ? DASH_FOV : 0);
   return { pos, dir, fov };
 }
 

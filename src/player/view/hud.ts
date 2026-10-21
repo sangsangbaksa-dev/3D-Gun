@@ -1,10 +1,30 @@
 // 전투 전용 DOM 오버레이: 조준선(퍼짐 반영), 히트마커, 피격 화면 효과, 탄약/무기 슬롯, 재장전 바.
 // 모든 요소는 코드로 만들어 붙인다 (index.html 은 W7 소유). 탄약 표시는 W7 HUD 가 생기면 SHOW_AMMO_PANEL 만 끄면 된다.
-import { WEAPON_ORDER, WEAPONS, type WeaponId } from '../../data';
+import { GUNS, GUN_ORDER, GUN_UPGRADE, RES_LABEL, type GunId } from '../../data';
+import { state } from '../../core/state';
+import { gunStats } from '../logic/weapons';
 
 export const SHOW_AMMO_PANEL = true;
 
 const CSS = `
+.pv-scope{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,transparent 0,transparent 31vmin,#000 31.4vmin);transition:opacity .08s}
+.pv-scope::before,.pv-scope::after{content:'';position:absolute;background:#000c}
+.pv-scope::before{left:50%;top:calc(50% - 31vmin);width:1px;height:62vmin}
+.pv-scope::after{top:50%;left:calc(50% - 31vmin);height:1px;width:62vmin}
+.pv-scope i{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#f33;box-shadow:0 0 6px #f33}
+.pv-up{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000a;pointer-events:auto;z-index:6}
+.pv-up .box{background:#1b212b;border:1px solid #fff3;border-radius:10px;padding:18px 22px;min-width:560px;max-width:720px;max-height:86vh;overflow:auto;box-shadow:0 10px 40px #000}
+.pv-up h2{margin:0 0 4px}.pv-up .sub{opacity:.75;font-size:13px;margin-bottom:10px}
+.pv-up .g{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:center;padding:9px 0;border-bottom:1px solid #fff1}
+.pv-up .g .n{font-weight:bold}.pv-up .g .n b{color:#ffd23b;font-weight:bold;margin-left:6px}
+.pv-up .g .d{font-size:12px;opacity:.75;grid-column:1}
+.pv-up .g .s{font-size:12px;color:#9cf;grid-column:1}
+.pv-up .g button{grid-column:2;grid-row:1 / span 3;background:#2f6f4e;color:#fff;border:0;border-radius:5px;padding:8px 14px;cursor:pointer;font:inherit;min-width:130px}
+.pv-up .g button:disabled{background:#444;color:#999;cursor:default}
+.pv-up .g.lock{opacity:.35}
+.pv-up .x{margin-top:12px;text-align:right}.pv-up .x button{background:#44505f;color:#fff;border:0;border-radius:5px;padding:6px 14px;cursor:pointer;font:inherit}
+.pv-lv{color:#ffd23b;font-size:11px;margin-left:4px}
+
 .pv-root{position:fixed;inset:0;pointer-events:none;z-index:3;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#fff}
 .pv-cross{position:absolute;left:50%;top:50%;width:0;height:0;transition:opacity .15s}
 .pv-cross i{position:absolute;background:#fff;box-shadow:0 0 2px #000,0 0 4px #0008;border-radius:1px}
@@ -48,13 +68,14 @@ export class CombatHud {
   private slotEls: Record<string, HTMLElement> = {};
   private hitAnim?: Animation;
   private vigAnim?: Animation;
+  private scope = el('pv-scope', '<i></i>');
   private oldCross: HTMLElement | null;
 
   constructor() {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
-    this.root.append(this.vig, this.low, this.cross, this.hit, this.dash);
+    this.root.append(this.scope, this.vig, this.low, this.cross, this.hit, this.dash);
     if (SHOW_AMMO_PANEL) this.root.append(this.ammo);
     document.body.appendChild(this.root);
     this.nm = this.ammo.querySelector('.nm')!;
@@ -62,8 +83,8 @@ export class CombatHud {
     this.rl = this.ammo.querySelector('.rl')!;
     this.rlFill = this.rl.firstElementChild as HTMLElement;
     this.slots = this.ammo.querySelector('.pv-slots')!;
-    WEAPON_ORDER.forEach((id, i) => {
-      const s = el('pv-slot', `<b>${i + 1}</b>${WEAPONS[id].name}`);
+    GUN_ORDER.forEach((id, i) => {
+      const s = el('pv-slot', `<b>${i + 1}</b>${GUNS[id].name}`);
       this.slots.appendChild(s);
       this.slotEls[id] = s;
     });
@@ -98,11 +119,17 @@ export class CombatHud {
 
   setLowHp(on: boolean) { this.low.style.opacity = on ? '1' : '0'; }
 
-  setWeapon(id: WeaponId, ammo: number, mag: number, owned: readonly string[]) {
-    this.nm.textContent = WEAPONS[id].name;
+  setScope(amount: number, on: boolean) {
+    this.scope.style.opacity = on ? String(Math.max(0, (amount - 0.55) / 0.45)) : '0';
+    this.cross.style.display = on && amount > 0.7 ? 'none' : '';
+  }
+
+  setWeapon(id: GunId, ammo: number, mag: number, owned: readonly string[]) {
+    const lv = state.weaponLv[id] ?? 0;
+    this.nm.innerHTML = `${GUNS[id].name}${lv ? `<span class="pv-lv">Lv${lv}</span>` : ''}`;
     this.n.innerHTML = `${ammo}<small> / ${mag}</small>`;
     this.n.classList.toggle('low', ammo <= Math.ceil(mag * 0.25));
-    for (const w of WEAPON_ORDER) {
+    for (const w of GUN_ORDER) {
       this.slotEls[w].classList.toggle('cur', w === id);
       this.slotEls[w].classList.toggle('lock', !owned.includes(w));
     }
@@ -119,4 +146,44 @@ export class CombatHud {
   }
 
   dispose() { this.root.remove(); if (this.oldCross) this.oldCross.style.display = ''; }
+}
+
+
+/** 총기 강화창 (V). 골드+부품으로 레벨을 올린다. 실제 처리는 'weapon:upgrade' 이벤트를 받은 컨트롤러가 한다. */
+export class UpgradePanel {
+  private el = el('pv-up', '<div class="box"></div>');
+  private box = this.el.firstElementChild as HTMLElement;
+  open = false;
+
+  constructor(private onUpgrade: (id: GunId) => void, private onClose: () => void) {
+    document.body.appendChild(this.el);
+    this.el.addEventListener('mousedown', (e) => e.stopPropagation());
+    this.el.addEventListener('click', (e) => { if (e.target === this.el) onClose(); });
+  }
+
+  show(on: boolean) { this.open = on; this.el.style.display = on ? 'flex' : 'none'; if (on) this.refresh(); }
+
+  refresh() {
+    if (!this.open) return;
+    const fmt = (id: GunId, lv: number) => {
+      const a = gunStats(id, lv, state.stats), d = GUNS[id];
+      const dps = (a.dmg * d.pellets / d.rate).toFixed(0);
+      return `피해 ${a.dmg.toFixed(0)}${d.pellets > 1 ? '×' + d.pellets : ''} · 탄창 ${a.mag} · 재장전 ${a.reload.toFixed(1)}초 · 초당 ${dps}`;
+    };
+    let html = `<h2>무기 강화 <small style="font-weight:normal;opacity:.7">(V 로 닫기)</small></h2><div class="sub">골드 ${state.gold} · ${RES_LABEL.parts} ${state.res.parts}</div>`;
+    for (const id of GUN_ORDER) {
+      const d = GUNS[id], own = state.weapons.includes(id), lv = state.weaponLv[id] ?? 0, max = lv >= GUN_UPGRADE.maxLv;
+      const cost = max ? '' : `${GUN_UPGRADE.gold[lv]}G + ${RES_LABEL.parts} ${GUN_UPGRADE.parts[lv]}`;
+      const can = own && !max && state.gold >= GUN_UPGRADE.gold[lv] && state.res.parts >= GUN_UPGRADE.parts[lv];
+      html += `<div class="g${own ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? 'Lv' + lv + '/' + GUN_UPGRADE.maxLv : '미보유'}</b></div>`
+        + `<div class="d">${d.desc}</div><div class="s">${own ? fmt(id, lv) + (max ? '' : '  →  ' + fmt(id, lv + 1)) : '상자에서 획득'}</div>`
+        + (own ? `<button data-id="${id}"${can ? '' : ' disabled'}>${max ? '최대 강화' : '강화 ' + cost}</button>` : '') + '</div>';
+    }
+    html += '<div class="x"><button data-close>닫기</button></div>';
+    this.box.innerHTML = html;
+    this.box.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => b.addEventListener('click', () => this.onUpgrade(b.dataset.id as GunId)));
+    this.box.querySelector('[data-close]')?.addEventListener('click', this.onClose);
+  }
+
+  dispose() { this.el.remove(); }
 }

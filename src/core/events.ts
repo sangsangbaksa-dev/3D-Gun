@@ -23,6 +23,10 @@ export interface GameEvents {
   'weapon:ammo': { weapon: string; ammo: number; mag: number; reloading: boolean }; // 교체/재장전/발사 후 탄약 표시용
   'weapon:reload': { weapon: string; duration: number };
   'weapon:switched': { weapon: string };
+  'weapon:upgrade': { weapon: string };              // UI/상점이 총기 강화를 요청하면 player 가 비용을 내고 레벨을 올린다
+  'weapon:upgraded': { weapon: string; level: number };
+  /** 효과음 훅: W7 오디오가 구독해 실제 소리로 바꿀 수 있다. 기본 합성음은 player/view/sfx.ts */
+  'weapon:sound': { weapon: string; kind: 'fire' | 'dry' | 'reload' | 'reloadDone' | 'switch' | 'hit' | 'kill' | 'headshot' };
   'weapon:unlock': { weapon: string };               // 무기 획득 (loot 가 낸다). player 가 state.weapons 에 넣는다
   // enemies
   'zombie:stunned': { id: number };
