@@ -32,9 +32,26 @@ export interface StructureRef extends Target {
   hit(dmg: number): void;
 }
 
+/** 채집 노드. gathering 이 넣고 뺀다. 아군 채집병(allies)이 일할 곳을 찾을 때 쓴다. */
+export interface GatherNodeRef {
+  id: number;
+  kind: string; // NodeKind
+  res: string;  // ResKey
+  x: number; z: number;
+  radius: number;
+  /** 채집 가능(고갈되지 않음) */
+  readonly ready: boolean;
+  /**
+   * dt 만큼 채집 진행. 끝나면 얻은 자원을 돌려주고 노드는 고갈된다. 자원 지급은 호출한 쪽이 한다
+   * (아군은 운반 후 저장고에 반납). speedMul 은 보통 state.stats.gatherSpeed.
+   */
+  harvest(dt: number, speedMul: number): { res: string; amount: number } | null;
+}
+
 export const zombies: ZombieRef[] = [];
 export const allies: AllyRef[] = [];
 export const structures: StructureRef[] = [];
+export const gatherNodes: GatherNodeRef[] = [];
 
 let nextId = 1;
 export const newId = () => nextId++;
