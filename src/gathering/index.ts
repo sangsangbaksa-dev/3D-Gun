@@ -9,7 +9,7 @@ import { obstacles, type Obstacle } from '../core/world';
 import { MAP } from '../data/map';
 import { GATHER_LAYOUT, GATHER_NODES, GATHER_REACH } from '../data';
 import { mulberry32 } from './logic/rng';
-import { blockRadius, createGathering, harvest, rollSampleDrop, tick, type GatheringModel } from './logic/gathering';
+import { blockRadius, createGathering, harvest, resetGathering, rollSampleDrop, tick, type GatheringModel } from './logic/gathering';
 import type { GatherNode } from './logic/nodes';
 import { createGatheringView, type GatheringView } from './view/gatheringView';
 
@@ -70,6 +70,13 @@ export const GatheringSystem: System = {
       gatherNodes.push(ref);
       refs.push(ref);
     }
+
+    // 새 런: 노드 재생성, 채집 진행 초기화 (자원/샘플 수치는 state 초기화 쪽이 맡는다)
+    events.on('run:start', () => {
+      if (!alive) return;
+      resetGathering(model);
+      view.reset();
+    });
 
     // 좀비 처치 → 샘플 드롭 (처치자가 아군이어도 받는다)
     events.on('enemy:killed', (e) => {
