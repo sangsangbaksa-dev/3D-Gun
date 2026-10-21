@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 // 백신/아군 모듈 진입점. 규칙은 logic/, 그리기와 DOM 은 view/ 에 있고 여기서는 둘을 이어 준다.
 import { INJECT, VACCINES, ALLY_ROLES, ALLY_ROLE_ORDER } from '../data';
-import { state } from '../core/state';
+import { state, changed } from '../core/state';
 import { events } from '../core/events';
 import { allies } from '../core/entities';
 import { input } from '../core/input';
@@ -10,7 +10,7 @@ import { resolveObstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
 import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
 import { injector, stunnedNear, advance, resetInject, activeTier, blockReason, chanceFor } from './logic/inject';
-import { enqueueCraft, updateCraft, nextOwnedTier } from './logic/vaccine';
+import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue } from './logic/vaccine';
 import { AllyView } from './view/allyView';
 import { Fx } from './view/fx';
 import { Camp } from './view/camp';
@@ -109,6 +109,23 @@ export const AlliesSystem: System = {
     events.on('player:hit', () => {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
       resetInject();
+    });
+    // 새 런: 아군·백신·샘플·제작 대기열을 모두 비운다 (docs/COORDINATION.md 1-e)
+    events.on('run:start', () => {
+      closePanel();
+      resetInject();
+      injector.tier = -1;
+      craftQueue.length = 0;
+      for (const a of allies as Ally[]) a.dead = true;
+      allies.length = 0;
+      for (const v of views.values()) v.dispose();
+      views.clear();
+      for (const d of dying) d.v.dispose();
+      dying.length = 0;
+      state.allyCount = 0;
+      state.vaccines = [0, 0, 0];
+      state.samples = 0; state.samplesSp = 0;
+      changed();
     });
     addEventListener('keydown', (e) => { if (e.code === 'Escape') closePanel(); });
     if (import.meta.env.DEV && location.hash.includes('allies-dev')) {

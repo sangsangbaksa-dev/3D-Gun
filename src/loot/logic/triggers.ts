@@ -24,6 +24,17 @@ export function bindLootEvents(mgr: ChestManager, rng: Rng) {
     events.emit('toast', { text: `웨이브 ${wave} 보상 상자가 기지 근처에 나타났다` });
   });
 
+  // 새 런: 천장·열쇠·보유 무기는 런마다 초기화(영구 보존은 meta 뿐). 코스튬은 꾸미기라 유지한다.
+  events.on('run:start', () => {
+    mgr.reset();
+    bossPos = null;
+    state.pity = 0;
+    state.keys = 0;
+    state.goldKeys = 0;
+    state.weapons = ['pistol'];
+    changed();
+  });
+
   events.on('boss:dead', ({ wave }) => {
     state.goldKeys += GOLD_KEY_PER_BOSS;
     changed();
