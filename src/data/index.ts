@@ -346,17 +346,30 @@ export const REWARD_TABLE: RewardDef[][] = [
   ],
 ];
 
-export type ZType = 'normal' | 'runner' | 'fatty' | 'boss' | 'king';
+export type ZType =
+  | 'normal' | 'runner' | 'fatty' | 'crawler' | 'swarmer' | 'leaper' | 'spitter' | 'bomber' | 'screamer' | 'tank'
+  | 'boss' | 'bossBomb' | 'bossAcid' | 'bossLord' | 'king';
 export interface ZStats { hp: number; speed: number; dmg: number; scale: number }
 export function zombieStats(wave: number, t: ZType): ZStats {
   const baseHp = 30 + wave * 9 + wave * wave * 0.5;
   const baseDmg = 10 + wave * 0.6;
+  const baseSpeed = 2.1 + Math.min(1, wave * 0.02);
   switch (t) {
     case 'runner': return { hp: baseHp * 0.55, speed: 4.4, dmg: baseDmg * 0.8, scale: 0.95 };
     case 'fatty': return { hp: baseHp * 2.6, speed: 1.35, dmg: baseDmg * 1.4, scale: 1.5 };
+    case 'crawler': return { hp: baseHp * 0.45, speed: baseSpeed * 1.25, dmg: baseDmg * 0.7, scale: 0.9 };
+    case 'swarmer': return { hp: baseHp * 0.22, speed: 5.3, dmg: baseDmg * 0.45, scale: 0.6 };
+    case 'leaper': return { hp: baseHp * 0.8, speed: 3.0, dmg: baseDmg * 1.1, scale: 1.05 };
+    case 'spitter': return { hp: baseHp * 0.6, speed: 2.0, dmg: baseDmg * 0.9, scale: 1 };
+    case 'bomber': return { hp: baseHp * 0.7, speed: 3.4, dmg: baseDmg * 3.2, scale: 1.15 };
+    case 'screamer': return { hp: baseHp * 0.75, speed: 2.2, dmg: baseDmg * 0.5, scale: 1.05 };
+    case 'tank': return { hp: baseHp * 3.4, speed: 1.5, dmg: baseDmg * 1.5, scale: 1.45 };
     case 'boss': return { hp: baseHp * 14, speed: 2.4, dmg: baseDmg * 2.2, scale: 2.2 };
+    case 'bossBomb': return { hp: baseHp * 12, speed: 2.6, dmg: baseDmg * 2.0, scale: 2.3 };
+    case 'bossAcid': return { hp: baseHp * 13, speed: 2.0, dmg: baseDmg * 1.9, scale: 2.4 };
+    case 'bossLord': return { hp: baseHp * 16, speed: 2.4, dmg: baseDmg * 2.4, scale: 2.6 };
     case 'king': return { hp: 14000, speed: 2.8, dmg: 55, scale: 3.2 };
-    default: return { hp: baseHp, speed: 2.1 + Math.min(1, wave * 0.02), dmg: baseDmg, scale: 1 };
+    default: return { hp: baseHp, speed: baseSpeed, dmg: baseDmg, scale: 1 };
   }
 }
 export const MAX_ALIVE = 40;
@@ -364,15 +377,13 @@ export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
 
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;
-/** 상태 이름 표기용이 아니라 밸런스 상수 모음 */
 export const ENEMY_RULES = {
-  prepFirst: 30,          // 첫 웨이브 준비 시간(초)
-  prepMax: 45,            // 준비 시간 상한
+  prep: 30,               // 웨이브 사이 준비 시간(초). 첫 웨이브도 동일
   stunHpRatio: 0.3,       // 체력이 이 비율 이하일 때 기절 판정
   stunBase: 0.35,         // 기본 기절 확률 (+ stats.stunBonus)
   stunTime: 8,            // 기절 유지 시간
   rageSpeed: 1.3,         // 기절에서 깨어난 좀비 속도 배수
-  lossOnDeath: 0.3,       // 체크포인트 복귀 때 잃는 자원 비율
+  fallbackRestart: 4,     // run:over 뒤 아무도 run:start 를 내지 않고 창(modal)도 안 열렸을 때 스스로 새 런을 시작하기까지(초)
   aggroPlayer: 16, aggroAlly: 11, aggroStructure: 7,
   reach: 0.9,             // 근접 공격 여유 거리
   windup: 0.45,           // 공격 준비 동작
@@ -381,27 +392,115 @@ export const ENEMY_RULES = {
   roamAggro: 14, roamPerDanger: 2, roamRespawn: 45, // 구역 배회 좀비 (zones[].danger 기준)
   laneSpread: 3,          // 레인 경유점 좌우 흩어짐(m)
 };
-/** 좀비 종류별 공격 간격(초)과 체형 */
-export const ZOMBIE_TUNING: Record<ZType, { atkCd: number; radius: number; height: number; reach: number }> = {
-  normal: { atkCd: 1.1, radius: 0.45, height: 1.9, reach: 0 },
-  runner: { atkCd: 0.8, radius: 0.4, height: 1.8, reach: 0 },
-  fatty: { atkCd: 1.6, radius: 0.75, height: 2.2, reach: 0.3 },
-  boss: { atkCd: 1.3, radius: 1.0, height: 3.4, reach: 0.8 },
-  king: { atkCd: 1.1, radius: 1.5, height: 5.0, reach: 1.2 },
+
+/** 종류별 체형과 능력. 능력 필드가 있는 종류만 그 행동을 한다 (모두 숫자 데이터). */
+export interface ZTune {
+  name: string;
+  atkCd: number; radius: number; height: number; reach: number;
+  /** 받는 피해 감소 (0.5 = 절반). 기절 중에는 무시 */
+  armor?: number;
+  /** 원거리 유닛이 유지하려는 거리 [가까이 오면 물러남, 사격 최대 거리] */
+  keep?: [number, number];
+  /** 점프 공격: 거리 range 안에서 cd 마다, windup 동안 웅크린 뒤 time 동안 날아 착지 범위 피해 */
+  leap?: { range: number; cd: number; windup: number; time: number; radius: number; dmgMul: number };
+  /** 산성 침: time 동안 날아가 착지, radius 범위 피해 후 pool 초 동안 웅덩이(초당 dps) */
+  spit?: { cd: number; windup: number; time: number; radius: number; dmgMul: number; pool: number; dps: number };
+  /** 자폭: 목표에 range 안으로 오면 fuse 초 뒤 폭발. 죽어도 deathRadius 로 터진다 */
+  bomb?: { range: number; fuse: number; radius: number; dmgMul: number; deathRadius: number; deathMul: number };
+  /** 비명: cd 마다 windup 뒤 radius 안 좀비를 time 초 동안 buff 배 빠르게 하고 count 마리를 부른다 */
+  scream?: { cd: number; windup: number; radius: number; buff: number; time: number; summon: ZType; count: number };
+}
+export const ZOMBIE_TUNING: Record<ZType, ZTune> = {
+  normal: { name: '좀비', atkCd: 1.1, radius: 0.45, height: 1.9, reach: 0 },
+  runner: { name: '달리기 좀비', atkCd: 0.8, radius: 0.4, height: 1.8, reach: 0 },
+  fatty: { name: '뚱보 좀비', atkCd: 1.6, radius: 0.75, height: 2.2, reach: 0.3 },
+  crawler: { name: '기어다니는 좀비', atkCd: 0.9, radius: 0.4, height: 0.85, reach: 0 },
+  swarmer: { name: '떼거리 좀비', atkCd: 0.7, radius: 0.28, height: 1.15, reach: 0 },
+  leaper: { name: '도약 좀비', atkCd: 1.0, radius: 0.45, height: 1.9, reach: 0,
+    leap: { range: 12, cd: 4.5, windup: 0.55, time: 0.6, radius: 1.8, dmgMul: 1.3 } },
+  spitter: { name: '산성 좀비', atkCd: 1.0, radius: 0.45, height: 1.9, reach: 0, keep: [6, 15],
+    spit: { cd: 2.6, windup: 0.5, time: 0.8, radius: 1.7, dmgMul: 1.0, pool: 3, dps: 6 } },
+  bomber: { name: '폭탄 좀비', atkCd: 1.0, radius: 0.55, height: 2.0, reach: 0,
+    bomb: { range: 2.8, fuse: 0.8, radius: 5, dmgMul: 1, deathRadius: 3.5, deathMul: 0.6 } },
+  screamer: { name: '비명 좀비', atkCd: 1.5, radius: 0.45, height: 1.95, reach: 0, keep: [8, 12],
+    scream: { cd: 9, windup: 0.9, radius: 28, buff: 1.4, time: 6, summon: 'normal', count: 2 } },
+  tank: { name: '장갑 좀비', atkCd: 1.7, radius: 0.8, height: 2.4, reach: 0.4, armor: 0.5 },
+  boss: { name: '브루저', atkCd: 1.3, radius: 1.0, height: 3.4, reach: 0.8 },
+  bossBomb: { name: '폭파광', atkCd: 1.3, radius: 1.05, height: 3.5, reach: 0.8 },
+  bossAcid: { name: '산성 괴수', atkCd: 1.4, radius: 1.1, height: 3.6, reach: 0.8 },
+  bossLord: { name: '군단장', atkCd: 1.2, radius: 1.15, height: 3.9, reach: 0.9, armor: 0.25 },
+  king: { name: '좀비 왕', atkCd: 1.1, radius: 1.5, height: 5.0, reach: 1.2 },
 };
+
+export const BOSS_TYPES: ZType[] = ['boss', 'bossBomb', 'bossAcid', 'bossLord'];
+export const isBossType = (t: ZType) => t === 'king' || BOSS_TYPES.includes(t);
+/** 10웨이브 브루저, 20 폭파광, 30 산성 괴수, 40 군단장, 50 좀비 왕. 50 이후 무한 모드는 보스가 순환한다 */
+export const bossTypeFor = (wave: number): ZType => (wave === FINAL_WAVE ? 'king' : BOSS_TYPES[(Math.floor(wave / 10) - 1) % BOSS_TYPES.length]);
+/** 10의 배수 웨이브는 보스, 50웨이브는 좀비 왕 */
+export const isBossWave = (wave: number) => wave > 0 && wave % 10 === 0;
+
+/** 보스 패턴 공통 수치와 보스별 패턴 목록(w = 선택 가중치) */
+export const BOSS_MOVE = {
+  slam: { windup: 1.1, dmgMul: 1.6 },
+  charge: { windup: 0.8, time: 0.7, speed: 16, dmgMul: 1.3 },
+  volley: { windup: 0.9, count: 5, spread: 0.9, time: 0.9, radius: 1.8, dmgMul: 0.9, pool: 3, dps: 6 },
+  bombRain: { windup: 1.3, count: 4, radius: 4, dmgMul: 1.4, scatter: 7 },
+  summon: { windup: 1.2 },
+  scream: { windup: 1.0, radius: 40, buff: 1.4, time: 8 },
+};
+export interface BossKit {
+  moves: { kind: keyof typeof BOSS_MOVE; w: number }[];
+  /** 소환 목록: 한 번에 type 을 count 마리씩 */
+  summon?: { type: ZType; count: number }[];
+  slamRadius: number;
+  /** 패턴 사이 쉬는 시간 [일반, 체력 50% 이하] */
+  cd: [number, number];
+  summonCd: [number, number];
+}
+export const BOSS_KIT: Record<string, BossKit> = {
+  boss: { moves: [{ kind: 'slam', w: 3 }, { kind: 'charge', w: 3 }], slamRadius: 5.5, cd: [5, 3.2], summonCd: [99, 99] },
+  bossBomb: { moves: [{ kind: 'bombRain', w: 3 }, { kind: 'charge', w: 2 }, { kind: 'summon', w: 2 }], summon: [{ type: 'bomber', count: 3 }], slamRadius: 6, cd: [4.5, 3], summonCd: [16, 11] },
+  bossAcid: { moves: [{ kind: 'volley', w: 4 }, { kind: 'slam', w: 2 }, { kind: 'summon', w: 1 }], summon: [{ type: 'spitter', count: 2 }, { type: 'crawler', count: 4 }], slamRadius: 6.5, cd: [4.5, 3], summonCd: [18, 12] },
+  bossLord: { moves: [{ kind: 'scream', w: 2 }, { kind: 'summon', w: 2 }, { kind: 'charge', w: 3 }, { kind: 'slam', w: 2 }], summon: [{ type: 'runner', count: 4 }, { type: 'tank', count: 1 }, { type: 'leaper', count: 2 }], slamRadius: 7, cd: [4, 2.6], summonCd: [14, 10] },
+  king: { moves: [{ kind: 'slam', w: 3 }, { kind: 'charge', w: 2 }, { kind: 'summon', w: 2 }, { kind: 'bombRain', w: 2 }, { kind: 'scream', w: 1 }], summon: [{ type: 'normal', count: 5 }, { type: 'tank', count: 1 }], slamRadius: 8, cd: [4, 2.6], summonCd: [20, 14] },
+};
+
+/** 엘리트: 이 웨이브부터 일반 종류가 확률적으로 강화판(금빛)으로 나온다. 떼거리와 보스는 제외 */
+export const ELITE = { fromWave: 20, chanceBase: 0.08, chancePerWave: 0.01, chanceMax: 0.35, hp: 2.5, dmg: 1.4, scale: 1.15, reward: 3 };
+export const eliteChance = (wave: number) => (wave < ELITE.fromWave ? 0 : Math.min(ELITE.chanceMax, ELITE.chanceBase + (wave - ELITE.fromWave) * ELITE.chancePerWave));
+
 export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
-  normal: { gold: 2, xp: 5 },
-  runner: { gold: 2, xp: 7 },
-  fatty: { gold: 5, xp: 14 },
-  boss: { gold: 80, xp: 150 },
+  normal: { gold: 2, xp: 5 }, runner: { gold: 2, xp: 7 }, fatty: { gold: 5, xp: 14 },
+  crawler: { gold: 2, xp: 5 }, swarmer: { gold: 1, xp: 2 }, leaper: { gold: 4, xp: 12 },
+  spitter: { gold: 6, xp: 16 }, bomber: { gold: 5, xp: 14 }, screamer: { gold: 8, xp: 20 }, tank: { gold: 12, xp: 28 },
+  boss: { gold: 80, xp: 150 }, bossBomb: { gold: 100, xp: 200 }, bossAcid: { gold: 120, xp: 250 }, bossLord: { gold: 160, xp: 350 },
   king: { gold: 500, xp: 1000 },
 };
-export const prepTime = (wave: number) => (wave <= 1 ? ENEMY_RULES.prepFirst : Math.min(ENEMY_RULES.prepMax, 20 + wave));
-/** 웨이브별 종류 비율(합 1). 달리기는 3웨이브부터, 뚱보는 5웨이브부터 섞인다 */
-export function waveMix(wave: number): { normal: number; runner: number; fatty: number } {
-  const runner = wave < 3 ? 0 : Math.min(0.4, 0.08 + (wave - 3) * 0.02);
-  const fatty = wave < 5 ? 0 : Math.min(0.25, 0.05 + (wave - 5) * 0.01);
-  return { normal: 1 - runner - fatty, runner, fatty };
+
+/** 모든 웨이브 준비 시간 30초 + 영구 업그레이드 보너스(state.start.prepBonus) */
+export const prepTime = (_wave: number, bonus = 0) => ENEMY_RULES.prep + bonus;
+
+/**
+ * 등장 표: 종류별로 from 웨이브부터 weight = min(max, base + (wave-from)*ramp). 나머지는 일반 좀비.
+ * pack > 1 이면 한 번 뽑힐 때 그 수만큼 한꺼번에 나온다(웨이브 수에는 마리 수로 센다).
+ */
+export const ROSTER: { type: ZType; from: number; base: number; ramp: number; max: number; pack: number }[] = [
+  { type: 'crawler', from: 2, base: 0.1, ramp: 0.01, max: 0.18, pack: 1 },
+  { type: 'runner', from: 3, base: 0.08, ramp: 0.02, max: 0.25, pack: 1 },
+  { type: 'swarmer', from: 4, base: 0.05, ramp: 0.01, max: 0.12, pack: 6 },
+  { type: 'fatty', from: 5, base: 0.05, ramp: 0.01, max: 0.15, pack: 1 },
+  { type: 'leaper', from: 6, base: 0.06, ramp: 0.015, max: 0.2, pack: 1 },
+  { type: 'spitter', from: 7, base: 0.05, ramp: 0.012, max: 0.16, pack: 1 },
+  { type: 'tank', from: 8, base: 0.04, ramp: 0.008, max: 0.12, pack: 1 },
+  { type: 'bomber', from: 9, base: 0.05, ramp: 0.01, max: 0.14, pack: 1 },
+  { type: 'screamer', from: 11, base: 0.03, ramp: 0.006, max: 0.08, pack: 1 },
+];
+/** 웨이브 w 에서 뽑을 수 있는 종류와 가중치(합 1, 일반 좀비 포함) */
+export function waveRoster(wave: number): { type: ZType; weight: number; pack: number }[] {
+  const out = ROSTER.filter((r) => wave >= r.from).map((r) => ({ type: r.type, weight: Math.min(r.max, r.base + (wave - r.from) * r.ramp), pack: r.pack }));
+  const sum = out.reduce((a, r) => a + r.weight, 0);
+  const scale = sum > 0.8 ? 0.8 / sum : 1; // 일반 좀비가 최소 20% 는 남는다
+  const list = out.map((r) => ({ ...r, weight: r.weight * scale }));
+  list.unshift({ type: 'normal', weight: 1 - list.reduce((a, r) => a + r.weight, 0), pack: 1 });
+  return list;
 }
-/** 10의 배수 웨이브는 보스, 50웨이브는 좀비 왕. 50 이후 무한 모드에서도 10의 배수마다 보스가 나온다 */
-export const isBossWave = (wave: number) => wave > 0 && wave % 10 === 0;
