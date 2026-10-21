@@ -33,8 +33,6 @@ export class PlayerView {
   private lastShotAge = 9;
   /** 1인칭에서 가릴 몸통 (머리, 상체, 다리, 모자, 배낭). 팔과 총은 남긴다 */
   private fpsHide: THREE.Object3D[] = [];
-  /** 1인칭에서만 보이는 팔·몸통 아래 막기 (빈 공간·뒷면이 비치지 않게) */
-  private fpsFill: THREE.Object3D[] = [];
 
   constructor(scene: THREE.Scene) {
     this.model = makeHumanoid(0xe0b48c, 0x3a6ea5);
@@ -51,32 +49,11 @@ export class PlayerView {
     this.pivot.position.set(0.11, 1.47, -0.5);
     g.add(this.pivot);
     // 팔은 몸통이 아니라 총 피벗에 붙여, 흔들림·반동·걸음 밥이 손과 총을 같이 움직인다
-    const skinFps = new THREE.MeshLambertMaterial({ color: 0xd4a882, side: THREE.DoubleSide });
-    const clothFps = new THREE.MeshLambertMaterial({ color: 0x2d4a6e, side: THREE.DoubleSide });
-    for (let i = 0; i < this.model.arms.length; i++) {
-      const arm = this.model.arms[i];
+    for (const arm of this.model.arms) {
       g.remove(arm);
       this.pivot.add(arm);
       arm.position.sub(this.pivot.position);
-      // 기본 팔 박스는 얇아서 1인칭 아래에서 속이 비친다 → 전완·소매를 카메라 쪽으로 길게
-      const fore = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.95, 0.34), skinFps);
-      fore.position.set(0, -0.58, 0.22);
-      arm.add(fore);
-      const cuff = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.3), skinFps);
-      cuff.position.set(0, -1.02, 0.28);
-      arm.add(cuff);
-      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.48, 0.3), clothFps);
-      sleeve.position.set(i === 0 ? 0.04 : -0.04, -0.38, 0.08);
-      arm.add(sleeve);
-      this.fpsFill.push(fore, cuff, sleeve);
     }
-    const gap = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.62, 0.48), skinFps);
-    gap.position.set(0.04, -0.28, 0.42);
-    this.pivot.add(gap);
-    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.38, 0.36), clothFps);
-    vest.position.set(0.02, -0.05, 0.32);
-    this.pivot.add(vest);
-    this.fpsFill.push(gap, vest);
     for (const id of GUN_ORDER) {
       const gun = buildGun(id);
       gun.root.visible = false;
@@ -139,7 +116,6 @@ export class PlayerView {
     const g = this.model.group;
     const showBody = viewMode !== 'first';
     for (const part of this.fpsHide) part.visible = showBody;
-    for (const part of this.fpsFill) part.visible = !showBody;
     this.time += dt;
     for (const id of GUN_ORDER) this.guns[id].root.visible = id === w.current;
     const gun = this.guns[w.current], def = GUNS[w.current];
