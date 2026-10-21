@@ -72,9 +72,10 @@ export const PlayerSystem: System = {
     const intent: FrameIntent = {
       forward: playing ? (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0) : 0,
       strafe: playing ? (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0) : 0,
-      lookDx: state.mode === 'play' ? input.dx : 0,
-      lookDy: state.mode === 'play' ? input.dy : 0,
+      lookDx: state.mode === 'play' ? input.dx * input.lookSensitivity : 0,
+      lookDy: state.mode === 'play' ? input.dy * input.lookSensitivity : 0,
       dash: playing && input.pressed.has('ShiftLeft'),
+      jump: playing && input.pressed.has('Space'),
       aim: playing && input.mouseRightDown,
       fire: playing && input.mouseDown,
       firePressed: playing && input.mouseDown && !prevFire,

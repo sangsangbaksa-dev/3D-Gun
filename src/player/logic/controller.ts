@@ -101,7 +101,7 @@ export class PlayerController {
     const p = this.player, w = this.weapons, stats = state.stats;
     const out: FrameOut = { pose: null as unknown as CameraPose, shot: null, hurt: null, died: false, respawned: false, dashed: false, dryFire: false, reloadStarted: false, reloadDone: false, switched: false };
 
-    if (this.pendingRun) this.resetRun(out);
+    if (this.pendingRun) this.resetRun(out, env.groundY);
 
     // 스킬로 최대 체력이 늘면 늘어난 만큼 현재 체력도 채운다
     if (p.maxHp !== stats.maxHp) {
@@ -111,12 +111,11 @@ export class PlayerController {
     }
 
     // 다른 모듈(enemies)이 사망 후 hp 를 채워 되살린 경우
-    if (p.dead && p.hp > 0) this.revive(out);
+    if (p.dead && p.hp > 0) this.revive(out, env.groundY);
 
     if (!env.combat) {
       this.pendingHits.length = 0;
-      stepMovement(p, dt, it, stats.dashCd, env.collide);
-      p.y = env.groundY(p.x, p.z);
+      stepMovement(p, dt, it, stats.dashCd, env.collide, env.groundY);
       out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
       return out;
     }
@@ -141,15 +140,14 @@ export class PlayerController {
       if (p.deadT >= PLAYER.respawnDelay && state.phase !== 'ended') {
         p.hp = p.maxHp;
         p.x = MAP.playerStart.x; p.z = MAP.playerStart.z;
-        this.revive(out);
+        this.revive(out, env.groundY);
       }
     }
 
     const wasDashing = p.dashT > 0;
     const dashReady = p.dashCd <= 0;
-    stepMovement(p, dt, it, stats.dashCd, env.collide);
+    stepMovement(p, dt, it, stats.dashCd, env.collide, env.groundY);
     if (!wasDashing && p.dashT > 0 && dashReady) out.dashed = true;
-    p.y = env.groundY(p.x, p.z);
 
     out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
@@ -201,7 +199,7 @@ export class PlayerController {
     return out;
   }
 
-  private resetRun(out: FrameOut) {
+  private resetRun(out: FrameOut, groundY: (x: number, z: number) => number) {
     this.pendingRun = false;
     const p = this.player, w = this.weapons;
     state.weapons.length = 0; state.weapons.push('pistol');
@@ -212,6 +210,7 @@ export class PlayerController {
     for (const id of GUN_ORDER) w.ammo[id] = magSize(w, state.stats, id);
     p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0;
     p.x = MAP.playerStart.x; p.z = MAP.playerStart.z;
+    p.y = groundY(p.x, p.z); p.jumpVelocity = 0; p.grounded = true;
     this.pendingHits.length = 0;
     out.respawned = true;
     events.emit('weapon:switched', { weapon: 'pistol' });
@@ -226,9 +225,10 @@ export class PlayerController {
     this.emitAmmo();
   }
 
-  private revive(out: FrameOut) {
+  private revive(out: FrameOut, groundY: (x: number, z: number) => number) {
     const p = this.player;
     p.dead = false; p.deadT = 0; p.hp = Math.max(1, p.hp); p.iframes = 2; p.dashT = 0; p.kick = 0;
+    p.y = groundY(p.x, p.z); p.jumpVelocity = 0; p.grounded = true;
     out.respawned = true;
     events.emit('player:respawn', { x: p.x, z: p.z });
   }

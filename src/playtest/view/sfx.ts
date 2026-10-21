@@ -1,4 +1,5 @@
 // WebAudio 합성 효과음 (외부 에셋 없음)
+import { preferences } from '../../core/preferences';
 let ctx: AudioContext | null = null;
 function tone(f: number, d: number, type: OscillatorType, vol: number, to = f) {
   try {
@@ -8,7 +9,7 @@ function tone(f: number, d: number, type: OscillatorType, vol: number, to = f) {
     o.type = type;
     o.frequency.setValueAtTime(f, t);
     o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + d);
-    g.gain.setValueAtTime(vol, t);
+    g.gain.setValueAtTime(vol * preferences.effectsVolume, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     o.connect(g).connect(ctx.destination);
     o.start(t); o.stop(t + d);

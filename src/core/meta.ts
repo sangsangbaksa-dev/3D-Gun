@@ -45,3 +45,46 @@ export function resetMeta() {
   Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 });
   saveMeta();
 }
+
+/** 계정 화면의 백업 내보내기에 사용할 복사본. */
+export function exportMetaSnapshot(): Meta {
+  return JSON.parse(JSON.stringify(meta)) as Meta;
+}
+
+/** 사용자가 선택한 백업의 전체 스키마를 검증한 뒤 진행 데이터를 교체한다. */
+export function importMetaSnapshot(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const source = value as Record<string, unknown>;
+  const numberKeys = ['currency', 'totalRuns', 'bestWave', 'bestCheckpoint', 'lastSeen', 'totalKills'] as const;
+  const recordKeys = ['upgrades', 'facilities', 'wallet', 'skills'] as const;
+
+  // 불완전하거나 손상된 파일이 기존 저장 데이터를 초기화하지 않도록 먼저 전체를 검증한다.
+  for (const key of numberKeys) {
+    const n = source[key];
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) return false;
+  }
+  const records = {} as Pick<Meta, typeof recordKeys[number]>;
+  for (const key of recordKeys) {
+    const raw = source[key];
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const clean: Record<string, number> = {};
+    for (const [id, n] of Object.entries(raw)) {
+      if (id.length > 80 || id === '__proto__' || id === 'constructor' || id === 'prototype'
+        || typeof n !== 'number' || !Number.isFinite(n) || n < 0) return false;
+      clean[id] = n;
+    }
+    records[key] = clean;
+  }
+
+  Object.assign(meta, {
+    currency: source.currency as number,
+    totalRuns: Math.floor(source.totalRuns as number),
+    bestWave: Math.floor(source.bestWave as number),
+    bestCheckpoint: Math.floor(source.bestCheckpoint as number),
+    lastSeen: source.lastSeen as number,
+    totalKills: Math.floor(source.totalKills as number),
+    ...records,
+  });
+  saveMeta();
+  return true;
+}
