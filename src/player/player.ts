@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { input } from '../core/input';
 import { state } from '../core/state';
 import { zombies } from '../core/entities';
-import { resolveObstacles } from '../core/world';
+import { getGroundY, resolveObstacles } from '../core/world';
 import { GUNS } from '../data';
 import { PlayerController, type FrameIntent } from './logic/controller';
 import { createRng } from './logic/math';
@@ -33,8 +33,7 @@ let ctrl: PlayerController | null = null;
 function controller() { return (ctrl ??= new PlayerController()); }
 
 const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
-// TODO(맵 담당): core/world.ts 에 getGroundY 가 생기면 교체
-const groundY = (_x: number, _z: number) => 0;
+const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
 /** 항상 1인칭. (3인칭 토글 제거) */

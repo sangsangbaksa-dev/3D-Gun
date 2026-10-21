@@ -1,6 +1,7 @@
 // 히트스캔 판정. 세로 원기둥(x,z,radius,높이) 대 광선 수학만 쓴다 (Three 레이캐스트 금지).
 import { PLAYER } from '../../data';
 import type { Target } from '../../core/entities';
+import { terrainY } from '../../core/terrain';
 import type { Vec3 } from './math';
 
 export function bulletDropAt(t: number) {
@@ -13,7 +14,7 @@ export function rayPoint(o: Vec3, d: Vec3, t: number): Vec3 {
 }
 
 /** 광선이 원기둥에 처음 닿는 거리 t (방향이 단위벡터면 미터). 안 닿으면 null. */
-export function rayCylinder(o: Vec3, d: Vec3, cx: number, cz: number, r: number, h: number): number | null {
+export function rayCylinder(o: Vec3, d: Vec3, cx: number, cz: number, r: number, h: number, base = 0): number | null {
   let t0 = -Infinity, t1 = Infinity;
   const a = d.x * d.x + d.z * d.z;
   const ox = o.x - cx, oz = o.z - cz;
@@ -28,9 +29,9 @@ export function rayCylinder(o: Vec3, d: Vec3, cx: number, cz: number, r: number,
     t0 = (-b - s) / a; t1 = (-b + s) / a;
   }
   if (Math.abs(d.y) < 1e-9) {
-    if (o.y < 0 || o.y > h) return null;
+    if (o.y < base || o.y > base + h) return null;
   } else {
-    let ty0 = -o.y / d.y, ty1 = (h - o.y) / d.y;
+    let ty0 = (base - o.y) / d.y, ty1 = (base + h - o.y) / d.y;
     if (ty0 > ty1) [ty0, ty1] = [ty1, ty0];
     t0 = Math.max(t0, ty0); t1 = Math.min(t1, ty1);
   }
@@ -45,28 +46,33 @@ export function castRay<T extends Target>(o: Vec3, d: Vec3, maxDist: number, tar
   let best: RayHit<T> | null = null;
   for (const tg of targets) {
     if (tg.dead) continue;
-    const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height);
+    const base = terrainY(tg.x, tg.z);
+    const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height, base);
     if (t !== null && t <= maxDist) {
-      const y = rayPoint(o, d, t).y;
-      if (y >= 0 && y <= tg.height && (!best || t < best.t)) best = { target: tg, t, y };
+      const y = rayPoint(o, d, t).y - base;
+      if (y >= -0.2 && y <= tg.height && (!best || t < best.t)) best = { target: tg, t, y };
     }
   }
   return best;
 }
 
-/** 광선이 지면(y=0)에 닿는 거리. 낙차 포함. */
+/** 광선이 굴곡 있는 지면에 닿는 거리. 낙차 포함. */
 export function rayGround(o: Vec3, d: Vec3, maxDist = 400): number | null {
-  if (o.y <= 0) return null;
-  const drop = PLAYER.bulletDrop;
-  const yEnd = o.y + d.y * maxDist - drop * maxDist * maxDist;
-  if (yEnd > 0) return null;
-  let lo = 0, hi = maxDist;
-  for (let i = 0; i < 26; i++) {
-    const mid = (lo + hi) * 0.5;
-    const y = o.y + d.y * mid - drop * mid * mid;
-    if (y > 0) lo = mid; else hi = mid;
+  const above = (t: number) => rayPoint(o, d, t).y - terrainY(o.x + d.x * t, o.z + d.z * t);
+  if (above(0) <= 0) return null;
+  let prev = 0;
+  for (let t = 2; t <= maxDist; t += 2) {
+    if (above(t) <= 0) {
+      let lo = prev, hi = t;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) * 0.5;
+        if (above(mid) > 0) lo = mid; else hi = mid;
+      }
+      return hi;
+    }
+    prev = t;
   }
-  return hi;
+  return null;
 }
 
 /** 광선이 닿는 모든 대상을 가까운 순으로 (관통탄용). */
@@ -74,10 +80,11 @@ export function castRayAll<T extends Target>(o: Vec3, d: Vec3, maxDist: number, 
   const hits: RayHit<T>[] = [];
   for (const tg of targets) {
     if (tg.dead) continue;
-    const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height);
+    const base = terrainY(tg.x, tg.z);
+    const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height, base);
     if (t !== null && t <= maxDist) {
-      const y = rayPoint(o, d, t).y;
-      if (y >= 0 && y <= tg.height) hits.push({ target: tg, t, y });
+      const y = rayPoint(o, d, t).y - base;
+      if (y >= -0.2 && y <= tg.height) hits.push({ target: tg, t, y });
     }
   }
   return hits.sort((a, b) => a.t - b.t);

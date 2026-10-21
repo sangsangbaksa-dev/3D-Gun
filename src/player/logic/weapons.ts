@@ -155,7 +155,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
     const tg = rayGround(env.origin, d);
     const t = tg !== null && tg < def.range ? tg : def.range;
     const e = at(t);
-    pellets.push({ kind: tg !== null && tg < def.range ? 'ground' : 'air', headshot: false, kill: false, dmg: 0, end: { x: e.x, y: Math.max(0, e.y), z: e.z }, also: [] });
+    pellets.push({ kind: tg !== null && tg < def.range ? 'ground' : 'air', headshot: false, kill: false, dmg: 0, end: { x: e.x, y: e.y, z: e.z }, also: [] });
   }
   return { weapon: w.current, pellets, ammoLeft: w.ammo[w.current] };
 }

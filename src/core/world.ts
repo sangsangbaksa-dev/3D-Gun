@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { terrainY } from './terrain';
+import { addScenery } from './scenery';
 
 export const WORLD_HALF = 62;
 
-/** 지형 높이(m). 맵 지형이 생기면 여기서 샘플링한다. */
-export function getGroundY(_x: number, _z: number): number {
-  return 0;
+/** 지형 높이(m). 기지는 평평하고 바깥은 언덕이다. */
+export function getGroundY(x: number, z: number): number {
+  return terrainY(x, z);
 }
 
 export interface Obstacle { x: number; z: number; r: number }
@@ -29,15 +31,7 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 140 });
   scene.add(sun, sun.target);
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_HALF * 2 + 40, WORLD_HALF * 2 + 40), new THREE.MeshLambertMaterial({ color: 0x5f6d48 }));
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-  const dirt = new THREE.Mesh(new THREE.CircleGeometry(14, 40), new THREE.MeshLambertMaterial({ color: 0x8a7656 }));
-  dirt.rotation.x = -Math.PI / 2;
-  dirt.position.y = 0.01;
-  dirt.receiveShadow = true;
-  scene.add(dirt);
+  addScenery(scene, obstacles);
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
