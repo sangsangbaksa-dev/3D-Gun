@@ -11,6 +11,9 @@ export interface GameEvents {
   'state:changed': undefined;                        // state.ts 값이 바뀜 → UI 갱신
   'ui:modal': { open: boolean };                     // 모달 열림/닫힘 → 포인터 락 해제, 입력 정지
   'game:end': { victory: boolean };                  // 엔딩 또는 게임 오버 화면
+  // 런 흐름: 사망/핵 파괴 → run:over → (2D 업그레이드 타이쿤) → run:start → 모든 모듈이 런 상태 초기화
+  'run:over': { wave: number; checkpoint: number; kills: number; gold: number; reason: 'player' | 'core' };
+  'run:start': { run: number; startWave: number };    // tycoon2d 가 "출격" 때 발행. 모듈은 자기 런 상태를 비운다
   'interact:prompt': { text: string | null };        // interact.ts → UI 가 'E ...' 안내 표시
   // player
   'player:hit': { dmg: number; x: number; z: number }; // 누군가 플레이어를 공격 → player 가 무적/체력 처리
