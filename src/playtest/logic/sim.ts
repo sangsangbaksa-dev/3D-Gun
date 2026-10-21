@@ -23,7 +23,8 @@ export type SimEvent =
   | { t: 'banner'; text: string }
   | { t: 'shot'; weapon: WeaponId; ends: Vec3[] }
   | { t: 'hit'; id: number; head: boolean; killed: boolean; x: number; y: number; z: number }
-  | { t: 'kill'; id: number }
+  | { t: 'kill'; id: number; x: number; z: number; type: string; boss: boolean }
+  | { t: 'wave'; start: boolean; wave: number }
   | { t: 'hurt' }
   | { t: 'reload' }
   | { t: 'gather'; id: number }
@@ -46,6 +47,8 @@ export interface Sim {
   best: number;
   deaths: number;
   kills: number;
+  /** true 면 상자는 외부 모듈(loot)이 맡는다: 월드 상자와 처치 드롭을 만들지 않는다 */
+  externalChests: boolean;
   kingKilled: boolean;
   core: { hp: number; maxHp: number; r: number };
   structs: Struct[];
@@ -119,9 +122,9 @@ export function mulberry32(seed: number): Rng {
 export const forward = (yaw: number) => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
 export const checkpointOf = (wave: number) => Math.floor((wave - 1) / 5) * 5 + 1;
 
-export function createSim(rng: Rng, best = 0): Sim {
+export function createSim(rng: Rng, best = 0, externalChests = false): Sim {
   const s: Sim = {
-    rng, nextId: 1, phase: 'prep', phaseT: FIRST_PREP, wave: 1, best, deaths: 0, kills: 0, kingKilled: false,
+    rng, nextId: 1, phase: 'prep', phaseT: FIRST_PREP, wave: 1, best, deaths: 0, kills: 0, externalChests, kingKilled: false,
     facing: 0, core: { hp: CORE_HP, maxHp: CORE_HP, r: 1.3 }, structs: [],
     player: { x: 0, z: 4, hp: 100, maxHp: 100, iframes: 0 },
     weapon: 'pistol',
@@ -131,7 +134,7 @@ export function createSim(rng: Rng, best = 0): Sim {
     zombies: [], queue: [], spawnT: 0, nodes: [], chests: [], gatherId: 0, gatherProg: 0, events: [],
   };
   placeNodes(s);
-  for (let i = 0; i < 6; i++) spawnWorldChest(s);
+  if (!externalChests) for (let i = 0; i < 6; i++) spawnWorldChest(s);
   return s;
 }
 
@@ -198,6 +201,7 @@ function startWave(s: Sim) {
     s.queue.push(r < pFat ? 'fatty' : r < pFat + pRun ? 'runner' : 'normal');
   }
   s.spawnT = 0;
+  push(s, { t: 'wave', start: true, wave: w });
   push(s, { t: 'banner', text: king ? '최종 보스 — 좀비 왕!' : boss ? `웨이브 ${w} — 중간 보스` : `웨이브 ${w}` });
 }
 
@@ -218,7 +222,8 @@ function clearWave(s: Sim) {
   s.gold += 20 + 5 * w;
   s.player.hp = Math.min(s.player.maxHp, s.player.hp + s.player.maxHp * 0.4);
   (Object.keys(s.ammo) as WeaponId[]).forEach((k) => (s.ammo[k] = WEAPONS[k].mag));
-  for (let i = 0; i < 2 && s.chests.filter((c) => !c.opened).length < 8; i++) spawnWorldChest(s);
+  push(s, { t: 'wave', start: false, wave: w });
+  for (let i = 0; i < 2 && !s.externalChests && s.chests.filter((c) => !c.opened).length < 8; i++) spawnWorldChest(s);
   s.core.hp = Math.min(s.core.maxHp, s.core.hp + s.core.maxHp * 0.3);
   for (const t of s.structs) t.hp = Math.min(t.maxHp, t.hp + t.maxHp * 0.5);
   s.phase = 'prep';
@@ -280,11 +285,11 @@ function killZed(s: Sim, z: Zed) {
   s.zombies = s.zombies.filter((o) => o !== z);
   s.kills++;
   s.gold += 2 + Math.floor(s.wave / 2);
-  push(s, { t: 'kill', id: z.id });
-  if (z.boss) {
+  push(s, { t: 'kill', id: z.id, x: z.x, z: z.z, type: z.type, boss: z.boss });
+  if (z.boss && !s.externalChests) {
     s.chests.push({ id: s.nextId++, x: z.x, z: z.z, tier: 2, opened: false });
     push(s, { t: 'toast', text: z.type === 'king' ? '좀비 왕을 쓰러뜨렸다!' : '보스 처치! 황금 상자 출현' });
-  } else if (s.rng() < 0.06) {
+  } else if (!s.externalChests && s.rng() < 0.06) {
     s.chests.push({ id: s.nextId++, x: z.x, z: z.z, tier: s.rng() < 0.2 ? 1 : 0, opened: false });
   }
   if (z.type === 'king') {

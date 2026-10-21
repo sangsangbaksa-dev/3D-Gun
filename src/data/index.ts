@@ -87,6 +87,86 @@ export const CHEST_TABLE: number[][] = [
 ];
 export const PITY_LIMIT = 10; // 철/황금 상자에서 희귀 미만이 10번 연속이면 다음은 희귀 이상 확정
 
+// ---- 보물상자 세부 수치 (loot 소유) ----
+export const RARITY_COLORS = [0xcfd3d8, 0x66cc66, 0x66aaff, 0xffcc33]; // 일반/고급/희귀/전설 (hex 숫자)
+/** 상자 등급별 열기 비용. 사용 열쇠 필드 이름(없으면 무료) */
+export const CHEST_KEY: (string | null)[] = [null, 'keys', 'goldKeys'];
+export const CHEST_INTERACT_RANGE = 2.4;
+export const CHEST_ODDS_RANGE = 6; // 이 거리 안에 들어오면 확률표를 띄운다
+/** 열기 연출 타임라인(초): 흔들림 → 뚜껑 터짐(보상 지급) → 빛기둥 → 사라짐 */
+export const CHEST_ANIM = { burst: 1.15, total: 3.8 };
+/** 열린 뒤 다시 생기기까지 초 (등급별) */
+export const CHEST_RESPAWN = [120, 240, 420];
+/** 맵에 정적 상자(MAP.chests)가 비어 있을 때 구역 위험도(danger)별로 절차 배치하는 개수 */
+export const ZONE_CHEST_RULE: Record<number, { wood: number; iron: number }> = {
+  1: { wood: 1, iron: 0 }, 2: { wood: 2, iron: 0 }, 3: { wood: 2, iron: 1 }, 4: { wood: 1, iron: 2 }, 5: { wood: 1, iron: 2 },
+};
+/** 구역 밖 흩뿌림: 면적 areaPer(㎡)마다 나무 상자 1개, 최대 max개 */
+export const CHEST_SCATTER = { areaPer: 4000, max: 40 };
+/** 황금 상자 희귀 스폰: 간격마다 (없을 때만) 위험도 minDanger 이상 구역 안에 나타나고 ttl 뒤 사라진다 */
+export const GOLD_SPAWN = { interval: 360, ttl: 150, minDanger: 4 };
+/** 좀비 처치 드롭 확률(0~1). 상자는 ttl 초 뒤 사라진다 */
+export const CHEST_DROP = { woodChance: 0.04, keyChance: 0.02, ttl: 90 };
+/** 웨이브 보상: 클리어마다 나무 상자, ironEvery 웨이브마다 철 상자 추가. 핵 둘레 buildRadius×(ringMinK~ringMaxK) 위치 */
+export const WAVE_CHEST = { ironEvery: 5, ringMinK: 0.5, ringMaxK: 0.85 }; // ring 은 MAP.buildRadius 에 대한 비율
+export const CHEST_MAX = 14; // 동시에 존재하는 최대 수 (넘치면 가장 오래된 드롭/웨이브 상자 제거)
+export const GOLD_KEY_PER_BOSS = 1;
+
+// 보상 표: 상자 보상 등급(0~3)마다 가중치 목록. 함수 없이 직렬화 가능한 데이터만 둔다.
+export type RewardDef =
+  | { kind: 'res'; w: number; res: ResKey; min: number; max: number }
+  | { kind: 'gold'; w: number; min: number; max: number }
+  | { kind: 'key'; w: number; n: number }
+  | { kind: 'goldKey'; w: number; n: number }
+  | { kind: 'sample'; w: number; min: number; max: number }
+  | { kind: 'sampleSp'; w: number; min: number; max: number }
+  | { kind: 'vaccine'; w: number; tier: number; n: number } // tier 0 초급 / 1 중급 / 2 고급
+  | { kind: 'skillPoint'; w: number; n: number }
+  | { kind: 'weapon'; w: number; id: WeaponId }
+  | { kind: 'costume'; w: number };
+export const COSTUMES = ['작업모', '파티 고깔', '요리사 모자', '해적 두건', '황금 왕관'];
+export const DUPLICATE_WEAPON_GOLD = 150; // 이미 가진 무기가 나오면 골드로 전환
+export const COSTUME_DUPLICATE_GOLD = 60;
+export const REWARD_TABLE: RewardDef[][] = [
+  [ // 일반
+    { kind: 'res', w: 30, res: 'wood', min: 6, max: 12 },
+    { kind: 'res', w: 22, res: 'stone', min: 4, max: 8 },
+    { kind: 'res', w: 16, res: 'herb', min: 3, max: 6 },
+    { kind: 'gold', w: 24, min: 15, max: 30 },
+    { kind: 'sample', w: 8, min: 1, max: 1 },
+  ],
+  [ // 고급
+    { kind: 'res', w: 18, res: 'iron', min: 3, max: 6 },
+    { kind: 'res', w: 14, res: 'parts', min: 2, max: 3 },
+    { kind: 'res', w: 12, res: 'herb', min: 6, max: 10 },
+    { kind: 'gold', w: 22, min: 40, max: 80 },
+    { kind: 'sample', w: 14, min: 2, max: 3 },
+    { kind: 'key', w: 10, n: 1 },
+    { kind: 'vaccine', w: 10, tier: 0, n: 1 },
+  ],
+  [ // 희귀
+    { kind: 'vaccine', w: 20, tier: 1, n: 1 },
+    { kind: 'res', w: 14, res: 'parts', min: 4, max: 6 },
+    { kind: 'res', w: 12, res: 'iron', min: 8, max: 12 },
+    { kind: 'sampleSp', w: 12, min: 1, max: 1 },
+    { kind: 'gold', w: 16, min: 100, max: 180 },
+    { kind: 'key', w: 8, n: 2 },
+    { kind: 'skillPoint', w: 8, n: 1 },
+    { kind: 'weapon', w: 6, id: 'shotgun' },
+    { kind: 'costume', w: 4 },
+  ],
+  [ // 전설
+    { kind: 'weapon', w: 20, id: 'smg' },
+    { kind: 'weapon', w: 14, id: 'shotgun' },
+    { kind: 'vaccine', w: 16, tier: 2, n: 1 },
+    { kind: 'skillPoint', w: 14, n: 2 },
+    { kind: 'goldKey', w: 10, n: 1 },
+    { kind: 'gold', w: 12, min: 400, max: 600 },
+    { kind: 'sampleSp', w: 8, min: 3, max: 3 },
+    { kind: 'costume', w: 6 },
+  ],
+];
+
 export type ZType = 'normal' | 'runner' | 'fatty' | 'boss' | 'king';
 export interface ZStats { hp: number; speed: number; dmg: number; scale: number }
 export function zombieStats(wave: number, t: ZType): ZStats {
