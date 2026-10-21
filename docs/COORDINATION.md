@@ -40,6 +40,14 @@
 - 각 모듈은 PR에 `docs/modules/<모듈>.md`를 추가해 **데이터 모델**(상태 필드, 데이터 표 스키마, 발행/구독 이벤트, 상태 전이)을 적습니다. C# 클래스·ScriptableObject·이벤트로 어떻게 옮길지 한 줄 메모를 붙입니다. 상세 이식 메모는 [UNITY_PORT.md](./UNITY_PORT.md).
 - 기존 스캐폴드(`player.ts`, `core/world.ts` 등)는 W1, 총괄 조율이 같은 규칙으로 점차 나눕니다.
 
+## 1-c. 배포 (Vercel, WebGL 정적 사이트)
+
+게임은 Vercel에 정적 사이트로 올라갑니다. 모든 작업자가 지킬 것:
+- `npm run build` → `dist/` 결과물이 서버 없이 그대로 동작해야 합니다. 서버 API, 환경 변수, 런타임 DB 금지. 저장은 localStorage.
+- 에셋은 `public/`이나 import로 번들에 포함하고 경로는 상대 경로(`import.meta.env.BASE_URL` 기준)로만 씁니다. 절대 URL, 외부 CDN 의존 금지.
+- 번들 크기와 첫 로딩을 가볍게 유지합니다. 큰 에셋(텍스처, 오디오 파일)은 추가하기 전에 총괄 조율과 상의하고, 오디오는 WebAudio 합성을 우선합니다. 새 npm 의존성은 최소화합니다.
+- 배포 설정은 `vercel.json`(빌드 `npm run build`, 출력 `dist`)에 있고, 절차는 [DEPLOY.md](./DEPLOY.md)에 있습니다.
+
 ## 2. 공용 계약 (src/core/)
 
 이미 `main`에 있는 것: `Ctx`/`System`(types.ts), `events`(events.ts), `input`, `world`(씬·`obstacles`·`resolveObstacles`), `humanoid`(사람형 모델).

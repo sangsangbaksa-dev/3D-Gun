@@ -6,6 +6,8 @@
 
 **Unity 이식 규칙(전원 필수):** 나중에 Unity로 옮깁니다. `src/<모듈>/logic/`(순수 TS, `three`·DOM import 금지)과 `src/<모듈>/view/`(Three.js·DOM)를 분리하고, 수치·표는 `src/data/`의 직렬화 가능한 객체로 둡니다. PR에 `docs/modules/<모듈>.md`(데이터 모델, 이벤트, C# 대응 메모)를 추가합니다. 자세한 내용은 `docs/COORDINATION.md` 1-b, `docs/UNITY_PORT.md`.
 
+**배포 규칙(전원 필수):** Vercel 정적 배포입니다. 서버·환경 변수 없이 `npm run build`의 `dist/`로 동작해야 하고, 에셋은 상대 경로로 번들에 포함하며, 큰 외부 에셋·무거운 의존성은 추가하지 않습니다(오디오는 WebAudio 합성).
+
 ## W1 무기/전투 (`feat/player`, `src/player/`)
 좌클릭 히트스캔 사격(`zombies` 목록 대상 레이캐스트, `hit(dmg*state.stats.dmgMul, false)`), 무기 3종(`WEAPONS`, 권총만 시작 보유, 1/2/3 교체), R 재장전(`reloadMul`, `magMul` 반영), 트레이서·총구 이펙트. `player:hit` 이벤트로 체력 감소(대시 무적 `iframes` 존중), 0이면 `player:dead`. `state.mode`가 build/modal이면 사격 정지. `weapon:fired` 발행. 무기 획득 방식(상자 보상 등)은 `state`에 보유 무기 필드를 추가해 W4와 맞춥니다.
 
