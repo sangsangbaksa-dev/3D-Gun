@@ -1,4 +1,4 @@
-// 이동·시선·대시. 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
+// 이동·시선·대시·점프. 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
 import { PLAYER } from '../../data';
 import { clamp, forwardOf, rightOf } from './math';
 import type { Player } from './player';
@@ -8,11 +8,16 @@ export interface MoveIntent {
   forward: number; strafe: number;
   lookDx: number; lookDy: number;
   dash: boolean;
+  jump: boolean;
   aim: boolean;
 }
 
 /** collide 는 장애물·맵 경계 처리(위치를 직접 보정). */
-export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown: number, collide: (p: { x: number; z: number }, radius: number) => void) {
+export function stepMovement(
+  p: Player, dt: number, it: MoveIntent, dashCooldown: number,
+  collide: (p: { x: number; z: number }, radius: number) => void,
+  groundY: (x: number, z: number) => number,
+) {
   p.iframes = Math.max(0, p.iframes - dt);
   p.dashCd = Math.max(0, p.dashCd - dt);
   p.kick = Math.max(0, p.kick - dt * 0.35 - p.kick * dt * 6);
@@ -44,5 +49,21 @@ export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown
   p.x += mx * speed * dt;
   p.z += mz * speed * dt;
   collide(p, PLAYER.radius);
+
+  const floor = groundY(p.x, p.z);
+  if (p.grounded) p.y = floor;
+  if (it.jump && p.grounded) {
+    p.grounded = false;
+    p.jumpVelocity = 7.2;
+  }
+  if (!p.grounded) {
+    p.jumpVelocity -= 20 * dt;
+    p.y += p.jumpVelocity * dt;
+    if (p.y <= floor) {
+      p.y = floor;
+      p.jumpVelocity = 0;
+      p.grounded = true;
+    }
+  }
   p.speed = speed;
 }
