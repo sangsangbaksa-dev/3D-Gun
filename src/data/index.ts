@@ -345,7 +345,7 @@ export type RewardDef =
   | { kind: 'sampleSp'; w: number; min: number; max: number }
   | { kind: 'vaccine'; w: number; tier: number; n: number } // tier 0 초급 / 1 중급 / 2 고급
   | { kind: 'skillPoint'; w: number; n: number }
-  | { kind: 'weapon'; w: number; id: WeaponId }
+  | { kind: 'weapon'; w: number; id: GunId }
   | { kind: 'costume'; w: number };
 export const COSTUMES = ['작업모', '파티 고깔', '요리사 모자', '해적 두건', '황금 왕관'];
 export const DUPLICATE_WEAPON_GOLD = 150; // 이미 가진 무기가 나오면 골드로 전환
@@ -366,6 +366,7 @@ export const REWARD_TABLE: RewardDef[][] = [
     { kind: 'sample', w: 14, min: 2, max: 3 },
     { kind: 'key', w: 10, n: 1 },
     { kind: 'vaccine', w: 10, tier: 0, n: 1 },
+    { kind: 'weapon', w: 4, id: 'magnum' },
   ],
   [ // 희귀
     { kind: 'vaccine', w: 20, tier: 1, n: 1 },
@@ -375,12 +376,18 @@ export const REWARD_TABLE: RewardDef[][] = [
     { kind: 'gold', w: 16, min: 100, max: 180 },
     { kind: 'key', w: 8, n: 2 },
     { kind: 'skillPoint', w: 8, n: 1 },
-    { kind: 'weapon', w: 6, id: 'shotgun' },
+    { kind: 'weapon', w: 5, id: 'shotgun' },
+    { kind: 'weapon', w: 6, id: 'magnum' },
+    { kind: 'weapon', w: 4, id: 'smg' },
+    { kind: 'weapon', w: 3, id: 'rifle' },
     { kind: 'costume', w: 4 },
   ],
   [ // 전설
-    { kind: 'weapon', w: 20, id: 'smg' },
-    { kind: 'weapon', w: 14, id: 'shotgun' },
+    { kind: 'weapon', w: 12, id: 'smg' },
+    { kind: 'weapon', w: 8, id: 'shotgun' },
+    { kind: 'weapon', w: 8, id: 'magnum' },
+    { kind: 'weapon', w: 14, id: 'rifle' },
+    { kind: 'weapon', w: 14, id: 'sniper' },
     { kind: 'vaccine', w: 16, tier: 2, n: 1 },
     { kind: 'skillPoint', w: 14, n: 2 },
     { kind: 'goldKey', w: 10, n: 1 },
