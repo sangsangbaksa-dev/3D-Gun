@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>좀비 타이쿤 3D</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#10141a; font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif; color:#eee; user-select:none; }
+  canvas { display:block; width:100%; height:100%; }
+  #hud { position:fixed; inset:0; pointer-events:none; }
+  .bar { position:absolute; left:16px; bottom:16px; width:260px; }
+  .bar .track { height:16px; background:#0008; border:1px solid #fff4; border-radius:4px; overflow:hidden; }
+  .bar .fill { height:100%; background:linear-gradient(#e24,#a12); width:100%; }
+  .bar .xp { height:6px; margin-top:4px; background:#0008; border-radius:3px; overflow:hidden; }
+  .bar .xp div { height:100%; background:#4cf; width:0; }
+  #hpText { font-size:13px; margin-bottom:3px; text-shadow:0 1px 2px #000; }
+  #top { position:absolute; top:12px; left:50%; transform:translateX(-50%); text-align:center; text-shadow:0 2px 4px #000; }
+  #wave { font-size:22px; font-weight:bold; }
+  #sub { font-size:14px; opacity:.9; }
+  #boss { display:none; margin-top:6px; width:360px; }
+  #boss .track { height:12px; background:#0008; border:1px solid #fff4; }
+  #boss .fill { height:100%; background:#a3d; width:100%; }
+  #res { position:absolute; top:12px; right:14px; text-align:right; font-size:14px; line-height:1.6; text-shadow:0 1px 3px #000; background:#0005; padding:8px 12px; border-radius:6px; }
+  #ammo { position:absolute; right:20px; bottom:16px; text-align:right; text-shadow:0 2px 4px #000; }
+  #ammo b { font-size:30px; }
+  #help { position:absolute; left:16px; top:12px; font-size:12px; line-height:1.6; opacity:.75; text-shadow:0 1px 2px #000; }
+  #prompt { position:absolute; left:50%; top:62%; transform:translateX(-50%); font-size:16px; text-shadow:0 2px 4px #000; background:#0007; padding:4px 12px; border-radius:6px; display:none; }
+  #prog { position:absolute; left:50%; top:67%; width:160px; height:8px; transform:translateX(-50%); background:#0008; border-radius:4px; overflow:hidden; display:none; }
+  #prog div { height:100%; background:#fc3; width:0; }
+  #cross { position:absolute; left:50%; top:50%; width:18px; height:18px; transform:translate(-50%,-50%); }
+  #cross::before, #cross::after { content:''; position:absolute; background:#fff; opacity:.85; }
+  #cross::before { left:8px; top:0; width:2px; height:18px; -webkit-mask:linear-gradient(#000 35%,transparent 35% 65%,#000 65%); mask:linear-gradient(#000 35%,transparent 35% 65%,#000 65%); }
+  #cross::after { top:8px; left:0; height:2px; width:18px; -webkit-mask:linear-gradient(90deg,#000 35%,transparent 35% 65%,#000 65%); mask:linear-gradient(90deg,#000 35%,transparent 35% 65%,#000 65%); }
+  #cross.hit::before, #cross.hit::after { background:#f33; opacity:1; }
+  #toasts { position:absolute; left:16px; bottom:90px; font-size:14px; text-shadow:0 1px 3px #000; }
+  #toasts div { background:#000a; padding:3px 10px; margin-top:4px; border-radius:4px; width:fit-content; }
+  #banner { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:42px; font-weight:bold; text-shadow:0 3px 8px #000; opacity:0; transition:opacity .4s; white-space:nowrap; }
+  #hint { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#0006; font-size:22px; cursor:pointer; }
+  #modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#000b; z-index:5; }
+  #box { background:#1b212b; border:1px solid #fff3; border-radius:10px; padding:20px 26px; min-width:420px; max-width:720px; max-height:86vh; overflow:auto; box-shadow:0 10px 40px #000; }
+  #box h2 { margin:0 0 12px; }
+  #box button { background:#2f6f4e; color:#fff; border:0; border-radius:5px; padding:6px 12px; margin:3px; cursor:pointer; font-size:14px; font-family:inherit; }
+  #box button:disabled { background:#444; color:#999; cursor:default; }
+  #box button.sec { background:#44505f; }
+  #box .row { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #fff1; padding:5px 0; gap:14px; }
+  #box .br { margin-top:12px; color:#9cf; font-weight:bold; }
+  #box small { opacity:.7; }
+  .t0 { color:#ccc } .t1 { color:#6c6 } .t2 { color:#6af } .t3 { color:#fc3 }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="help">WASD 이동 · Shift 대시 · 클릭 사격 · R 재장전 · 1~3 무기<br>E 상호작용(채집/상자/주사) · C 백신 선택 · Q 아군 역할<br>B 건설(우클릭 철거) · Tab 스킬 · N 웨이브 바로 시작</div>
+  <div id="top"><div id="wave"></div><div id="sub"></div><div id="boss"><div class="track"><div class="fill" id="bossFill"></div></div></div></div>
+  <div id="res"></div>
+  <div id="cross"></div>
+  <div id="prompt"></div><div id="prog"><div></div></div>
+  <div id="toasts"></div>
+  <div id="banner"></div>
+  <div class="bar"><div id="hpText"></div><div class="track"><div class="fill" id="hpFill"></div></div><div class="xp"><div id="xpFill"></div></div></div>
+  <div id="ammo"></div>
+</div>
+<div id="hint">클릭해서 플레이 계속</div>
+<div id="modal"><div id="box"></div></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
