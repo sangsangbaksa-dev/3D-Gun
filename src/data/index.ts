@@ -235,6 +235,26 @@ export const VACCINES: VaccineDef[] = [
   { name: '고급 백신', herb: 8, sample: 0, sampleSp: 2, parts: 0, iron: 2, rate: 0.8 },
 ];
 
+// ── 백신/아군 (소유: allies). 직렬화 가능한 값만 둔다. ──
+export type AllyRole = 'fighter' | 'gatherer' | 'guard' | 'researcher';
+export const ALLY_ROLE_ORDER: AllyRole[] = ['fighter', 'guard', 'gatherer', 'researcher'];
+export interface AllyRoleDef { name: string; desc: string; color: number; max: number }
+export const ALLY_ROLES: Record<AllyRole, AllyRoleDef> = {
+  fighter: { name: '전투병', desc: '플레이어를 따라다니며 함께 싸운다 (최대 3)', color: 0xe5483f, max: 3 },
+  guard: { name: '경비병', desc: '핵 주변을 순찰하며 다가오는 좀비를 막는다', color: 0x3f8be5, max: 99 },
+  gatherer: { name: '채집병', desc: '자원을 캐서 기지로 가져온다', color: 0xe5a53f, max: 99 },
+  researcher: { name: '연구 보조', desc: '연구소 백신 제작 속도 증가', color: 0xa56be5, max: 99 },
+};
+/** 아군 기본 능력. 최종값 = 기본 * state.stats.allyDmg / allyHp */
+export const ALLY = { hp: 60, speed: 5, dmg: 9, atkRate: 0.8, atkRange: 1.7, radius: 0.45, height: 1.9, regenDelay: 5, regen: 2, aggro: 12, leash: 16 };
+/** 주사: 시간(초), 체력이 낮을수록 더해지는 성공률(최대), 보스 감산 */
+export const INJECT = { time: 1.5, range: 2.2, lowHpBonus: 0.2, bossPenalty: 0.3, minRate: 0.05, maxRate: 0.95 };
+/** 백신 제작: 1개당 기본 시간(초)과 연구 보조 1명당 가속 비율 */
+export const CRAFT = { time: 3, perResearcher: 0.35 };
+export const GATHER = { time: 3, carryRange: 2.5 };
+/** 아군 동시 상한의 절대 천장 */
+export const ALLY_HARD_CAP = 30;
+
 // 상자 등급: 0 나무(무료), 1 철(열쇠), 2 황금(황금 열쇠)
 export const CHEST_NAMES = ['나무 상자', '철 상자', '황금 상자'];
 export const REWARD_NAMES = ['일반', '고급', '희귀', '전설'];
