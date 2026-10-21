@@ -183,8 +183,8 @@ export class PlayerController {
           if (shot) {
             out.shot = shot;
             this.fireBuf = 0;
-            const sprayKick = 1 + w.bloom * 0.5;
-            p.kick = Math.min(0.45, p.kick + GUNS[shot.weapon].recoil * (p.aiming ? 0.55 : 1) * sprayKick);
+            const sprayKick = 1 + w.bloom * 0.85;
+            p.kick = Math.min(0.62, p.kick + GUNS[shot.weapon].recoil * 2.4 * (p.aiming ? 0.4 : 1) * sprayKick);
             events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(w, stats) });
             events.emit('weapon:sound', { weapon: shot.weapon, kind: 'fire' });
             const hitKind = shot.pellets.some((pl) => pl.kill) ? 'kill' : shot.pellets.some((pl) => pl.headshot) ? 'headshot' : shot.pellets.some((pl) => pl.kind === 'zombie') ? 'hit' : null;
@@ -193,7 +193,9 @@ export class PlayerController {
           }
         }
       }
+      if (!out.shot && w.sinceShot > 0.16) p.kick = Math.max(0, p.kick - p.kick * dt * 4);
     }
+    out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
     if (p.hp !== this.lastHp || p.maxHp !== this.lastMaxHp) {
       this.lastHp = p.hp; this.lastMaxHp = p.maxHp;

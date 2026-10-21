@@ -15,7 +15,9 @@ export interface MoveIntent {
 export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown: number, collide: (p: { x: number; z: number }, radius: number) => void) {
   p.iframes = Math.max(0, p.iframes - dt);
   p.dashCd = Math.max(0, p.dashCd - dt);
-  p.kick = Math.max(0, p.kick - dt * 0.35 - p.kick * dt * 6);
+  // 연사로 쌓인 수직 반동. 쏘는 동안은 천천히만 돌아오고, 멈추면 더 빨리 내려온다
+  const kickRecover = 0.85;
+  p.kick = Math.max(0, p.kick - p.kick * dt * kickRecover);
 
   if (p.dead) { p.speed = 0; p.moving = false; p.aiming = false; p.aimT = Math.max(0, p.aimT - dt * 6); return; }
 

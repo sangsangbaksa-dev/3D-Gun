@@ -178,8 +178,8 @@ export const PLAYER = {
   respawnDelay: 3,     // 사망 후 아무도 되살리지 않을 때 자동 부활까지 (초)
   headshotMul: 1.8,    // 머리(키의 78% 이상) 명중 배율
   aimAssist: 0.15,     // 조준 보정: 판정 반경에 더하는 여유(m)
-  /** 비행 거리 t(m)마다 y -= bulletDrop * t² (아주 약한 낙차) */
-  bulletDrop: 0.00005,
+  /** 비행 거리 t(m)에서 y -= bulletDrop * t². 30m ≈ 0.7m, 50m ≈ 2m */
+  bulletDrop: 0.0008,
 };
 
 export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
