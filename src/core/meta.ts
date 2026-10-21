@@ -45,3 +45,37 @@ export function resetMeta() {
   Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 });
   saveMeta();
 }
+
+/** 계정 화면의 백업 내보내기에 사용할 복사본. */
+export function exportMetaSnapshot(): Meta {
+  return JSON.parse(JSON.stringify(meta)) as Meta;
+}
+
+/** 사용자가 선택한 백업을 검증·정리한 뒤 현재 브라우저 진행 데이터를 교체한다. */
+export function importMetaSnapshot(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const source = value as Record<string, unknown>;
+  const number = (key: keyof Pick<Meta, 'currency' | 'totalRuns' | 'bestWave' | 'bestCheckpoint' | 'lastSeen' | 'totalKills'>) => {
+    const n = source[key];
+    return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+  const record = (key: 'upgrades' | 'facilities' | 'wallet' | 'skills'): Record<string, number> => {
+    const raw = source[key];
+    const out: Record<string, number> = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    for (const [id, n] of Object.entries(raw)) {
+      if (id.length <= 80 && id !== '__proto__' && id !== 'constructor' && id !== 'prototype'
+        && typeof n === 'number' && Number.isFinite(n) && n >= 0) out[id] = n;
+    }
+    return out;
+  };
+  Object.assign(meta, {
+    currency: number('currency'), totalRuns: Math.floor(number('totalRuns')),
+    bestWave: Math.floor(number('bestWave')), bestCheckpoint: Math.floor(number('bestCheckpoint')),
+    lastSeen: number('lastSeen'), totalKills: Math.floor(number('totalKills')),
+    upgrades: record('upgrades'), facilities: record('facilities'),
+    wallet: record('wallet'), skills: record('skills'),
+  });
+  saveMeta();
+  return true;
+}
