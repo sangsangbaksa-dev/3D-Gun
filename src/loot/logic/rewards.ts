@@ -1,5 +1,5 @@
 // 상자 뽑기 규칙: 보상 등급 추첨(천장 포함) → 보상 추첨 → state 에 지급. 순수 TS (three/DOM 없음).
-import { CHEST_TABLE, COSTUMES, COSTUME_DUPLICATE_GOLD, DUPLICATE_WEAPON_GOLD, PITY_LIMIT, REWARD_TABLE, RES_LABEL, WEAPONS, type RewardDef } from '../../data';
+import { CHEST_TABLE, COSTUMES, COSTUME_DUPLICATE_GOLD, DUPLICATE_WEAPON_GOLD, PITY_LIMIT, REWARD_TABLE, RES_LABEL, GUNS, type RewardDef } from '../../data';
 import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { randInt, type Rng } from './rng';
@@ -47,7 +47,7 @@ export function rollReward(rarity: number, rng: Rng): Reward {
     case 'goldKey': return { def, amount: def.n, text: `황금 열쇠 ${def.n}개` };
     case 'vaccine': return { def, amount: def.n, text: `${['초급', '중급', '고급'][def.tier]} 백신 ${def.n}개` };
     case 'skillPoint': return { def, amount: def.n, text: `스킬 포인트 +${def.n}` };
-    case 'weapon': return { def, amount: 1, text: `${WEAPONS[def.id].name} 획득!` };
+    case 'weapon': return { def, amount: 1, text: `${GUNS[def.id].name} 획득!` };
     case 'costume': {
       const c = COSTUMES[Math.floor(rng() * COSTUMES.length)];
       return { def, amount: 1, text: `아군 코스튬 「${c}」`, costume: c };
@@ -77,8 +77,8 @@ export function applyReward(r: Reward): string {
     case 'vaccine': state.vaccines[d.tier] += r.amount; break;
     case 'skillPoint': state.skillPoints += r.amount; break;
     case 'weapon':
-      if (state.weapons.includes(d.id)) { state.gold += DUPLICATE_WEAPON_GOLD; text = `${WEAPONS[d.id].name} (이미 보유) → 골드 ${DUPLICATE_WEAPON_GOLD}`; }
-      else state.weapons.push(d.id);
+      if (state.weapons.includes(d.id)) { state.gold += DUPLICATE_WEAPON_GOLD; text = `${GUNS[d.id].name} (이미 보유) → 골드 ${DUPLICATE_WEAPON_GOLD}`; }
+      else events.emit('weapon:unlock', { weapon: d.id }); // state.weapons 에는 player 가 넣는다
       break;
     case 'costume':
       if (r.costume && state.costumes.includes(r.costume)) { state.gold += COSTUME_DUPLICATE_GOLD; text = `「${r.costume}」 (중복) → 골드 ${COSTUME_DUPLICATE_GOLD}`; }

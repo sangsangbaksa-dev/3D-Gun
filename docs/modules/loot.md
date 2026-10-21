@@ -42,7 +42,7 @@ src/loot/
 | `CHEST_RESPAWN`, `ZONE_CHEST_RULE`, `CHEST_SCATTER`, `GOLD_SPAWN`, `CHEST_DROP`, `WAVE_CHEST`, `CHEST_MAX` | 스폰·드롭·재생성 수치 |
 
 ### 추가한 공유 상태 (`core/state.ts`, 추가만)
-`weapons: string[]` 보유 무기(시작 `['pistol']`, 상자 보상으로 추가. player 가 읽어 1/2/3 교체에 사용), `costumes: string[]` 모은 코스튬. `pity`, `keys`, `goldKeys`, `vaccines`, `samples`, `samplesSp`, `skillPoints`, `gold`, `res`는 기존 필드를 쓴다.
+`weapons: string[]` 보유 무기(소유 player. 상자는 `weapon:unlock`만 낸다), `costumes: string[]` 모은 코스튬. `pity`, `keys`, `goldKeys`, `vaccines`, `samples`, `samplesSp`, `skillPoints`, `gold`, `res`는 기존 필드를 쓴다.
 
 ## 규칙
 - **뽑기**: 열기 시 열쇠 소모(나무는 무료) → `rollRarity(tier, pity)`: 철/황금만 천장 적용, `pity >= PITY_LIMIT`이면 희귀 이상만 가중 추첨 → 희귀 이상이면 `pity = 0`, 아니면 +1. 나무 상자는 천장에 영향 없음. 10만 회 시뮬레이션으로 희귀 미만 연속이 10회를 넘지 않음을 확인.
@@ -54,8 +54,8 @@ src/loot/
 ## 이벤트
 | 방향 | 이벤트 |
 |------|--------|
-| 구독 | `enemy:killed`, `wave:clear`, `boss:dead`, `run:start` (상자·타이머 초기화, `pity`·`keys`·`goldKeys`=0, `weapons`=['pistol']. 코스튬은 유지) |
-| 발행 | `chest:opened { tier, rarity, text }`, `toast` |
+| 구독 | `enemy:killed`, `wave:clear`, `boss:dead`, `run:start` (상자·타이머 초기화, `pity`·`keys`·`goldKeys`=0, 코스튬은 유지. 보유 무기는 player 가 초기화) |
+| 발행 | `chest:opened { tier, rarity, text }`, `weapon:unlock { weapon }`(무기 당첨, player 가 `state.weapons`에 추가), `toast` |
 
 ## 저장
 `ChestManager.save()/load()`가 `LootSave`(자리, 닫힌 상자, 재생성 대기, 황금 타이머)를 JSON으로 주고받는다. 천장과 열쇠는 `state`에 있다. 저장 통합(Phase 2)에서 호출만 하면 된다.
