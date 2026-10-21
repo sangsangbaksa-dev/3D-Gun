@@ -76,6 +76,6 @@ export const CSS = `
 @keyframes t2dFloat{to{transform:translateY(-60px);opacity:0}}
 #t2d .toast2{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);background:#000c;border:1px solid #ffffff2a;padding:8px 18px;border-radius:20px;font-size:14px;animation:t2dToast 2s forwards;pointer-events:none}
 @keyframes t2dToast{0%{opacity:0;transform:translate(-50%,10px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
-#t2d .sect{margin:6px 2px 10px;font-size:13px;color:#9cc8ff}
+#t2d .sect{margin:10px 2px 4px;font-size:13px;font-weight:700;letter-spacing:.08em;color:#9cc8ff;grid-column:1 / -1}
 @media(max-width:900px){#t2d aside{display:none}#t2d nav{width:96px}}
 `;

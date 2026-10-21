@@ -83,7 +83,7 @@ export function switchWeapon(w: WeaponState, id: GunId): boolean {
 export function currentSpread(w: WeaponState, stats: Stats, moving: boolean, aiming: boolean): number {
   const base = gunStats(w.current, levelOf(w), stats).spread;
   const spray = w.bloom * (1 + w.bloom * 0.45);
-  return base * (1 + spray) * (moving ? 1.35 : 1) * (aiming ? 0.5 : 1);
+  return base * (1 + spray) * (moving ? 1.35 : 1) * (aiming ? 0.5 : 1) * stats.spreadMul;
 }
 
 export type PelletKind = 'zombie' | 'ground' | 'air';
@@ -143,7 +143,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
         const tg = h.target;
         const head = h.y >= tg.height * 0.78;
         const fall = 1 - def.falloff * Math.min(1, h.t / def.range);
-        const dmg = gs.dmg * fall * Math.pow(0.7, k) * (head ? PLAYER.headshotMul : 1);
+        const dmg = gs.dmg * fall * Math.pow(0.7, k) * (head ? PLAYER.headshotMul * env.stats.headMul : 1);
         tg.hit(dmg, false);
         const info = { x: at(h.t).x, y: at(h.t).y, z: at(h.t).z, kill: tg.dead };
         if (!first) first = { kind: 'zombie', headshot: head, kill: tg.dead, dmg, end: at(h.t), also: [] };

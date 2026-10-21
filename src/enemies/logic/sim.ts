@@ -162,7 +162,7 @@ export class EnemySim implements DamageSink {
     events.emit('enemy:killed', { x: z.x, z: z.z, type: z.type, byAlly });
     const rw = ZOMBIE_REWARD[z.type];
     const mul = z.elite ? ELITE.reward : 1;
-    const coins = rw.gold * mul;
+    const coins = Math.round(rw.gold * mul * state.stats.goldMul);
     state.gold += coins;
     events.emit('xp:gain', { amount: rw.xp * mul, reason: 'kill' });
     events.emit('toast', { text: `코인 +${coins}` });

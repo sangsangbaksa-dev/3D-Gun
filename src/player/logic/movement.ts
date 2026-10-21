@@ -1,5 +1,6 @@
 // 이동·시선·대시. 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
 import { PLAYER } from '../../data';
+import { state } from '../../core/state';
 import { clamp, forwardOf, rightOf } from './math';
 import type { Player } from './player';
 
@@ -36,7 +37,7 @@ export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown
     p.dashT = PLAYER.dashTime; p.iframes = Math.max(p.iframes, PLAYER.dashIframes); p.dashCd = dashCooldown;
     p.dashDirX = len > 0 ? mx : f.x; p.dashDirZ = len > 0 ? mz : f.z;
   }
-  let speed = len > 0 ? PLAYER.speed * (p.aiming ? PLAYER.aimSpeedMul : 1) : 0;
+  let speed = len > 0 ? PLAYER.speed * state.stats.speedMul * (p.aiming ? PLAYER.aimSpeedMul : 1) : 0;
   p.moving = len > 0;
   if (p.dashT > 0) {
     p.dashT -= dt;

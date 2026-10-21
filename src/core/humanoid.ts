@@ -34,6 +34,9 @@ export function makeHumanoid(skin: number, cloth: number, scale = 1): Humanoid {
 
 export function animateWalk(h: Humanoid, dt: number, speed: number) {
   h.walk += dt * speed * 2.2;
-  const s = Math.sin(h.walk) * Math.min(1, speed / 3) * 0.7;
+  const amp = Math.min(1, speed / 3);
+  const s = Math.sin(h.walk) * amp * 0.7;
   h.legs[0].rotation.x = s; h.legs[1].rotation.x = -s;
+  if (h.arms[0]) h.arms[0].rotation.x = -s * 0.85;
+  if (h.arms[1]) h.arms[1].rotation.x = s * 0.85;
 }

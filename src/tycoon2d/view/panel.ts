@@ -117,7 +117,12 @@ export class TycoonPanel {
       const note = document.createElement('div'); note.className = 'sect';
       note.textContent = '스킬 트리 노드를 영구 습득합니다 (스킬 포인트 소모). 출격하면 해당 레벨로 시작합니다.';
       this.content.appendChild(note);
-      SKILLS.forEach((s, i) => grid.appendChild(this.skillCard(s.id, i)));
+      const branches = [...new Set(SKILLS.map((s) => s.branch))];
+      branches.forEach((br) => {
+        const h = document.createElement('div'); h.className = 'sect'; h.textContent = br;
+        grid.appendChild(h);
+        SKILLS.filter((s) => s.branch === br).forEach((s, i) => grid.appendChild(this.skillCard(s.id, i)));
+      });
     } else {
       const note = document.createElement('div'); note.className = 'sect';
       note.textContent = '시설은 출격 중이든 접속 중이 아니든 계속 재화를 만듭니다 (부재 시 최대 4시간, 50%).';
@@ -191,7 +196,8 @@ export class TycoonPanel {
 
   private skillCard(id: string, i: number): HTMLElement {
     const s = SKILLS.find((x) => x.id === id)!;
-    const c = this.makeCard(i, '🌳', s.name, `${s.desc}  <small>(${s.branch})</small>`);
+    const icon = { 생존: '❤️', 채집: '🪓', 연구: '🧪', 사령: '🚩' }[s.branch] ?? '🌳';
+    const c = this.makeCard(i, icon, s.name, s.desc);
     c.btn.onclick = (e) => this.afterBuy(c.el, buySkill(meta, id), e);
     this.cards.push({
       el: c.el,

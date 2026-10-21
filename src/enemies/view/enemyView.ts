@@ -256,7 +256,8 @@ export class EnemyView {
     if (z.state !== 'stunned') g.rotation.z = roll;
     g.rotation.x = lean;
     g.position.y = gy + lift;
-    h.arms.forEach((a) => (a.rotation.x = armX));
+    const swing = Math.sin(h.walk) * Math.min(0.45, z.moveSpeed * 0.08);
+    h.arms.forEach((a, i) => { a.rotation.x = armX + (i === 0 ? swing : -swing); });
 
     // 장식 애니메이션
     const parts = v.m.parts;

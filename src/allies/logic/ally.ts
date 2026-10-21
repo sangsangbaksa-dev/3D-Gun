@@ -5,6 +5,8 @@ import { events } from '../../core/events';
 import { allies, zombies, structures, nearest, newId, type AllyRef, type ZombieRef } from '../../core/entities';
 import { clamp, dist, turnToward, yawTo } from './math';
 
+const allyMove = (k = 1) => ALLY.speed * k * (1 + 0.1 * (state.skillLv.aspeed || 0));
+
 export type AllyAct = 'idle' | 'move' | 'attack' | 'work' | 'flee';
 
 /** 아군 한 명. AllyRef(공용 계약)를 그대로 구현하므로 allies 목록에 바로 들어간다 */
@@ -133,7 +135,7 @@ function foe(x: number, z: number, maxDist: number): ZombieRef | undefined {
 
 function strike(a: Ally, t: ZombieRef, dt: number, env: AllyEnv): boolean {
   const reach = ALLY.atkRange + t.radius;
-  const d = moveTo(a, t.x, t.z, ALLY.speed, dt, reach * 0.8, env);
+  const d = moveTo(a, t.x, t.z, allyMove(), dt, reach * 0.8, env);
   a.yaw = turnToward(a.yaw, yawTo(t.x - a.x, t.z - a.z), dt * 14);
   if (d <= reach && a.atkCd <= 0) {
     a.atkCd = ALLY.atkRate; a.swing = 1; a.act = 'attack'; a.actT = 0;
@@ -151,7 +153,7 @@ function fighter(a: Ally, dt: number, env: AllyEnv) {
   const n = Math.max(1, countRole('fighter'));
   const ang = (a.slot / n) * Math.PI * 2 + 0.6;
   const tx = p.x + Math.cos(ang) * 3, tz = p.z + Math.sin(ang) * 3;
-  if (moveTo(a, tx, tz, ALLY.speed * 1.15, dt, 0.6, env) < 0.8) a.act = 'idle';
+  if (moveTo(a, tx, tz, allyMove(1.15), dt, 0.6, env) < 0.8) a.act = 'idle';
 }
 
 function guard(a: Ally, dt: number, env: AllyEnv) {
@@ -160,13 +162,13 @@ function guard(a: Ally, dt: number, env: AllyEnv) {
   if (t) { strike(a, t, dt, env); return; }
   a.patrol += dt * 0.18;
   const ang = a.patrol + a.slot * 1.3, r = 6.5 + (a.slot % 3);
-  if (moveTo(a, c.x + Math.cos(ang) * r, c.z + Math.sin(ang) * r, ALLY.speed * 0.45, dt, 0.4, env) < 0.5) a.act = 'idle';
+  if (moveTo(a, c.x + Math.cos(ang) * r, c.z + Math.sin(ang) * r, allyMove(0.45), dt, 0.4, env) < 0.5) a.act = 'idle';
 }
 
 function researcher(a: Ally, dt: number, env: AllyEnv) {
   const base = labPos() ?? anchor();
   const ang = a.slot * 2.1, tx = base.x + Math.cos(ang) * 2.8, tz = base.z + Math.sin(ang) * 2.8;
-  const d = moveTo(a, tx, tz, ALLY.speed * 0.7, dt, 0.3, env);
+  const d = moveTo(a, tx, tz, allyMove(0.7), dt, 0.3, env);
   if (d <= 0.6) { a.act = 'work'; a.yaw = turnToward(a.yaw, yawTo(base.x - a.x, base.z - a.z), dt * 6); }
 }
 
@@ -184,10 +186,10 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
   const c = anchor();
   // 좀비가 가까우면 기지로 도망
   const scary = foe(a.x, a.z, 7);
-  if (scary) { a.act = 'flee'; moveTo(a, c.x, c.z, ALLY.speed * 1.3, dt, 2, env); a.act = 'flee'; return; }
+  if (scary) { a.act = 'flee'; moveTo(a, c.x, c.z, allyMove(1.3), dt, 2, env); a.act = 'flee'; return; }
 
   if (a.carry) {
-    if (moveTo(a, c.x, c.z, ALLY.speed * 0.9, dt, GATHER.carryRange, env) <= GATHER.carryRange + 0.3) {
+    if (moveTo(a, c.x, c.z, allyMove(0.9), dt, GATHER.carryRange, env) <= GATHER.carryRange + 0.3) {
       gain(a.carry.res, a.carry.amount);
       events.emit('resource:gathered', { res: a.carry.res, amount: a.carry.amount });
       a.carry = null; a.nodeId = 0; a.act = 'idle';
@@ -209,7 +211,7 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     a.actT = 0;
   }
   if (!node) { a.act = 'idle'; return; }
-  if (moveTo(a, node.x, node.z, ALLY.speed * 0.9, dt, 1.2, env) <= 1.5) {
+  if (moveTo(a, node.x, node.z, allyMove(0.9), dt, 1.2, env) <= 1.5) {
     a.act = 'work'; a.speed = 0;
     a.yaw = turnToward(a.yaw, yawTo(node.x - a.x, node.z - a.z), dt * 8);
     a.actT += dt * state.stats.gatherSpeed;

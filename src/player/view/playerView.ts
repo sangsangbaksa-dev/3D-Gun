@@ -199,11 +199,22 @@ export class PlayerView {
     const hammer = gun.parts.hammer;
     if (hammer) hammer.obj.rotation.x = -0.6 * Math.max(0, 1 - age / 0.18) + 0.2 * smooth(age / 0.5 - 0.2);
 
-    // ── 조준 각도: 카메라 시선(pitch - kick)에 맞춰 팔과 총이 위아래로 ──
-    const a = -(p.pitch - p.kick) + 0.1;
-    const adsX = -0.07 * p.aimT;
-    this.pivot.rotation.set(a + recoilPitch - dip + this.swayY * 0.8, this.swayX * 1.2, roll + this.swayX * 0.5);
-    this.pivot.position.set(0.11 + adsX + bobX + this.swayX * 0.4, 1.47 - dip * 0.14 + bobY + breath - this.swayY * 0.3, -0.5 + recoilBack + handShift);
+    // ── 조준: 우클릭이면 총구가 화면 중앙(시선)으로 들어온다 ──
+    const ads = p.aimT;
+    const a = -(p.pitch - p.kick) + 0.08 * (1 - ads);
+    const swayDamp = 1 - ads * 0.92;
+    this.pivot.rotation.set(
+      a + recoilPitch * (1 - ads * 0.35) - dip + this.swayY * 0.8 * swayDamp,
+      this.swayX * 1.2 * swayDamp,
+      (roll + this.swayX * 0.5) * swayDamp,
+    );
+    const hipX = 0.18, hipY = 1.34, hipZ = -0.48;
+    const adsX = 0, adsY = 1.56, adsZ = -0.36;
+    this.pivot.position.set(
+      hipX + (adsX - hipX) * ads + bobX * swayDamp + this.swayX * 0.4 * swayDamp,
+      hipY + (adsY - hipY) * ads - dip * 0.14 + bobY * swayDamp + breath - this.swayY * 0.3 * swayDamp,
+      hipZ + (adsZ - hipZ) * ads + recoilBack * (1 - ads * 0.5) + handShift,
+    );
 
     // 조준·흔들림·반동은 피벗이 이미 적용한다. 손은 그 축에 붙어 총을 쥔 자세만 유지한다
     const [left, right] = this.model.arms;

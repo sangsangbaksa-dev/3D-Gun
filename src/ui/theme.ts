@@ -20,6 +20,10 @@ export const THEME_CSS = `
   --zt-shadow: 0 8px 32px rgba(0,0,0,.45);
   --zt-font: 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
 }
+html, body, #hud, #attract, #t2d, #box, #modal, .pv-root, .pv-up {
+  word-break: keep-all;
+  line-break: strict;
+}
 `;
 
 export function injectTheme() {
