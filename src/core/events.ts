@@ -30,8 +30,11 @@ export interface GameEvents {
   // allies
   'zombie:converted': { id: number; type: string };  // enemies 는 이 좀비를 목록에서 빼고 메시를 넘겨준다
   'ally:dead': { id: number };
+  'zombie:inject-failed': { id: number };            // 주사 실패 → enemies 가 그 좀비를 분노(이동속도 +30%) 상태로 깨운다
+  'ally:spawned': { id: number; role: string };
   // gathering
-  'resource:gathered': { res: string; amount: number };
+  'resource:gathered': { res: string; amount: number }; // res: ResKey 또는 'samples' | 'samplesSp'
+  'gather:hit': { kind: string };                    // 채집 중 타격 한 번 (효과음용: tree, rock, iron, herb, wreck)
   // loot
   'chest:opened': { tier: number; rarity: number; text: string };
   // base
