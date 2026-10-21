@@ -16,7 +16,7 @@ export const HudSystem: System = {
     acc += dt;
     if (acc < 0.2) return;
     acc = 0;
-    if (wave) wave.textContent = state.phase === 'ended' ? '클리어!' : `웨이브 ${state.wave}`;
+    if (wave) wave.textContent = state.phase === 'ended' ? (state.wave >= 50 ? '클리어!' : '런 종료') : `웨이브 ${state.wave}`;
     if (sub) {
       sub.textContent = state.phase === 'prep'
         ? `준비 ${Math.ceil(state.prepLeft)}초 · N 으로 바로 시작`
