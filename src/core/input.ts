@@ -5,6 +5,8 @@ export const input = {
   mouseRightDown: false,
   dx: 0,
   dy: 0,
+  /** 설정 메뉴의 시점 감도 배율 */
+  lookSensitivity: 1,
   locked: false,
   /** 포인터 잠금을 못 쓰는 환경(iframe 등)에서 방향키/우클릭 드래그로 시점을 돌리는 대체 모드 */
   fallback: false,
