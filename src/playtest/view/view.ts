@@ -176,7 +176,7 @@ export class PlaytestView {
   update(dt: number, ctx: Ctx) {
     const s = this.sim;
     const p = ctx.player;
-    const canPlay = (input.locked || debug) && !this.overlayOpen;
+    const canPlay = !this.overlayOpen;
     const slot = input.pressed.has('Digit1') ? 0 : input.pressed.has('Digit2') ? 1 : input.pressed.has('Digit3') ? 2 : -1;
     const o = ctx.camera.position, d = ctx.aimDir;
     const inp: SimInput = {
@@ -395,6 +395,7 @@ export class PlaytestView {
 
   private overlay(html: string, buttons: [string, () => void][]) {
     this.overlayOpen = true;
+    input.modalOpen = true;
     document.exitPointerLock?.();
     const box = $('box');
     box.innerHTML = html;
@@ -406,7 +407,7 @@ export class PlaytestView {
     }
     $('modal').style.display = 'flex';
   }
-  private hideOverlay() { this.overlayOpen = false; $('modal').style.display = 'none'; }
+  private hideOverlay() { this.overlayOpen = false; input.modalOpen = false; $('modal').style.display = 'none'; }
 
   private showDead(from: number, to: number, core: boolean) {
     this.overlay(
