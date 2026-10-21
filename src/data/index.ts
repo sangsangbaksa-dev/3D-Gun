@@ -119,16 +119,72 @@ export const PLAYER = {
   aimAssist: 0.15,     // 3인칭 조준 보정: 판정 반경에 더하는 여유(m)
 };
 
-export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop';
-export interface BuildingDef { name: string; cost: Partial<Record<ResKey, number>>; radius: number; hp: number; desc: string }
-export const BUILDING_ORDER: BuildingId[] = ['lab', 'barracks', 'barricade', 'tower', 'shop'];
+export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
+type Cost = Partial<Record<ResKey, number>>;
+/** 포탑 한 단계의 능력. 1단계가 기본, 이후는 업그레이드 */
+export interface TurretLevel { dmg: number; rate: number; range: number; upCost: Cost; upGold: number }
+export interface BuildingDef {
+  name: string; cost: Cost; radius: number; hp: number; desc: string;
+  /** 사격 판정용 원기둥 높이(m) */
+  height: number;
+  /** 포탑류: 탄약 수, 보충 비용(한 번에 가득), 단계별 능력 */
+  turret?: { ammo: number; refill: Cost; levels: TurretLevel[] };
+  /** 함정류: 범위 안의 좀비를 느리게 하고 지속 피해 */
+  trap?: { radius: number; slow: number; dps: number };
+}
+export const BUILDING_ORDER: BuildingId[] = ['tower', 'mgtower', 'barricade', 'trap', 'lab', 'barracks', 'shop'];
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, desc: 'E: 백신 제작' },
-  barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, desc: '아군 상한 +3' },
-  barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1.2, hp: 200, desc: '좀비를 막는다' },
-  tower: { name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1.2, hp: 300, desc: '자동 사격' },
-  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, desc: 'E: 자원 판매, 열쇠 구매' },
+  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작' },
+  barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
+  barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
+  tower: {
+    name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1, hp: 300, height: 5, desc: '자동 사격, 업그레이드',
+    turret: {
+      ammo: 40, refill: { wood: 2, stone: 1 },
+      levels: [
+        { dmg: 9, rate: 0.7, range: 15, upCost: {}, upGold: 0 },
+        { dmg: 14, rate: 0.6, range: 17, upCost: { wood: 10, stone: 10, iron: 2 }, upGold: 0 },
+        { dmg: 22, rate: 0.5, range: 19, upCost: { stone: 14, iron: 6, parts: 2 }, upGold: 30 },
+      ],
+    },
+  },
+  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 판매, 열쇠 구매' },
+  mgtower: {
+    name: '기관포탑', cost: { wood: 10, stone: 10, iron: 8, parts: 4 }, radius: 1, hp: 350, height: 2.4, desc: '빠른 연사, 탄약 소모 큼',
+    turret: {
+      ammo: 240, refill: { iron: 2, parts: 1 },
+      levels: [
+        { dmg: 4, rate: 0.11, range: 13, upCost: {}, upGold: 0 },
+        { dmg: 6, rate: 0.09, range: 14.5, upCost: { iron: 8, parts: 3 }, upGold: 0 },
+        { dmg: 9, rate: 0.08, range: 16, upCost: { iron: 14, parts: 6 }, upGold: 40 },
+      ],
+    },
+  },
+  trap: {
+    name: '슬로우 트랩', cost: { wood: 6, iron: 2 }, radius: 1, hp: 120, height: 0.4, desc: '범위 안 좀비 감속 + 지속 피해',
+    trap: { radius: 3.2, slow: 0.45, dps: 7 },
+  },
 };
+
+// ---- 기지 / 핵 (소유: base). 핵 위치·건설 반경·레인은 data/map.ts 의 MAP 을 읽는다 ----
+export const GRID = 2;                 // 건설 격자 간격(m)
+export const CORE_CLEARANCE = 4.2;     // 핵 중심에서 이 거리 안은 건설 불가
+export const DEMOLISH_REFUND = 0.5;    // 철거 환급 비율
+export const BARRACKS_CAP = 3;         // 숙소 1채당 아군 상한
+/** 핵. hp 는 업그레이드 단계별 최대 체력 */
+export const CORE = { radius: 2.2, height: 4, hp: [500, 800, 1200, 1800] };
+/** 핵 수리 1회: 최대 체력의 pct 만큼 회복 */
+export const CORE_REPAIR = { pct: 0.2, cost: { wood: 8, stone: 6 } as Cost };
+/** 핵 강화(다음 단계로). 준비 단계에만. */
+export const CORE_UPGRADES: { cost: Cost; gold: number }[] = [
+  { cost: { stone: 20, iron: 6 }, gold: 50 },
+  { cost: { stone: 40, iron: 14, parts: 5 }, gold: 150 },
+  { cost: { stone: 80, iron: 30, parts: 12 }, gold: 400 },
+];
+/** 핵이 파괴된 뒤 체크포인트에서 복구되는 체력 비율 */
+export const CORE_REBUILD_PCT = 0.6;
+/** 상점 열쇠 가격(골드) */
+export const KEY_PRICE = { iron: 80, gold: 260 };
 
 export type Branch = '생존' | '채집' | '연구' | '사령';
 export interface SkillDef { id: string; branch: Branch; name: string; desc: string; max: number }
