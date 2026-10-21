@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import { makeHumanoid, animateWalk, Humanoid } from '../../core/humanoid';
 import { obstacles } from '../../core/world';
 import { input } from '../../core/input';
-import { WEAPONS, RES_KEYS, RES_LABEL, REWARD_NAMES, FINAL_WAVE } from '../../data';
+import { WEAPONS, WEAPON_ORDER, RES_KEYS, RES_LABEL, REWARD_NAMES, FINAL_WAVE } from '../../data';
 import type { Ctx } from '../../core/types';
 import { Sim, SimInput, ResNode, Chest, Zed, Struct, STRUCT_DEF, MAX_TURRETS, createSim, mulberry32, stepSim, interactTarget, continueEndless, forward, MAX_DMG_LEVEL } from '../logic/sim';
 
 import { sfx } from './sfx';
+import { state } from '../../core/state';
+import { events } from '../../core/events';
 
 const $ = (id: string) => document.getElementById(id) as HTMLElement;
 const BEST_KEY = 'zt3d-best';
@@ -112,11 +114,13 @@ export class PlaytestView {
   private wasPrep = true;
   private overlayOpen = false;
   private coreMesh: THREE.Group | null = null;
+  private extPrompt: string | null = null;
+  private extModal = false;
 
   constructor() {
     let best = 0;
     try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch { /* 저장소 불가 */ }
-    this.sim = createSim(mulberry32(this.seed), best);
+    this.sim = createSim(mulberry32(this.seed), best, true);
     this.flashEl = document.createElement('div');
     this.flashEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;background:radial-gradient(transparent 40%,#c00a);opacity:0;transition:opacity .25s;z-index:3';
     document.body.appendChild(this.flashEl);
@@ -132,6 +136,8 @@ export class PlaytestView {
     cb.innerHTML = '기지 코어<div style="height:10px;background:#0008;border:1px solid #fff4"><div id="coreFill" style="height:100%;background:#4cf0ff;width:100%"></div></div>';
     $('top').appendChild(cb);
     this.coreFill = $('coreFill');
+    events.on('interact:prompt', (e) => { this.extPrompt = e.text; });
+    events.on('ui:modal', (e) => { this.extModal = e.open; input.modalOpen = e.open || this.overlayOpen; });
     if (debug) (window as unknown as Record<string, unknown>).__zt = { view: this, ctx };
   }
 
@@ -161,7 +167,7 @@ export class PlaytestView {
   private newGame() {
     this.seed = Math.floor(Math.random() * 1e9);
     const best = this.sim.best;
-    this.sim = createSim(mulberry32(this.seed), best);
+    this.sim = createSim(mulberry32(this.seed), best, true);
     this.chestViews.forEach((c) => { this.ctx.scene.remove(c.g); disposeObj(c.g); });
     this.chestViews.clear();
     this.structViews.forEach((v) => { this.ctx.scene.remove(v.g); disposeObj(v.g); });
@@ -176,8 +182,9 @@ export class PlaytestView {
   update(dt: number, ctx: Ctx) {
     const s = this.sim;
     const p = ctx.player;
-    const canPlay = !this.overlayOpen;
-    const slot = input.pressed.has('Digit1') ? 0 : input.pressed.has('Digit2') ? 1 : input.pressed.has('Digit3') ? 2 : -1;
+    const canPlay = !this.overlayOpen && !this.extModal;
+    let slot = input.pressed.has('Digit1') ? 0 : input.pressed.has('Digit2') ? 1 : input.pressed.has('Digit3') ? 2 : -1;
+    if (slot >= 0 && !state.weapons.includes(WEAPON_ORDER[slot])) { slot = -1; if (canPlay) this.toast('아직 없는 무기입니다 (상자에서 획득)'); }
     const o = ctx.camera.position, d = ctx.aimDir;
     const inp: SimInput = {
       px: p.x, pz: p.z, iframes: p.iframes, yaw: p.yaw,
@@ -190,8 +197,15 @@ export class PlaytestView {
       upgrade: canPlay && input.pressed.has('KeyU'), heal: canPlay && input.pressed.has('KeyH'),
       skip: canPlay && input.pressed.has('KeyN'), restart: input.pressed.has('KeyR') || input.pressed.has('Enter'),
     };
+    // loot 등 외부 모듈과 자원을 공유한다: 매 프레임 state 를 받아 쓰고 결과를 돌려준다
+    for (const k of RES_KEYS) s.res[k] = state.res[k];
+    s.gold = state.gold;
     if (!this.overlayOpen) stepSim(s, dt, inp);
     else if (s.phase === 'dead' && inp.restart) { stepSim(s, dt, inp); }
+    for (const k of RES_KEYS) state.res[k] = s.res[k];
+    state.gold = s.gold;
+    state.wave = s.wave;
+    state.phase = s.phase === 'combat' ? 'combat' : s.phase === 'ended' ? 'ended' : 'prep';
     p.hp = s.player.hp; p.maxHp = s.player.maxHp;
 
     this.syncEntities(dt);
@@ -275,6 +289,7 @@ export class PlaytestView {
     for (const e of evs) {
       switch (e.t) {
         case 'toast': this.toast(e.text); break;
+        case 'wave': events.emit(e.start ? 'wave:start' : 'wave:clear', { wave: e.wave }); break;
         case 'banner': this.banner(e.text); sfx.wave(); break;
         case 'shot': {
           const p = this.ctx.player, f = forward(p.yaw), r = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
@@ -288,6 +303,7 @@ export class PlaytestView {
           sfx.shot(e.weapon === 'shotgun');
           break;
         }
+        case 'kill': events.emit('enemy:killed', { x: e.x, z: e.z, type: e.type, byAlly: false }); if (e.boss) events.emit('boss:dead', { wave: this.sim.wave, type: e.type }); break;
         case 'hit': {
           const v = this.zViews.get(e.id);
           if (v) v.flash = 1;
@@ -353,14 +369,15 @@ export class PlaytestView {
       ? `준비 ${Math.ceil(s.phaseT)}초 (N: 바로 시작) · 최고 ${s.best}`
       : s.phase === 'combat' ? `남은 좀비 ${left}` : '';
     $('res').innerHTML = RES_KEYS.map((k) => `${RES_LABEL[k]} ${s.res[k]}`).join(' · ')
-      + `<br>골드 ${s.gold} · 포탑 ${s.structs.filter((t) => t.kind === 'turret').length}/${MAX_TURRETS} · 공격력 강화 Lv${s.dmgLevel}/${MAX_DMG_LEVEL} · 처치 ${s.kills}`;
+      + `<br>골드 ${s.gold} · 열쇠 ${state.keys}/${state.goldKeys} · 포탑 ${s.structs.filter((t) => t.kind === 'turret').length}/${MAX_TURRETS} · 공격력 강화 Lv${s.dmgLevel}/${MAX_DMG_LEVEL} · 처치 ${s.kills}`;
     const boss = s.zombies.find((z) => z.boss);
     const be = $('boss');
     be.style.display = boss ? 'block' : 'none';
     if (boss) $('bossFill').style.width = `${(boss.hp / boss.maxHp) * 100}%`;
 
     const pr = $('prompt'), pg = $('prog'), t = interactTarget(s);
-    if (t && this.sim.phase !== 'dead') {
+    if (!t && this.extPrompt && this.sim.phase !== 'dead') { pr.style.display = 'block'; pr.textContent = this.extPrompt; }
+    else if (t && this.sim.phase !== 'dead') {
       pr.style.display = 'block';
       pr.textContent = t.kind === 'node' ? `[E 길게] ${RES_LABEL[t.node.res]} 채집` : `[E] ${['나무', '철', '황금'][t.chest.tier]} 상자 열기`;
     } else pr.style.display = 'none';
