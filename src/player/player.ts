@@ -28,6 +28,8 @@ export function createPlayer(_scene?: THREE.Scene): Player {
 
 /** combat=false 면 이동/카메라/모델만 동작한다. 테스트 빌드(playtest)가 자체 사격을 쓰는 동안 main.ts 에서 끈다. */
 export const playerOptions = { combat: true };
+/** 카메라 후처리 훅: PlayerSystem 이 카메라를 놓은 직후 순서대로 부른다 (사망 연출의 쓰러짐 기울기 등) */
+export const cameraPost: ((cam: THREE.PerspectiveCamera) => void)[] = [];
 
 let ctrl: PlayerController | null = null;
 function controller() { return (ctrl ??= new PlayerController()); }
@@ -93,6 +95,7 @@ export const PlayerSystem: System = {
     const s = shake * shake * 0.06;
     cam.position.set(out.pose.pos.x + (Math.random() - 0.5) * s, out.pose.pos.y + (Math.random() - 0.5) * s, out.pose.pos.z + (Math.random() - 0.5) * s);
     cam.lookAt(cam.position.x + out.pose.dir.x, cam.position.y + out.pose.dir.y, cam.position.z + out.pose.dir.z);
+    for (const f of cameraPost) f(cam);
     ctx.aimDir.set(out.pose.dir.x, out.pose.dir.y, out.pose.dir.z);
     ctx.world.sun.position.set(p.x + 30, 50, p.z + 20);
     ctx.world.sun.target.position.set(p.x, 0, p.z);

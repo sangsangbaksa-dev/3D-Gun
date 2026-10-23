@@ -11,6 +11,7 @@ import { RUN_XP } from '../data/tycoon2d';
 import { addXp, bankRun, bonuses, settleOffline, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
 import { mountAttract } from './view/attract';
+import { playDeath, deathActive } from '../ui/deathScreen';
 
 const BASE_CORE_HP = 500;
 let panel: TycoonPanel;
@@ -63,15 +64,21 @@ function showPanel(report: RunReport | null, offline?: { secs: number; gold: num
   panel.open(report, offline);
 }
 
-function handleOver(snap: RunSnapshot) {
-  if (panel.isOpen) return;
+function handleOver(snap: RunSnapshot, reason: 'player' | 'core' = 'player') {
+  if (panel.isOpen || deathActive()) return;
   overSeen = true;
   pending = null;
+  const level = state.level;
   const report = bankRun(meta, snap);
   meta.lastSeen = Date.now();
   saveMeta();
   state.gold = 0; // 정산된 재화는 지갑으로 옮겼다
-  showPanel(report);
+  // 사망 연출 → 결과 카드 → 본부. 연출 중에도 창(modal) 상태로 둬서 사격·일시정지·director 대체 재시작이 돌지 않게 한다
+  state.mode = 'modal';
+  input.modalOpen = true;
+  document.exitPointerLock?.();
+  events.emit('ui:modal', { open: true });
+  playDeath({ reason, report, level }, () => showPanel(report));
 }
 
 function launch() {
@@ -108,7 +115,7 @@ export const Tycoon2dSystem: System = {
     if (off.secs > 0) events.emit('toast', { text: `부재 중 수익: 🪙 +${Math.floor(off.gains.gold ?? 0)}` });
 
     // W2 가 run:over 를 내면 그대로 쓰고, 아직 없으면 사망/핵 파괴 이벤트로 대신 감지한다 (같은 프레임 안 호출 순서상 먼저 스냅샷)
-    events.on('run:over', (e) => handleOver(snapshot(e.wave, e.checkpoint, e.kills, e.gold)));
+    events.on('run:over', (e) => handleOver(snapshot(e.wave, e.checkpoint, e.kills, e.gold), e.reason));
     const fallback = () => { if (!pending && !panel.isOpen) pending = { snap: snapshot(state.wave, state.checkpoint, 0, state.gold), t: 0.1 }; };
     events.on('player:dead', fallback);
     // 런 경험치 → 레벨업마다 스킬 포인트 (정산 때 전부 저축)
