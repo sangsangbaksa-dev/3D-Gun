@@ -179,7 +179,8 @@ export const AlliesSystem: System = {
     }
 
     dev?.update(dt);
-    for (const a of allies as Ally[]) updateAlly(a, dt, env);
+    // 창(V 무기, 교환소, 본부)이 열려 있으면 좀비가 멈추므로 아군도 멈춘다
+    if (state.mode !== 'modal') for (const a of allies as Ally[]) updateAlly(a, dt, env);
     for (const dead of reapDead()) {
       const v = views.get(dead.id);
       if (v) { views.delete(dead.id); dying.push({ v, m: dead }); }
