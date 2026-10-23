@@ -8,7 +8,7 @@ import { input } from '../core/input';
 import { addInteractable } from '../core/interact';
 import { resolveObstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
-import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, restoreAllies, persistAllies, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
+import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, restoreAllies, persistAllies, flushAllies, saveTick, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
 import { injector, stunnedNear, advance, resetInject, activeTier, blockReason, chanceFor } from './logic/inject';
 import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue } from './logic/vaccine';
 import { AllyView } from './view/allyView';
@@ -16,11 +16,37 @@ import { Fx } from './view/fx';
 import { Camp } from './view/camp';
 import { LabPanel } from './view/labPanel';
 import { InjectHud } from './view/injectHud';
-import type { ZombieRef } from '../core/entities';
+import type { ZombieRef, GatherNodeRef } from '../core/entities';
 
 let gatherProvider: () => GatherNode[] = () => [];
 /** gathering 모듈의 자원 노드를 채집병에게 알려 준다. main.ts 등에서 한 번 연결한다 (docs/modules/allies.md) */
 export const setGatherNodeProvider = (fn: () => GatherNode[]) => { gatherProvider = fn; };
+
+/**
+ * core/entities 의 gatherNodes(gathering 모듈이 등록한 실제 노드)를 채집병용 노드로 바꾼다.
+ * 아군은 GATHER.time 동안 일한 뒤 take() 로 한 번에 수확하고, 노드는 플레이어가 캔 것처럼 고갈·재생성된다.
+ */
+export function gatherNodesFrom(refs: readonly GatherNodeRef[]): () => GatherNode[] {
+  const cache = new Map<GatherNodeRef, GatherNode>();
+  const out: GatherNode[] = [];
+  return () => {
+    out.length = 0;
+    for (const r of refs) {
+      let n = cache.get(r);
+      if (!n) {
+        n = {
+          id: r.id, x: r.x, z: r.z, res: r.res as GatherNode['res'],
+          available: () => r.ready,
+          // 남은 작업량을 한 번에 끝낸다 (큰 dt). 고갈 처리와 추가 수확 확률은 gathering 쪽 규칙을 따른다
+          take: () => r.harvest(1e6, 1)?.amount ?? 0,
+        };
+        cache.set(r, n);
+      }
+      out.push(n);
+    }
+    return out;
+  };
+}
 
 const toast = (text: string) => events.emit('toast', { text });
 const env: AllyEnv = {
@@ -74,24 +100,31 @@ function fail(z: ZombieRef, tier: number, chance: number) {
   toast('백신이 듣지 않았다! 좀비가 분노한다');
 }
 
+/** 마지막으로 받은 ui:modal 상태 (상점·연구소·강화창 등 어떤 창이든) */
+let uiModal = false;
+/** 창이 열려 있거나 일시정지 중이면 E 주사를 막는다 (V 상점을 연 채 E 로 주사되던 문제) */
+const injectBlocked = () =>
+  uiModal || input.modalOpen || input.paused || state.mode !== 'play' || (panel?.open ?? false);
+
 const injectable = {
   get x() { return target?.x ?? 1e6; },
   get z() { return target?.z ?? 1e6; },
   range: INJECT.range,
   label(): string | null {
-    if (!target || target.dead || !target.stunned) return null;
+    if (!target || target.dead || !target.stunned || injectBlocked()) return null;
     const b = blockReason();
     if (b === 'nostock') return '백신이 없다 — 연구소에서 제작하자';
     if (b === 'cap') return `아군 상한에 도달 (${state.allyCount}) — 숙소·스킬로 늘리자`;
     return `E 길게 눌러 ${VACCINES[activeTier()].name} 주사 · 성공률 ${Math.round(chanceFor(target) * 100)}% · C 백신 변경`;
   },
   press() {
+    if (injectBlocked()) return;
     const b = blockReason();
     if (b === 'nostock') toast('백신이 없다. 연구소에서 만들어 오자');
     else if (b === 'cap') toast('아군이 가득 찼다');
   },
   hold(dt: number) {
-    if (!target || target.dead || !target.stunned || blockReason() !== 'none') return;
+    if (!target || target.dead || !target.stunned || injectBlocked() || blockReason() !== 'none') return;
     const z = target;
     const r = advance(dt, z, Math.random());
     if (r.kind === 'success') convert(z, r.tier, r.chance);
@@ -119,6 +152,9 @@ export const AlliesSystem: System = {
       if (wave === 1) toast('준비 시간: B 로 포탑(1·2) · 핵 L 백신 제작 · 좀비 처치로 샘플');
       else if (wave % 3 === 0 && state.vaccines.every((n) => n === 0) && state.samples >= 1) toast('백신이 비었어요 — L 키로 제작');
     });
+    events.on('run:over', flushAllies);
+    events.on('ui:modal', ({ open }) => { uiModal = open; if (open) resetInject(); });
+    addEventListener('pagehide', flushAllies);
     events.on('player:hit', () => {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
       resetInject();
@@ -190,6 +226,7 @@ export const AlliesSystem: System = {
       fx.burst(dead.x, 1, dead.z, 0x9aa5a0, 12, 3);
     }
     syncCount();
+    saveTick(dt);
     for (const a of allies as Ally[]) if (!views.has(a.id)) views.set(a.id, new AllyView(a, ctx.scene));
     for (const v of views.values()) v.update(dt, ctx.camera);
     for (let i = dying.length - 1; i >= 0; i--) if (dying[i].v.update(dt, ctx.camera)) dying.splice(i, 1);

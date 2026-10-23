@@ -70,6 +70,9 @@ export function createBase(deps: BaseDeps) {
   const slowed = new Set<ZombieRef>();
   let coreDeadT = -1;
   let regenT = 0;
+  /** 포탑 저장 지연 (persistTurrets 참고) */
+  let saveDirty = false, saveT = 0;
+  const SAVE_EVERY = 2;
   /** 런 시작 보너스(영구 업그레이드)로 늘어난 핵 최대 체력 */
   let coreBonus = 0;
   let selfToast: (t: string) => void = (text) => events.emit('toast', { text });
@@ -123,7 +126,7 @@ export function createBase(deps: BaseDeps) {
         b.hp = Math.max(0, b.hp - dmg);
         b.hitFlash = 1;
         if (b.hp <= 0) remove(b, true);
-        else if (BUILDINGS[b.kind].turret) persistTurrets();
+        else if (BUILDINGS[b.kind].turret) persistTurrets(false);
       },
     };
     return b;
@@ -141,12 +144,18 @@ export function createBase(deps: BaseDeps) {
     if (destroyed) selfToast(`${BUILDINGS[b.kind].name}이(가) 파괴됐어요!`);
   }
 
-  function persistTurrets() {
+  /**
+   * 포탑 상태를 meta 에 반영한다. now=false(사격·피격처럼 자주 생기는 변화)면 저장소 쓰기는 미뤄서
+   * update 가 SAVE_EVERY 초마다 한 번만 쓴다. 런 종료 때는 바로 쓴다 (페이지 종료 때는 main.ts 가 saveMeta).
+   */
+  function persistTurrets(now = true) {
     meta.turrets = buildings.filter((b) => !b.dead && BUILDINGS[b.kind].turret && b.ammo > 0).map((b) => ({
       kind: b.kind, x: b.x, z: b.z, level: b.level, hp: b.hp, ammo: b.ammo,
     }));
-    saveMeta();
+    if (now) { saveDirty = false; saveT = 0; saveMeta(); } else saveDirty = true;
   }
+  function flushTurrets() { if (saveDirty) persistTurrets(true); }
+  events.on('run:over', flushTurrets);
 
   function restoreTurrets() {
     for (const s of meta.turrets) {
@@ -297,6 +306,7 @@ export function createBase(deps: BaseDeps) {
 
   // ---- 매 프레임 ----
   function update(dt: number, zombies: ZombieRef[]) {
+    if (saveDirty && (saveT += dt) >= SAVE_EVERY) flushTurrets();
     core.hitFlash = Math.max(0, core.hitFlash - dt * 3);
     core.hp = state.coreHp;
 
@@ -361,7 +371,7 @@ export function createBase(deps: BaseDeps) {
         remove(b, false);
         continue;
       }
-      persistTurrets();
+      persistTurrets(false);
       const my = def.height * 0.82;
       fx.push({
         t: 'shot', id: b.id, kind: b.kind,

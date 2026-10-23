@@ -81,13 +81,24 @@ export function setRole(a: Ally, r: AllyRole): boolean {
 
 const isRole = (r: string): r is AllyRole => (ALLY_ROLE_ORDER as string[]).includes(r);
 
-/** 체력이 남은 아군만 다음 판과 새로고침 뒤에 남긴다 */
-export function persistAllies() {
+/**
+ * 체력이 남은 아군만 다음 판과 새로고침 뒤에 남긴다.
+ * now=false(피격처럼 자주 생기는 변화)면 저장소 쓰기를 미루고 saveTick 이 SAVE_EVERY 초마다 한 번 쓴다.
+ */
+let saveDirty = false, saveT = 0;
+const SAVE_EVERY = 2;
+export function persistAllies(now = true) {
+  if (!now) { saveDirty = true; return; }
   meta.allies = (allies as Ally[]).filter((a) => !a.dead && a.hp > 0).map((a) => ({
     role: a.role, x: a.x, z: a.z, hp: a.hp, maxHp: a.maxHp, zType: a.zType, yaw: a.yaw,
   }));
+  saveDirty = false; saveT = 0;
   saveMeta();
 }
+/** 미룬 저장이 있으면 지금 쓴다 (런 종료·페이지 종료) */
+export function flushAllies() { if (saveDirty) persistAllies(true); }
+/** 매 프레임 호출: 미룬 저장을 SAVE_EVERY 초 간격으로 처리 */
+export function saveTick(dt: number) { if (saveDirty && (saveT += dt) >= SAVE_EVERY) persistAllies(true); }
 
 /** 저장된 아군을 되돌린다. 이미 필드에 있으면 건너뛴다 */
 export function restoreAllies() {
@@ -113,7 +124,7 @@ export function spawnAlly(x: number, z: number, zType: string, view: unknown, ro
       if (a.dead || dmg <= 0) return;
       a.hp -= dmg; a.hurtT = 0.25; a.sinceHit = 0;
       if (a.hp <= 0) { a.hp = 0; a.dead = true; a.deadT = 0; }
-      else persistAllies();
+      else persistAllies(false);
     },
   };
   allies.push(a);
@@ -211,6 +222,9 @@ export function virtualNodes(): GatherNode[] {
   });
 }
 
+/** 채집병이 기지에서 이만큼(m) 안의 노드만 캔다. 큰 맵 끝까지 걸어가 좀비 소굴에 빠지지 않게 */
+const GATHER_RADIUS = 60;
+
 function gatherer(a: Ally, dt: number, env: AllyEnv) {
   const c = anchor();
   // 좀비가 가까우면 기지로 도망
@@ -234,7 +248,7 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     for (const n of nodes) {
       if (!n.available() || taken.has(n.id)) continue;
       const d = dist(n.x, n.z, c.x, c.z);
-      if (d < bd) { bd = d; node = n; }
+      if (d <= GATHER_RADIUS && d < bd) { bd = d; node = n; }
     }
     a.nodeId = node ? node.id : 0;
     a.actT = 0;
@@ -247,7 +261,8 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     if (a.actT >= GATHER.time) {
       a.actT = 0;
       let n = node.take();
-      if (n > 0 && env.rng() < state.stats.gatherExtra) n += 1;
+      // 실제 노드는 수확할 때 이미 추가 수확 확률을 굴린다. 임시 채집장(id<0)만 여기서 굴린다
+      if (n > 0 && node.id < 0 && env.rng() < state.stats.gatherExtra) n += 1;
       if (n > 0) a.carry = { res: node.res, amount: n };
     }
   }
