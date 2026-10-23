@@ -204,7 +204,7 @@ export class PlayerController {
     w.current = 'pistol'; w.reloadLeft = 0; w.cooldown = 0.3; w.bloom = 0;
     for (const id of GUN_ORDER) w.ammo[id] = magSize(w, state.stats, id);
     p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0;
-    p.x = MAP.playerStart.x; p.z = MAP.playerStart.z;
+    p.x = MAP.playerStart.x; p.z = MAP.playerStart.z; p.yaw = Math.PI; p.pitch = 0.2;
     this.pendingHits.length = 0;
     out.respawned = true;
     events.emit('weapon:switched', { weapon: 'pistol' });
