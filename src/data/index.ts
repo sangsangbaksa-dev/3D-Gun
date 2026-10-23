@@ -201,7 +201,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
   barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
   tower: {
-    name: '감시탑', cost: { wood: 36, stone: 28, iron: 10, parts: 6 }, radius: 1, hp: 300, height: 5, desc: '영구 포탑. 내구도를 다 쓰면 파괴',
+    name: '감시탑', cost: { wood: 22, stone: 14, parts: 3 }, radius: 1, hp: 300, height: 5, desc: '영구 포탑. 내구도를 다 쓰면 파괴',
     turret: {
       ammo: 80, refill: { wood: 99, stone: 99 },
       levels: [

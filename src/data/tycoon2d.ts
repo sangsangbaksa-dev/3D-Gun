@@ -14,7 +14,7 @@ export const WALLET_ICON: Record<WalletKey, string> = {
 export type Cost = Partial<Record<WalletKey, number>>;
 
 /** 첫 런부터 주던 기본 보급 */
-export const BASE_START = { wood: 14, stone: 8, herb: 4, parts: 3 };
+export const BASE_START = { wood: 24, stone: 16, herb: 4, parts: 4 }; // 첫 웨이브에 감시탑 1기(나무 22·돌 14·부품 3)를 바로 세울 수 있는 양
 
 export type UpgradeCat = 'weapon' | 'base' | 'turret' | 'ally' | 'econ';
 export const CAT_ORDER: UpgradeCat[] = ['weapon', 'base', 'turret', 'ally', 'econ'];
