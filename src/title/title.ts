@@ -3,6 +3,8 @@
 // 타이틀의 "출격"은 onStart 를 부른다 (tycoon2d 가 본부 화면을 연다).
 import { TITLE_CSS, STORY_FADE_S } from './style';
 import { getSettings, loadSettings, resetSettings, setSettings } from './settings';
+import { resetTutorial } from './tutorial';
+import { injectKeycapCss, keyTableHtml } from '../ui/keys';
 
 /** TitleSystem 이 읽는다: 타이틀이 떠 있는 동안 카메라가 핵 주위를 돈다 */
 export const titleView = { orbiting: false };
@@ -19,36 +21,14 @@ const STORY: { text: string; em?: boolean }[] = [
 const STORY_HOLD_S = 2.4;
 const STORY_KEY = '3dgun.storySeen.v1';
 
-const CONTROLS: { keys: string; action: string; group: string }[] = [
-  { keys: 'W A S D', action: '이동', group: '이동' },
-  { keys: 'Shift', action: '대시', group: '이동' },
-  { keys: '마우스 / 방향키', action: '시점 회전', group: '이동' },
-  { keys: '좌클릭', action: '사격 (화면 클릭 시 시점 고정)', group: '전투' },
-  { keys: '우클릭', action: '조준', group: '전투' },
-  { keys: 'R', action: '재장전', group: '전투' },
-  { keys: '1 ~ 6', action: '무기 바꾸기', group: '전투' },
-  { keys: 'V', action: '무기 상점', group: '전투' },
-  { keys: 'E', action: '상호작용 (채집 · 상자 · 상점)', group: '기지' },
-  { keys: 'B', action: '건설 모드 (1 포탑 · 5 연구소)', group: '기지' },
-  { keys: 'F / U / X', action: '건물 수리 / 강화 / 철거', group: '기지' },
-  { keys: 'N', action: '다음 웨이브 바로 부르기', group: '기지' },
-  { keys: 'L', action: '백신 제작 (연구소)', group: '백신' },
-  { keys: 'C', action: '백신 종류 고르기', group: '백신' },
-  { keys: 'E (누르고 있기)', action: '기절한 좀비에게 주사', group: '백신' },
-  { keys: 'Q', action: '가까운 아군 역할 바꾸기', group: '백신' },
-  { keys: 'P / Esc', action: '일시정지 · 창 닫기', group: '시스템' },
-];
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const storySeen = () => { try { return localStorage.getItem(STORY_KEY) === '1'; } catch { return true; } };
 
+/** 조작키 창: ui/keys.ts 의 같은 목록을 그룹별로 (H 도움말 창과 동일) */
 function controlsHtml() {
-  let g = '', h = '<h3>조작키<button class="x" data-close>닫기</button></h3><div class="cols">';
-  for (const c of CONTROLS) {
-    if (c.group !== g) { g = c.group; h += `<div class="g">${g}</div>`; }
-    h += `<div class="r"><span>${c.action}</span><kbd>${c.keys}</kbd></div>`;
-  }
-  return h + '</div>';
+  return `<h3>조작키<button class="x" data-close>닫기</button></h3><div class="cols">${keyTableHtml()}</div>`
+    + '<p class="khint">게임 중에는 <kbd class="zk">H</kbd> 또는 <kbd class="zk">F1</kbd> 로 언제든 이 목록을 볼 수 있어요.</p>';
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -60,7 +40,7 @@ function settingsHtml() {
   return '<h3>설정<button class="x" data-close>닫기</button></h3>'
     + row('전체 볼륨', 'volume', 0, 1, 0.05, s.volume, pct(s.volume))
     + row('마우스 감도', 'sensitivity', 0.2, 3, 0.05, s.sensitivity, mul(s.sensitivity))
-    + '<div class="r" style="border:0;justify-content:flex-end;padding-top:10px"><button class="x" data-reset>초기화</button></div>';
+    + '<div class="r" style="border:0;justify-content:space-between;padding-top:10px"><button class="x" data-tut>튜토리얼 다시 보기</button><button class="x" data-reset>초기화</button></div>';
 }
 
 /** 오른쪽 아래 "설정 / 조작키" 버튼과 펼쳐지는 창 */
@@ -94,6 +74,12 @@ function mountMenu(root: HTMLElement) {
     const t = e.target as HTMLElement;
     if (t.closest('[data-close]')) close();
     else if (t.closest('[data-reset]')) { resetSettings(); panel.innerHTML = settingsHtml(); }
+    else if (t.closest('[data-tut]')) {
+      resetTutorial();
+      const b = t.closest<HTMLButtonElement>('[data-tut]')!;
+      b.textContent = '다음 출격 때 처음부터 안내해요';
+      b.disabled = true;
+    }
   });
   panel.addEventListener('input', (e) => {
     const el = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-k]');
@@ -168,6 +154,7 @@ export interface TitleHandle { show(): void; hide(): void; visible(): boolean }
 
 export function mountTitle(onStart: () => void): TitleHandle {
   loadSettings();
+  injectKeycapCss();
   if (!document.getElementById('zt-title-style')) {
     const st = document.createElement('style');
     st.id = 'zt-title-style';
