@@ -7,7 +7,7 @@ import { input } from '../core/input';
 import { meta, loadMeta, saveMeta, resetMeta } from '../core/meta';
 import { state, recalcStats } from '../core/state';
 import { RES_KEYS } from '../data';
-import { bankRun, bonuses, settleOffline, tick, type RunReport, type RunSnapshot } from './logic/economy';
+import { bankRun, bonuses, settleOffline, tick, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
 import { mountAttract } from './view/attract';
 
@@ -17,9 +17,11 @@ let attract: ReturnType<typeof mountAttract>;
 let overSeen = false;
 let pending: { snap: RunSnapshot; t: number } | null = null;
 let acc = 0;
+/** 이번 런 시작 때 지급한 양 (seedRun 이 기록). 정산 때 빼서 공짜 지급은 저축되지 않게 한다 */
+let grant: RunGrant = { gold: 0, res: {}, samples: 0, skillPoints: 0 };
 
 function snapshot(wave: number, checkpoint: number, kills: number, gold: number): RunSnapshot {
-  return { wave, checkpoint, kills, gold, res: { ...state.res }, samples: state.samples, samplesSp: state.samplesSp, skillPoints: state.skillPoints };
+  return { wave, checkpoint, kills, gold, res: { ...state.res }, samples: state.samples, samplesSp: state.samplesSp, skillPoints: state.skillPoints, grant };
 }
 
 /** 영구 업그레이드를 state 의 보정/시작 보너스에 등록한다 (recalcStats 가 statMods 를 적용) */
@@ -47,6 +49,7 @@ function seedRun() {
   state.skillLv = { ...bonuses(meta).skillLv };
   state.weapons = [...s.weapons];
   state.coreMaxHp = BASE_CORE_HP + s.coreHp; state.coreHp = state.coreMaxHp;
+  grant = { gold: state.gold, res: { ...state.res }, samples: state.samples, skillPoints: state.skillPoints };
   recalcStats();
 }
 
