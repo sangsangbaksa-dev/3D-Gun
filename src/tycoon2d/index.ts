@@ -9,9 +9,11 @@ import { state, recalcStats } from '../core/state';
 import { RES_KEYS } from '../data';
 import { bankRun, bonuses, settleOffline, tick, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
+import { mountAttract } from './view/attract';
 
 const BASE_CORE_HP = 500;
 let panel: TycoonPanel;
+let attract: ReturnType<typeof mountAttract>;
 let overSeen = false;
 let pending: { snap: RunSnapshot; t: number } | null = null;
 let acc = 0;
@@ -29,6 +31,7 @@ function applyToState() {
   Object.assign(state.start, {
     gold: b.startGold, startWave: b.startWave, res: { ...b.startRes }, coreHp: b.coreHp, prepBonus: b.prepBonus,
     samples: b.startSamples, skillPoints: b.startSkillPoints, weapons: [...b.weapons], weaponLv: { ...b.weaponLv }, turretDmgMul: b.turretDmgMul,
+    exchangeSellBonus: b.exchangeSellBonus,
   });
   // 총 품질(영구): player 가 같은 객체를 참조하므로 키만 갈아 끼운다 ('*' = 모든 총기)
   for (const k of Object.keys(state.weaponLvBonus)) delete state.weaponLvBonus[k];
@@ -69,6 +72,7 @@ function handleOver(snap: RunSnapshot) {
 function launch() {
   applyToState();
   const startWave = state.start.startWave;
+  attract.hide();
   panel.close();
   state.mode = 'play';
   input.modalOpen = false;
@@ -91,6 +95,11 @@ export const Tycoon2dSystem: System = {
       onChanged: () => { applyToState(); saveMeta(); },
       onReset: () => { resetMeta(); applyToState(); },
     });
+    attract = mountAttract(() => showPanel(null));
+    state.mode = 'modal';
+    input.modalOpen = true;
+    events.emit('ui:modal', { open: true });
+    attract.show();
     if (off.secs > 0) events.emit('toast', { text: `부재 중 수익: 🪙 +${Math.floor(off.gains.gold ?? 0)}` });
 
     // W2 가 run:over 를 내면 그대로 쓰고, 아직 없으면 사망/핵 파괴 이벤트로 대신 감지한다 (같은 프레임 안 호출 순서상 먼저 스냅샷)

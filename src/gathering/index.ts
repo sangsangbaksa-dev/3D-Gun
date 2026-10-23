@@ -5,7 +5,7 @@ import { state, gain, changed } from '../core/state';
 import { events } from '../core/events';
 import { addInteractable, removeInteractable, type Interactable } from '../core/interact';
 import { gatherNodes, type GatherNodeRef } from '../core/entities';
-import { obstacles, type Obstacle } from '../core/world';
+import { getGroundY, obstacles, type Obstacle } from '../core/world';
 import { MAP } from '../data/map';
 import { GATHER_LAYOUT, GATHER_NODES, GATHER_REACH } from '../data';
 import { mulberry32 } from './logic/rng';
@@ -13,8 +13,7 @@ import { blockRadius, createGathering, harvest, resetGathering, rollSampleDrop, 
 import type { GatherNode } from './logic/nodes';
 import { createGatheringView, type GatheringView } from './view/gatheringView';
 
-// 지형 높이. 맵 담당이 core/world.ts 에 getGroundY 를 넣으면 이 줄만 바꾼다.
-const groundY = (_x: number, _z: number) => 0;
+const groundY = getGroundY;
 
 let model: GatheringModel;
 let view: GatheringView;

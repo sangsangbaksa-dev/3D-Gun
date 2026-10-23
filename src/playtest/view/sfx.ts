@@ -21,6 +21,5 @@ export const sfx = {
   hurt: () => tone(110, 0.25, 'sawtooth', 0.08, 55),
   gather: () => tone(520, 0.12, 'triangle', 0.06, 760),
   reload: () => tone(300, 0.1, 'square', 0.04, 200),
-  chest: (tier: number) => { tone(440, 0.15, 'triangle', 0.07, 660); setTimeout(() => tone(660 + tier * 150, 0.3, 'triangle', 0.07, 990), 120); },
   wave: () => tone(70, 0.6, 'sawtooth', 0.08, 55),
 };

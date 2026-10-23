@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { makeHumanoid, animateWalk, type Humanoid } from '../../core/humanoid';
 import { ALLY_ROLES, type AllyRole } from '../../data';
+import { getGroundY } from '../../core/world';
 import type { Ally } from '../logic/ally';
 
 const isHumanoid = (v: unknown): v is Humanoid => !!v && typeof v === 'object' && 'group' in v && 'legs' in v && 'arms' in v;
@@ -92,12 +93,13 @@ export class AllyView {
     if (this.shownRole !== m.role) this.dress(m.role);
     const mats = hum.mats;
 
-    g.position.set(m.x, 0, m.z);
+    const gy = getGroundY(m.x, m.z);
+    g.position.set(m.x, gy, m.z);
     g.rotation.y = m.yaw;
 
     if (m.dead) {
       g.rotation.x = -Math.min(1, m.deadT / 0.4) * Math.PI / 2;
-      g.position.y = Math.min(1, m.deadT / 0.4) * 0.25 - Math.max(0, m.deadT - 1.2) * 0.6;
+      g.position.y = gy + Math.min(1, m.deadT / 0.4) * 0.25 - Math.max(0, m.deadT - 1.2) * 0.6;
       this.hpBar.visible = this.marker.visible = false;
       if (m.deadT > 2) { this.dispose(); return true; }
       return false;
@@ -122,7 +124,7 @@ export class AllyView {
         else { arms[0].rotation.x = -1.1; arms[1].rotation.x = -1.2 + Math.sin(this.t * 6) * 0.25; bob += Math.abs(Math.sin(this.t * 4)) * 0.03; }
       } else if (m.carry) arms[0].rotation.x = arms[1].rotation.x = -1.2;
     }
-    g.position.y = bob;
+    g.position.y = gy + bob;
     this.crate.visible = !!m.carry;
     if (m.carry) (this.crate.material as THREE.MeshLambertMaterial).color.setHex({ wood: 0xb98b52, stone: 0x9aa0a8, iron: 0x6d7b8c, herb: 0x5fae4e, parts: 0xd0a030 }[m.carry.res]);
     if (m.act === 'attack') g.position.addScaledVector(new THREE.Vector3(-Math.sin(m.yaw), 0, -Math.cos(m.yaw)), Math.sin(m.swing * Math.PI) * 0.25);
@@ -138,7 +140,7 @@ export class AllyView {
     const hurt = m.hp < m.maxHp - 0.5;
     this.hpBar.visible = hurt;
     if (hurt) {
-      this.hpBar.position.set(m.x, 2.9, m.z);
+      this.hpBar.position.set(m.x, gy + 2.9, m.z);
       this.hpBar.quaternion.copy(camera.quaternion);
       const k = Math.max(0.02, m.hp / m.maxHp);
       this.hpFill.scale.x = k; this.hpFill.position.x = -0.52 * (1 - k);

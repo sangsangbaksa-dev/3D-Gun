@@ -1,7 +1,8 @@
 // 기절한 좀비에게 백신을 놓는 절차. E 를 INJECT.time 초 동안 누르고 있으면 판정한다.
-import { INJECT } from '../../data';
+import { INJECT, VACCINES } from '../../data';
 import { state, changed } from '../../core/state';
 import { zombies, nearest, type ZombieRef } from '../../core/entities';
+import { events } from '../../core/events';
 import { bestOwnedTier, conversionChance } from './vaccine';
 import { allyCap } from './ally';
 
@@ -48,7 +49,8 @@ export function advance(dt: number, z: ZombieRef, roll: number): InjectResult {
   if (injector.progress < 1) return { kind: 'progress' };
   const tier = activeTier();
   const chance = chanceFor(z);
-  state.vaccines[tier] -= 1;
+  state.vaccines[tier] = Math.max(0, (state.vaccines[tier] ?? 0) - 1);
+  if (state.vaccines[tier] <= 0) events.emit('toast', { text: `${VACCINES[tier].name}을 다 썼다` });
   changed();
   resetInject();
   return { kind: roll < chance ? 'success' : 'fail', tier, chance };

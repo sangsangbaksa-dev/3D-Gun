@@ -1,8 +1,15 @@
 import * as THREE from 'three';
 import { MAP } from '../data/map';
 import { buildWorldView } from './worldview';
+import { terrainY } from './terrain';
+import { addScenery } from './scenery';
 
 export const WORLD_HALF = MAP.half;
+
+/** 지형 높이(m). 기지는 평평하고 바깥은 언덕이다. */
+export function getGroundY(x: number, z: number): number {
+  return terrainY(x, z);
+}
 
 export interface Obstacle { x: number; z: number; r: number }
 export const obstacles: Obstacle[] = [];
@@ -18,16 +25,16 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   scene.fog = new THREE.Fog(0xb8cde0, 80, 380);
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
 
-  scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x5a5040, 0.9));
-  const sun = new THREE.DirectionalLight(0xfff1d0, 1.6);
+  scene.add(new THREE.HemisphereLight(0xd4e8ff, 0x4a4538, 0.95));
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.55);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160 });
   scene.add(sun, sun.target);
 
+  addScenery(scene, obstacles);
   buildWorldView(scene);
-  obstacles.length = 0;
   for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
 
   const resize = () => {

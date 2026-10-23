@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { makeHumanoid, animateWalk, type Humanoid } from '../../core/humanoid';
 import { GUNS, GUN_ORDER, type GunId } from '../../data';
+import type { CameraView } from '../logic/camera';
 import type { Player } from '../logic/player';
 import type { WeaponState } from '../logic/weapons';
 import { buildGun, type GunModel, type GunPart } from './guns';
@@ -30,6 +31,8 @@ export class PlayerView {
   private bobT = 0;
   private time = 0;
   private lastShotAge = 9;
+  /** 1인칭에서 가릴 몸통 (머리, 상체, 다리, 모자, 배낭). 팔과 총은 남긴다 */
+  private fpsHide: THREE.Object3D[] = [];
 
   constructor(scene: THREE.Scene) {
     this.model = makeHumanoid(0xe0b48c, 0x3a6ea5);
@@ -39,9 +42,18 @@ export class PlayerView {
     cap.position.set(0, 1.94, -0.03); cap.castShadow = true; g.add(cap);
     const pack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.58, 0.22), new THREE.MeshLambertMaterial({ color: 0x4d5a3a }));
     pack.position.set(0, 1.1, 0.29); pack.castShadow = true; g.add(pack);
+    // 머리·상체는 그룹에 직접 붙은 메시. 모자·배낭도 메시. 다리 그룹과 함께 가리고 팔·총(피벗)은 둔다.
+    this.fpsHide = [...this.model.legs, ...g.children.filter((c): c is THREE.Mesh => c instanceof THREE.Mesh)];
+    for (const part of this.fpsHide) part.visible = false;
 
     this.pivot.position.set(0.11, 1.47, -0.5);
     g.add(this.pivot);
+    // 팔은 몸통이 아니라 총 피벗에 붙여, 흔들림·반동·걸음 밥이 손과 총을 같이 움직인다
+    for (const arm of this.model.arms) {
+      g.remove(arm);
+      this.pivot.add(arm);
+      arm.position.sub(this.pivot.position);
+    }
     for (const id of GUN_ORDER) {
       const gun = buildGun(id);
       gun.root.visible = false;
@@ -100,8 +112,10 @@ export class PlayerView {
     this.light.intensity = k === 'shotgun' || k === 'sniper' ? 6 : 3;
   }
 
-  update(dt: number, p: Player, w: WeaponState) {
+  update(dt: number, p: Player, w: WeaponState, viewMode: CameraView) {
     const g = this.model.group;
+    const showBody = viewMode !== 'first';
+    for (const part of this.fpsHide) part.visible = showBody;
     this.time += dt;
     for (const id of GUN_ORDER) this.guns[id].root.visible = id === w.current;
     const gun = this.guns[w.current], def = GUNS[w.current];
@@ -185,16 +199,27 @@ export class PlayerView {
     const hammer = gun.parts.hammer;
     if (hammer) hammer.obj.rotation.x = -0.6 * Math.max(0, 1 - age / 0.18) + 0.2 * smooth(age / 0.5 - 0.2);
 
-    // ── 조준 각도: 카메라 시선(pitch - kick)에 맞춰 팔과 총이 위아래로 ──
-    const a = -(p.pitch - p.kick) + 0.1;
-    const adsX = -0.07 * p.aimT;
-    this.pivot.rotation.set(a + recoilPitch - dip + this.swayY * 0.8, this.swayX * 1.2, roll + this.swayX * 0.5);
-    this.pivot.position.set(0.11 + adsX + bobX + this.swayX * 0.4, 1.47 - dip * 0.14 + bobY + breath - this.swayY * 0.3, -0.5 + recoilBack + handShift);
+    // ── 조준: 우클릭이면 총구가 화면 중앙(시선)으로 들어온다 ──
+    const ads = p.aimT;
+    const a = -(p.pitch - p.kick) + 0.08 * (1 - ads);
+    const swayDamp = 1 - ads * 0.92;
+    this.pivot.rotation.set(
+      a + recoilPitch * (1 - ads * 0.35) - dip + this.swayY * 0.8 * swayDamp,
+      this.swayX * 1.2 * swayDamp,
+      (roll + this.swayX * 0.5) * swayDamp,
+    );
+    const hipX = 0.18, hipY = 1.34, hipZ = -0.48;
+    const adsX = 0, adsY = 1.56, adsZ = -0.36;
+    this.pivot.position.set(
+      hipX + (adsX - hipX) * ads + bobX * swayDamp + this.swayX * 0.4 * swayDamp,
+      hipY + (adsY - hipY) * ads - dip * 0.14 + bobY * swayDamp + breath - this.swayY * 0.3 * swayDamp,
+      hipZ + (adsZ - hipZ) * ads + recoilBack * (1 - ads * 0.5) + handShift,
+    );
 
-    const arm = Math.PI / 2 + a + recoilPitch - dip + this.swayY * 0.8;
+    // 조준·흔들림·반동은 피벗이 이미 적용한다. 손은 그 축에 붙어 총을 쥔 자세만 유지한다
     const [left, right] = this.model.arms;
-    right.rotation.set(arm, 0, -0.5 + this.swayX);
-    left.rotation.set(arm, 0, 0.95 + this.swayX * 0.6);
+    right.rotation.set(Math.PI / 2, 0, -0.5);
+    left.rotation.set(Math.PI / 2, 0, 0.95);
 
     // 불꽃 수명
     if (this.flashT > 0) {

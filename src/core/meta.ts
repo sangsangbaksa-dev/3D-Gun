@@ -14,10 +14,14 @@ export interface Meta {
   /** 스킬트리 노드의 영구 레벨(SKILLS 의 id). 런 시작 때 state.skillLv 로 들어간다 */
   skills: Record<string, number>;
   totalKills: number;
+  /** 체력이 남은 아군. 0이 되면 빠진다 */
+  allies: { role: string; x: number; z: number; hp: number; maxHp: number; zType: string; yaw: number }[];
+  /** 런이 끝나도 남는 포탑. ammo 가 내구도 */
+  turrets: { kind: string; x: number; z: number; level: number; hp: number; ammo: number }[];
 }
 
 const KEY = 'zt3d.meta.v1';
-export const meta: Meta = { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 };
+export const meta: Meta = { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0, allies: [], turrets: [] };
 
 /** 저장소(localStorage) 접근은 이 파일 안에만 둔다. Unity 에서는 persistentDataPath JSON 으로 대체 */
 export function loadMeta() {
@@ -36,12 +40,18 @@ export function loadMeta() {
         meta[k] = clean;
       }
     }
+    if (Array.isArray(d.allies)) {
+      meta.allies = d.allies.filter((a) => a && typeof a.role === 'string' && Number.isFinite(a.x) && Number.isFinite(a.z) && Number.isFinite(a.hp) && a.hp > 0 && Number.isFinite(a.maxHp) && a.maxHp > 0);
+    }
+    if (Array.isArray(d.turrets)) {
+      meta.turrets = d.turrets.filter((t) => t && (t.kind === 'tower' || t.kind === 'mgtower') && Number.isFinite(t.x) && Number.isFinite(t.z) && Number.isFinite(t.ammo) && t.ammo > 0 && Number.isFinite(t.hp) && t.hp > 0);
+    }
   } catch { /* 저장소를 못 쓰거나 깨졌으면 새로 시작 */ }
 }
 export function saveMeta() {
   try { localStorage.setItem(KEY, JSON.stringify(meta)); } catch { /* 무시 */ }
 }
 export function resetMeta() {
-  Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0 });
+  Object.assign(meta, { currency: 0, totalRuns: 0, bestWave: 0, bestCheckpoint: 0, upgrades: {}, facilities: {}, lastSeen: 0, wallet: {}, skills: {}, totalKills: 0, allies: [], turrets: [] });
   saveMeta();
 }

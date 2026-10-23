@@ -1,7 +1,8 @@
 // 전투 전용 DOM 오버레이: 조준선(퍼짐 반영), 히트마커, 피격 화면 효과, 탄약/무기 슬롯, 재장전 바.
 // 모든 요소는 코드로 만들어 붙인다 (index.html 은 W7 소유). 탄약 표시는 W7 HUD 가 생기면 SHOW_AMMO_PANEL 만 끄면 된다.
-import { GUNS, GUN_ORDER, GUN_UPGRADE, RES_LABEL, type GunId } from '../../data';
-import { state } from '../../core/state';
+import { GUNS, GUN_ORDER, GUN_UNLOCK_GOLD, RES_LABEL, type GunId } from '../../data';
+import { changed, state } from '../../core/state';
+import { events } from '../../core/events';
 import { gunStats } from '../logic/weapons';
 
 export const SHOW_AMMO_PANEL = true;
@@ -27,7 +28,7 @@ const CSS = `
 
 .pv-root{position:fixed;inset:0;pointer-events:none;z-index:3;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#fff}
 .pv-cross{position:absolute;left:50%;top:50%;width:0;height:0;transition:opacity .15s}
-.pv-cross i{position:absolute;background:#fff;box-shadow:0 0 2px #000,0 0 4px #0008;border-radius:1px}
+.pv-cross i{position:absolute;background:rgba(255,255,255,.92);box-shadow:0 0 2px #000,0 0 6px rgba(0,0,0,.5);border-radius:1px}
 .pv-cross .t,.pv-cross .b{width:2px;height:8px;left:-1px}.pv-cross .l,.pv-cross .r{height:2px;width:8px;top:-1px}
 .pv-cross .dot{width:2px;height:2px;left:-1px;top:-1px;opacity:.9}
 .pv-hit{position:absolute;left:50%;top:50%;width:0;height:0;opacity:0}
@@ -38,17 +39,17 @@ const CSS = `
 .pv-vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(190,0,0,.62) 100%);opacity:0}
 .pv-low{position:absolute;inset:0;box-shadow:inset 0 0 120px 30px rgba(200,0,0,.55);opacity:0;animation:pvPulse 1s ease-in-out infinite}
 @keyframes pvPulse{50%{filter:brightness(1.7)}}
-.pv-ammo{position:absolute;right:22px;bottom:70px;text-align:right;text-shadow:0 2px 4px #000}
-.pv-ammo .nm{font-size:13px;opacity:.85;letter-spacing:.5px}
-.pv-ammo .n{font-size:40px;font-weight:bold;line-height:1;font-variant-numeric:tabular-nums}
-.pv-ammo .n small{font-size:18px;opacity:.65;font-weight:normal}
+.pv-ammo{position:absolute;right:18px;bottom:18px;text-align:right;padding:12px 14px;background:var(--zt-glass,rgba(10,14,20,.72));border:1px solid var(--zt-border,rgba(255,255,255,.12));border-radius:var(--zt-radius,12px);backdrop-filter:var(--zt-blur,blur(10px));box-shadow:var(--zt-shadow,0 8px 32px #0008)}
+.pv-ammo .nm{font-size:12px;color:var(--zt-muted,#9aa8ba);letter-spacing:.06em;font-weight:600;text-transform:uppercase}
+.pv-ammo .n{font-size:38px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 8px #0006}
+.pv-ammo .n small{font-size:17px;opacity:.55;font-weight:600;color:var(--zt-muted)}
 .pv-ammo .n.low{color:#ff6b5a}
-.pv-ammo .rl{height:5px;width:150px;margin:6px 0 0 auto;background:#0009;border:1px solid #fff3;border-radius:3px;overflow:hidden;opacity:0;transition:opacity .1s}
-.pv-ammo .rl div{height:100%;width:0;background:linear-gradient(90deg,#ffcf5a,#ff9d3b)}
-.pv-slots{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-.pv-slot{min-width:52px;padding:4px 8px;border-radius:5px;background:#000a;border:1px solid #fff2;font-size:12px;text-align:center;opacity:.55}
-.pv-slot b{display:block;font-size:11px;opacity:.7;font-weight:normal}
-.pv-slot.cur{opacity:1;border-color:#ffd23b;box-shadow:0 0 8px #ffd23b55}
+.pv-ammo .rl{height:5px;width:100%;max-width:160px;margin:8px 0 0 auto;background:#0006;border:1px solid var(--zt-border);border-radius:999px;overflow:hidden;opacity:0;transition:opacity .1s}
+.pv-ammo .rl div{height:100%;width:0;background:linear-gradient(90deg,var(--zt-gold,#ffd23b),#ff9d3b)}
+.pv-slots{display:flex;gap:5px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap;max-width:320px}
+.pv-slot{min-width:48px;padding:5px 7px;border-radius:var(--zt-radius-sm,8px);background:#0c121a88;border:1px solid var(--zt-border);font-size:11px;text-align:center;opacity:.5;font-weight:600}
+.pv-slot b{display:block;font-size:10px;opacity:.65;font-weight:700;color:var(--zt-muted)}
+.pv-slot.cur{opacity:1;border-color:var(--zt-gold,#ffd23b);box-shadow:0 0 12px rgba(255,210,59,.35);background:rgba(255,210,59,.08)}
 .pv-slot.lock{opacity:.25}
 .pv-dash{position:absolute;left:50%;top:calc(50% + 46px);width:56px;height:4px;margin-left:-28px;background:#0007;border-radius:2px;overflow:hidden;opacity:0;transition:opacity .2s}
 .pv-dash div{height:100%;background:#7fd6ff;width:100%}
@@ -145,11 +146,13 @@ export class CombatHud {
     (this.dash.firstElementChild as HTMLElement).style.width = `${Math.round(ready01 * 100)}%`;
   }
 
+  setVisible(on: boolean) { this.root.style.display = on ? '' : 'none'; }
+
   dispose() { this.root.remove(); if (this.oldCross) this.oldCross.style.display = ''; }
 }
 
 
-/** 총기 강화창 (V). 골드+부품으로 레벨을 올린다. 실제 처리는 'weapon:upgrade' 이벤트를 받은 컨트롤러가 한다. */
+/** 총기 창 (V). 없는 총은 코인으로 산다. 가진 총의 강화는 이 판에서 막혀 있다. */
 export class UpgradePanel {
   private el = el('pv-up', '<div class="box"></div>');
   private box = this.el.firstElementChild as HTMLElement;
@@ -170,19 +173,32 @@ export class UpgradePanel {
       const dps = (a.dmg * d.pellets / d.rate).toFixed(0);
       return `피해 ${a.dmg.toFixed(0)}${d.pellets > 1 ? '×' + d.pellets : ''} · 탄창 ${a.mag} · 재장전 ${a.reload.toFixed(1)}초 · 초당 ${dps}`;
     };
-    let html = `<h2>무기 강화 <small style="font-weight:normal;opacity:.7">(V 로 닫기)</small></h2><div class="sub">골드 ${state.gold} · ${RES_LABEL.parts} ${state.res.parts}</div>`;
+    let html = `<h2>무기 <small style="font-weight:normal;opacity:.7">(V 로 닫기)</small></h2><div class="sub">코인 ${state.gold} · ${RES_LABEL.parts} ${state.res.parts}</div>`;
     for (const id of GUN_ORDER) {
-      const d = GUNS[id], own = state.weapons.includes(id), lv = state.weaponLv[id] ?? 0, max = lv >= GUN_UPGRADE.maxLv;
-      const cost = max ? '' : `${GUN_UPGRADE.gold[lv]}G + ${RES_LABEL.parts} ${GUN_UPGRADE.parts[lv]}`;
-      const can = own && !max && state.gold >= GUN_UPGRADE.gold[lv] && state.res.parts >= GUN_UPGRADE.parts[lv];
-      html += `<div class="g${own ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? 'Lv' + lv + '/' + GUN_UPGRADE.maxLv : '미보유'}</b></div>`
-        + `<div class="d">${d.desc}</div><div class="s">${own ? fmt(id, lv) + (max ? '' : '  →  ' + fmt(id, lv + 1)) : '상자에서 획득'}</div>`
-        + (own ? `<button data-id="${id}"${can ? '' : ' disabled'}>${max ? '최대 강화' : '강화 ' + cost}</button>` : '') + '</div>';
+      const d = GUNS[id], own = state.weapons.includes(id), lv = (state.weaponLv[id] ?? 0) + (state.weaponLvBonus[id] ?? 0);
+      const price = GUN_UNLOCK_GOLD[id];
+      const canBuy = !own && price != null && state.gold >= price;
+      const detail = own ? fmt(id, lv) : (price != null ? `코인 ${price}에 구매` : '기본 지급');
+      const button = own
+        ? `<button disabled>이 판에선 강화 불가</button>`
+        : (price != null ? `<button data-buy="${id}"${canBuy ? '' : ' disabled'}>구매 ${price}G</button>` : '');
+      html += `<div class="g${own || price != null ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? '보유' : '미보유'}</b></div>`
+        + `<div class="d">${d.desc}</div><div class="s">${detail}</div>${button}</div>`;
     }
     html += '<div class="x"><button data-close>닫기</button></div>';
     this.box.innerHTML = html;
     this.box.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => b.addEventListener('click', () => this.onUpgrade(b.dataset.id as GunId)));
+    this.box.querySelectorAll<HTMLButtonElement>('button[data-buy]').forEach((b) => b.addEventListener('click', () => this.buyGun(b.dataset.buy as GunId)));
     this.box.querySelector('[data-close]')?.addEventListener('click', this.onClose);
+  }
+
+  private buyGun(id: GunId) {
+    const price = GUN_UNLOCK_GOLD[id];
+    if (price == null || state.weapons.includes(id) || state.gold < price) return;
+    state.gold -= price;
+    events.emit('weapon:unlock', { weapon: id });
+    changed();
+    this.refresh();
   }
 
   dispose() { this.el.remove(); }

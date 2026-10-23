@@ -74,7 +74,7 @@ export function updateCraft(dt: number, researchers: number): number[] {
   job.t += dt;
   if (job.t >= craftTime(researchers)) {
     craftQueue.shift();
-    state.vaccines[job.tier] = (state.vaccines[job.tier] ?? 0) + 1;
+    state.vaccines[job.tier] = (state.vaccines[job.tier] ?? 0) + VACCINES[job.tier].uses;
     changed();
     done.push(job.tier);
   }

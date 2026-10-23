@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAP, type MapProp } from '../data/map';
+import { terrainY } from './terrain';
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, repeat = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -24,15 +25,9 @@ function speckle(g: CanvasRenderingContext2D, w: number, h: number, base: string
 
 export function buildWorldView(scene: THREE.Scene) {
   const H = MAP.half;
-  // 지면: 큰 텍스처 반복 + 구역별 색 얼룩(보이는 큰 캔버스 한 장)
-  const grass = canvasTex(256, 256, (g) => speckle(g, 256, 256, '#6a7a4a', 5000, 90));
-  grass.repeat.set(H / 6, H / 6);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(H * 2 + 160, H * 2 + 160), new THREE.MeshLambertMaterial({ map: grass }));
-  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-
   // 구역 바닥(흙/돌/아스팔트 느낌 원판)
   const zoneColor: Record<string, number> = { base: 0x8a7656, forest: 0x4f6a3a, quarry: 0x8a8a84, mine: 0x5d5650, field: 0x8c9a4e, ruins: 0x6b6b68, wasteland: 0x8d7a5c, boss: 0x4a3a3a };
-  for (const z of MAP.zones) {
+  for (const z of MAP.zones.filter((q) => Math.hypot(q.x, q.z) - q.r > 70)) {
     const m = new THREE.Mesh(new THREE.CircleGeometry(z.r, 40), new THREE.MeshLambertMaterial({ color: zoneColor[z.kind] ?? 0x777777, transparent: true, opacity: 0.85 }));
     m.rotation.x = -Math.PI / 2; m.position.set(z.x, 0.02, z.z); m.receiveShadow = true; scene.add(m);
   }
@@ -48,12 +43,14 @@ export function buildWorldView(scene: THREE.Scene) {
     for (let i = 1; i < lane.waypoints.length; i++) {
       const a = lane.waypoints[i - 1], b = lane.waypoints[i];
       const len = Math.hypot(b.x - a.x, b.z - a.z), w = 6;
-      const g = new THREE.PlaneGeometry(w, len);
+      const g = new THREE.PlaneGeometry(w, len, 1, Math.max(1, Math.round(len / 3)));
       const uv = g.attributes.uv as THREE.BufferAttribute;
       for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (len / 10));
       g.rotateX(-Math.PI / 2);
       g.rotateY(Math.atan2(b.x - a.x, b.z - a.z) + Math.PI);
-      g.translate((a.x + b.x) / 2, 0.04 + i * 0.001, (a.z + b.z) / 2);
+      g.translate((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
+      const pp = g.attributes.position as THREE.BufferAttribute;
+      for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + 0.06 + i * 0.001);
       roads.push(g);
     }
   }
@@ -89,14 +86,14 @@ export function buildWorldView(scene: THREE.Scene) {
         const i = f * 4 + k;
         uv.setXY(i, uv.getX(i) * Math.max(1, Math.round(widths[f] / 4)) / 1, uv.getY(i) * floors / 1 / 1 * 1);
       }
-      wallGeo[p.style ?? 0].push(place(g, p, p.h / 2));
+      wallGeo[p.style ?? 0].push(place(g, p, p.h / 2 + terrainY(p.x, p.z) - 0.3));
       const roof = new THREE.BoxGeometry(p.w + 0.4, 0.5, p.d + 0.4);
-      roofGeo.push(place(roof, p, p.h + 0.25));
+      roofGeo.push(place(roof, p, p.h + 0.25 + terrainY(p.x, p.z) - 0.3));
     } else if (p.kind === 'wall' && p.w && p.d && p.h) {
-      small.push(place(new THREE.BoxGeometry(p.w, p.h, p.d), p, p.h / 2));
+      small.push(place(new THREE.BoxGeometry(p.w, p.h, p.d), p, p.h / 2 + terrainY(p.x, p.z)));
     } else if (p.kind === 'car' && p.w && p.d && p.h) {
-      carGeo.push(place(new THREE.BoxGeometry(p.w, p.h * 0.6, p.d), p, p.h * 0.45));
-      carGeo.push(place(new THREE.BoxGeometry(p.w * 0.5, p.h * 0.45, p.d * 0.85), p, p.h * 0.95));
+      carGeo.push(place(new THREE.BoxGeometry(p.w, p.h * 0.6, p.d), p, p.h * 0.45 + terrainY(p.x, p.z)));
+      carGeo.push(place(new THREE.BoxGeometry(p.w * 0.5, p.h * 0.45, p.d * 0.85), p, p.h * 0.95 + terrainY(p.x, p.z)));
     }
   }
   wallGeo.forEach((arr, v) => {

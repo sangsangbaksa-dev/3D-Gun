@@ -14,12 +14,12 @@ export const WALLET_ICON: Record<WalletKey, string> = {
 export type Cost = Partial<Record<WalletKey, number>>;
 
 /** 첫 런부터 주던 기본 보급 */
-export const BASE_START = { wood: 14, stone: 8, herb: 2 };
+export const BASE_START = { wood: 14, stone: 8, herb: 4, parts: 3 };
 
 export type UpgradeCat = 'weapon' | 'base' | 'turret' | 'ally' | 'econ';
 export const CAT_ORDER: UpgradeCat[] = ['weapon', 'base', 'turret', 'ally', 'econ'];
 export const CAT_LABEL: Record<UpgradeCat, string> = { weapon: '무기', base: '기지·핵', turret: '포탑', ally: '아군', econ: '보급·경제' };
-export const CAT_ICON: Record<UpgradeCat, string> = { weapon: '🔫', base: '🏰', turret: '🗼', ally: '🧟', econ: '📦' };
+export const CAT_ICON: Record<UpgradeCat, string> = { weapon: '🔫', base: '🏰', turret: '🗼', ally: '🧟', econ: '💱' };
 
 export type UpgradeEffect =
   | { kind: 'startGold'; per: number }
@@ -36,7 +36,7 @@ export type UpgradeEffect =
   | { kind: 'weapon'; id: string }
   | { kind: 'prepBonus'; per: number }                 // 준비 시간 +초
   | { kind: 'startWave'; per: number }                 // 시작 웨이브 +N (bestCheckpoint 까지)
-  | { kind: 'clickGold'; per: number }     // 보급 상자 터치 수입
+  | { kind: 'clickGold'; per: number }     // (레거시) 미사용 — 교환소로 대체됨
   | { kind: 'incomeMul'; per: number }     // 모든 생산 건물 수입 배율
   | { kind: 'keepRatio'; per: number };    // 사망 시 남은 자원을 지갑으로 옮기는 비율 보너스
 
@@ -79,7 +79,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'a_herb', cat: 'ally', name: '약초 상비', desc: '런 시작 약초 +4', icon: '🌿', max: 6, cost: { gold: 50, herb: 8 }, costGrowth: 1.4, effect: { kind: 'startRes', res: 'herb', per: 4 } },
   // 경제
   { id: 'e_gold', cat: 'econ', name: '출격 지원금', desc: '런 시작 골드 +25', icon: '🪙', max: 10, cost: { gold: 60 }, costGrowth: 1.5, effect: { kind: 'startGold', per: 25 } },
-  { id: 'e_click', cat: 'econ', name: '보급 상자 수확', desc: '상자 터치 수입 +2 골드', icon: '👆', max: 15, cost: { gold: 30 }, costGrowth: 1.35, effect: { kind: 'clickGold', per: 2 } },
+  { id: 'e_click', cat: 'econ', name: '교환 협상', desc: '교환소 판매가 +1 골드 (자원당, 구매가 미만)', icon: '💱', max: 10, cost: { gold: 30 }, costGrowth: 1.35, effect: { kind: 'clickGold', per: 1 } },
   { id: 'e_income', cat: 'econ', name: '운영 효율', desc: '모든 생산 건물 수입 +10%', icon: '📈', max: 10, cost: { gold: 200, parts: 2 }, costGrowth: 1.6, effect: { kind: 'incomeMul', per: 0.1 } },
   { id: 'e_keep', cat: 'econ', name: '철수 보급', desc: '사망 시 남은 자원 회수율 +6%', icon: '🎒', max: 8, cost: { gold: 120, wood: 20 }, costGrowth: 1.5, effect: { kind: 'keepRatio', per: 0.06 } },
   { id: 'e_gather', cat: 'econ', name: '채집 효율', desc: '채집 속도 +10%', icon: '⛏️', max: 8, cost: { gold: 80, wood: 15 }, costGrowth: 1.45, effect: { kind: 'gatherSpeed', per: 0.1 } },

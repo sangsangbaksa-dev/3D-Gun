@@ -1,12 +1,12 @@
 // 2D 업그레이드 타이쿤 화면 (DOM). 규칙은 logic/economy.ts 에 있고, 여기서는 그리기와 클릭 연결만 한다.
 import { meta } from '../../core/meta';
-import { SKILLS } from '../../data';
+import { RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
 import {
   UPGRADES, PRODUCERS, CAT_ORDER, CAT_LABEL, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
 } from '../../data/tycoon2d';
 import {
-  bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, clickIncome, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
-  incomePerSec, refundSkills, skillCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
+  bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
+  incomePerSec, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
 } from '../logic/economy';
 import { CSS } from './style';
 
@@ -117,7 +117,12 @@ export class TycoonPanel {
       const note = document.createElement('div'); note.className = 'sect';
       note.textContent = '스킬 트리 노드를 영구 습득합니다 (스킬 포인트 소모). 출격하면 해당 레벨로 시작합니다.';
       this.content.appendChild(note);
-      SKILLS.forEach((s, i) => grid.appendChild(this.skillCard(s.id, i)));
+      const branches = [...new Set(SKILLS.map((s) => s.branch))];
+      branches.forEach((br) => {
+        const h = document.createElement('div'); h.className = 'sect'; h.textContent = br;
+        grid.appendChild(h);
+        SKILLS.filter((s) => s.branch === br).forEach((s, i) => grid.appendChild(this.skillCard(s.id, i)));
+      });
     } else {
       const note = document.createElement('div'); note.className = 'sect';
       note.textContent = '시설은 출격 중이든 접속 중이 아니든 계속 재화를 만듭니다 (부재 시 최대 4시간, 50%).';
@@ -191,7 +196,8 @@ export class TycoonPanel {
 
   private skillCard(id: string, i: number): HTMLElement {
     const s = SKILLS.find((x) => x.id === id)!;
-    const c = this.makeCard(i, '🌳', s.name, `${s.desc}  <small>(${s.branch})</small>`);
+    const icon = { 생존: '❤️', 채집: '🪓', 연구: '🧪', 사령: '🚩' }[s.branch] ?? '🌳';
+    const c = this.makeCard(i, icon, s.name, s.desc);
     c.btn.onclick = (e) => this.afterBuy(c.el, buySkill(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -237,19 +243,37 @@ export class TycoonPanel {
   }
 
   private buildSide() {
-    this.side.innerHTML = `<button class="crate" data-crate><span class="big">📦</span>보급 상자 수색<br><small class="cg"></small></button>
+    this.side.innerHTML = `<div class="exchange"><h3>🏪 교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
       <div class="panelbox" data-preview></div>`;
-    (this.side.querySelector('[data-crate]') as HTMLElement).addEventListener('click', (e) => {
-      const g = clickIncome(meta);
-      this.floatText(`+${g} 🪙`, (e as MouseEvent).clientX, (e as MouseEvent).clientY);
-      this.host.onChanged();
-      this.refreshWallet(0);
-    });
+    const rows = this.side.querySelector('[data-ex-rows]') as HTMLElement;
+    for (const k of RES_KEYS) {
+      const row = document.createElement('div');
+      row.className = 'ex-row';
+      row.dataset.res = k;
+      row.innerHTML = `<div class="n" data-ex-label></div><div class="btns"></div>`;
+      const btns = row.querySelector('.btns') as HTMLElement;
+      const mk = (label: string, fn: () => void) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'ex-btn'; b.textContent = label;
+        b.addEventListener('click', (e) => { fn(); this.changed(); this.floatText(label, (e as MouseEvent).clientX, (e as MouseEvent).clientY); });
+        btns.appendChild(b);
+      };
+      mk('팔기 1', () => { metaSell(meta, k, 1); });
+      mk('팔기 전부', () => { metaSell(meta, k, Math.floor(bal(meta, k))); });
+      mk('사기 1', () => { metaBuy(meta, k, 1); });
+      mk('사기 10', () => { metaBuy(meta, k, 10); });
+      rows.appendChild(row);
+    }
   }
 
   private refreshSide() {
     const b = bonuses(meta);
-    (this.side.querySelector('.cg') as HTMLElement).textContent = `클릭당 🪙 +${b.clickGold}`;
+    for (const k of RES_KEYS) {
+      const el = this.side.querySelector(`[data-res="${k}"] [data-ex-label]`) as HTMLElement | null;
+      if (el) {
+        el.textContent = `${RES_LABEL[k]} · 판매 🪙${metaSellUnit(meta, k)} · 구매 🪙${RES_BUY_PRICE[k]}`;
+      }
+    }
     const row = (a: string, v: string) => `<div><span>${a}</span><b>${v}</b></div>`;
     const wl = Object.entries(b.weaponLv).filter(([, v]) => v > 0).map(([k, v]) => `${k} +${v}`).join(', ') || '-';
     (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>다음 출격 미리보기</h3>`

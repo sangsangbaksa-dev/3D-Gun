@@ -14,7 +14,7 @@ export const state = {
   res: Object.fromEntries(RES_KEYS.map((k) => [k, 0])) as Record<ResKey, number>,
   samples: 0,     // 좀비 샘플 (일반/달리기/뚱보)
   samplesSp: 0,   // 특수 샘플 (보스)
-  vaccines: [0, 0, 0] as number[], // 초급/중급/고급 보유 수
+  vaccines: [0, 0, 0] as number[], // 초급/중급/고급. 이번 판 소모품, 런이 끝나면 사라짐
   xp: 0,
   skillPoints: 0,
   skillLv: {} as Record<string, number>,
@@ -42,6 +42,8 @@ export const state = {
     weaponLv: {} as Record<string, number>,
     /** 포탑 피해 배율에 더하는 값 (0.2 = +20%). base 가 반영한다 */
     turretDmgMul: 0,
+    /** 메타 업그레이드 교환 협상: 인런 교환소 판매가 보너스(자원당 골드) */
+    exchangeSellBonus: 0,
   },
   // enemies 가 갱신: 준비 단계 남은 시간(초), 이번 웨이브에서 남은 좀비 수(스폰 대기 포함), 마지막 체크포인트 웨이브
   prepLeft: 0,

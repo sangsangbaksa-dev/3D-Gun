@@ -36,7 +36,7 @@ function onLockError() {
 
 export function initInput(canvas: HTMLElement) {
   addEventListener('keydown', (e) => {
-    if (e.code === 'Tab' || e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+    if (e.code === 'Tab' || e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'F3') e.preventDefault();
     if (!e.repeat) input.pressed.add(e.code);
     input.keys.add(e.code);
     if ((e.code === 'Escape' || e.code === 'KeyP') && !e.repeat && !input.modalOpen) input.paused = !input.paused;

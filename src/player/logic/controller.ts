@@ -1,11 +1,11 @@
 // 플레이어 컨트롤러: 이동 + 무기 + 피격/사망을 한 프레임에 묶는다. 엔진 비의존.
 // 입력은 FrameIntent, 월드 정보는 FrameEnv 로 받고, 결과는 FrameOut 으로 돌려준다 (view 는 이것만 읽는다).
-import { GUNS, GUN_ORDER, GUN_UPGRADE, PLAYER, type GunId } from '../../data';
+import { GUNS, GUN_ORDER, PLAYER, type GunId } from '../../data';
 import { MAP } from '../../data/map';
 import { events } from '../../core/events';
-import { state, spend } from '../../core/state';
+import { state } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
-import { aimOrigin, cameraPose, type CameraPose } from './camera';
+import { aimOrigin, cameraPose, type CameraPose, type CameraView } from './camera';
 import { stepMovement, type MoveIntent } from './movement';
 import { createPlayerState, type Player } from './player';
 import { createWeaponState, currentSpread, isReloading, magSize, startReload, switchWeapon, tickWeapon, tryFire, type FireResult, type WeaponState } from './weapons';
@@ -30,6 +30,8 @@ export interface FrameEnv {
   canShoot: boolean;
   /** false 면 사격·피격·무기·체력 처리를 건너뛰고 이동/카메라만 한다 (테스트 빌드가 전투를 자체 처리하는 동안) */
   combat: boolean;
+  /** 1인칭 눈 또는 3인칭 어깨 카메라 */
+  view: CameraView;
 }
 
 export interface FrameOut {
@@ -75,19 +77,9 @@ export class PlayerController {
   spreadNow() { return currentSpread(this.weapons, state.stats, this.player.moving, this.player.aiming); }
 
   /** 총기 강화: 골드+부품을 내고 레벨을 올린다. 성공하면 true */
-  upgrade(id: GunId): boolean {
-    if (!(id in GUNS) || !state.weapons.includes(id)) return false;
-    const lv = state.weaponLv[id] ?? 0;
-    if (lv >= GUN_UPGRADE.maxLv) { events.emit('toast', { text: `${GUNS[id].name}은(는) 최대 강화` }); return false; }
-    if (!spend({ parts: GUN_UPGRADE.parts[lv] }, GUN_UPGRADE.gold[lv])) { events.emit('toast', { text: '골드나 부품이 부족하다' }); return false; }
-    state.weaponLv[id] = lv + 1;
-    // 탄창이 커졌으면 현재 탄도 그만큼 채워 준다
-    const w = this.weapons;
-    w.ammo[id] += magSize(w, state.stats, id) - magSize({ ...w, lv: { ...w.lv, [id]: lv } }, state.stats, id);
-    events.emit('weapon:upgraded', { weapon: id, level: lv + 1 });
-    events.emit('toast', { text: `${GUNS[id].name} 강화 Lv${lv + 1}` });
-    this.emitAmmo();
-    return true;
+  upgrade(_id: GunId): boolean {
+    events.emit('toast', { text: '무기는 이 판에서 강화할 수 없다' });
+    return false;
   }
 
   private emitAmmo() {
@@ -115,7 +107,7 @@ export class PlayerController {
       this.pendingHits.length = 0;
       stepMovement(p, dt, it, stats.dashCd, env.collide);
       p.y = env.groundY(p.x, p.z);
-      out.pose = cameraPose(p, GUNS[w.current].adsFov);
+      out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
       return out;
     }
 
@@ -149,7 +141,7 @@ export class PlayerController {
     if (!wasDashing && p.dashT > 0 && dashReady) out.dashed = true;
     p.y = env.groundY(p.x, p.z);
 
-    out.pose = cameraPose(p, GUNS[w.current].adsFov);
+    out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
     // 무기
     if (tickWeapon(w, dt, stats) === 'reloaded') { out.reloadDone = true; events.emit('weapon:sound', { weapon: w.current, kind: 'reloadDone' }); this.emitAmmo(); }
@@ -175,13 +167,14 @@ export class PlayerController {
           if (it.firePressed) events.emit('weapon:sound', { weapon: w.current, kind: 'dry' });
         } else {
           const shot = tryFire(w, {
-            origin: aimOrigin(out.pose, p), dir: out.pose.dir,
+            origin: aimOrigin(out.pose, p, env.view), dir: out.pose.dir,
             targets: env.zombies, stats, aiming: p.aiming, moving: p.moving, rng: env.rng,
           });
           if (shot) {
             out.shot = shot;
             this.fireBuf = 0;
-            p.kick = Math.min(0.3, p.kick + GUNS[shot.weapon].recoil * (p.aiming ? 0.6 : 1));
+            const sprayKick = 1 + w.bloom * 0.85;
+            p.kick = Math.min(0.62, p.kick + GUNS[shot.weapon].recoil * 2.4 * (p.aiming ? 0.4 : 1) * sprayKick);
             events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(w, stats) });
             events.emit('weapon:sound', { weapon: shot.weapon, kind: 'fire' });
             const hitKind = shot.pellets.some((pl) => pl.kill) ? 'kill' : shot.pellets.some((pl) => pl.headshot) ? 'headshot' : shot.pellets.some((pl) => pl.kind === 'zombie') ? 'hit' : null;
@@ -190,7 +183,9 @@ export class PlayerController {
           }
         }
       }
+      if (!out.shot && w.sinceShot > 0.16) p.kick = Math.max(0, p.kick - p.kick * dt * 4);
     }
+    out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
     if (p.hp !== this.lastHp || p.maxHp !== this.lastMaxHp) {
       this.lastHp = p.hp; this.lastMaxHp = p.maxHp;

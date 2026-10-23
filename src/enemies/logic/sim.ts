@@ -162,8 +162,10 @@ export class EnemySim implements DamageSink {
     events.emit('enemy:killed', { x: z.x, z: z.z, type: z.type, byAlly });
     const rw = ZOMBIE_REWARD[z.type];
     const mul = z.elite ? ELITE.reward : 1;
-    state.gold += rw.gold * mul;
+    const coins = Math.round(rw.gold * mul * state.stats.goldMul);
+    state.gold += coins;
     events.emit('xp:gain', { amount: rw.xp * mul, reason: 'kill' });
+    events.emit('toast', { text: `코인 +${coins}` });
     changed();
     if (z.type === 'fatty') {
       this.gases.push({ x: z.x, z: z.z, r: ENEMY_RULES.gasRadius, t: ENEMY_RULES.gasTime, tick: 0, dps: ENEMY_RULES.gasDps, kind: 'gas' });
@@ -636,7 +638,7 @@ export class EnemySim implements DamageSink {
     const p = this.deps.player;
     for (const zone of MAP.zones) {
       if (zone.kind === 'base' || zone.danger < 2) continue;
-      const want = ENEMY_RULES.roamPerDanger * zone.danger;
+      const want = Math.max(0, Math.floor(ENEMY_RULES.roamPerDanger * zone.danger));
       let have = 0;
       for (const z of this.list) if (z.home?.zone === zone.id && !z.dead) have++;
       if (have >= want) continue;

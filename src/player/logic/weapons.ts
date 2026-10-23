@@ -1,7 +1,7 @@
 // 무기 상태와 발사 규칙. 순수 로직 (three, DOM 없음).
 import { GUNS, GUN_ORDER, GUN_UPGRADE, PLAYER, type GunId, type Stats } from '../../data';
 import type { ZombieRef } from '../../core/entities';
-import { castRayAll, rayGround } from './hitscan';
+import { castRayAll, rayGround, rayPoint } from './hitscan';
 import { normalize, type Rng, type Vec3 } from './math';
 
 export interface WeaponState {
@@ -50,7 +50,8 @@ export const isReloading = (w: WeaponState) => w.reloadLeft > 0;
 
 export function tickWeapon(w: WeaponState, dt: number, stats: Stats): 'reloaded' | null {
   w.cooldown = Math.max(0, w.cooldown - dt);
-  w.bloom = Math.max(0, w.bloom - dt * 2.2);
+  const decay = w.sinceShot < 0.28 ? 1.5 : 2.4;
+  w.bloom = Math.max(0, w.bloom - dt * decay);
   w.sinceShot += dt;
   if (w.reloadLeft > 0) {
     w.reloadLeft -= dt;
@@ -81,7 +82,8 @@ export function switchWeapon(w: WeaponState, id: GunId): boolean {
 /** 지금 쏘면 적용될 퍼짐(라디안): 연사 누적 + 이동 시 증가, 조준 시 절반. 조준선 UI 도 이 값을 쓴다 */
 export function currentSpread(w: WeaponState, stats: Stats, moving: boolean, aiming: boolean): number {
   const base = gunStats(w.current, levelOf(w), stats).spread;
-  return base * (1 + w.bloom) * (moving ? 1.35 : 1) * (aiming ? 0.5 : 1);
+  const spray = w.bloom * (1 + w.bloom * 0.45);
+  return base * (1 + spray) * (moving ? 1.35 : 1) * (aiming ? 0.5 : 1) * stats.spreadMul;
 }
 
 export type PelletKind = 'zombie' | 'ground' | 'air';
@@ -118,7 +120,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
   w.sinceShot = 0;
 
   const spread = currentSpread(w, env.stats, env.moving, env.aiming);
-  w.bloom = Math.min(2, w.bloom + def.bloom);
+  w.bloom = Math.min(2.8, w.bloom + def.bloom * 1.15);
 
   // 방향에 수직인 두 축
   const d0 = normalize(env.dir);
@@ -132,7 +134,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
     const ang = env.rng() * Math.PI * 2, rad = Math.sqrt(env.rng()) * spread;
     const a = Math.cos(ang) * rad, b = Math.sin(ang) * rad;
     const d = normalize({ x: d0.x + rx.x * a + ux.x * b, y: d0.y + rx.y * a + ux.y * b, z: d0.z + rx.z * a + ux.z * b });
-    const at = (t: number): Vec3 => ({ x: env.origin.x + d.x * t, y: env.origin.y + d.y * t, z: env.origin.z + d.z * t });
+    const at = (t: number): Vec3 => rayPoint(env.origin, d, t);
 
     const hits = castRayAll(env.origin, d, def.range, env.targets, PLAYER.aimAssist).slice(0, Math.max(1, def.pierce));
     if (hits.length) {
@@ -141,7 +143,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
         const tg = h.target;
         const head = h.y >= tg.height * 0.78;
         const fall = 1 - def.falloff * Math.min(1, h.t / def.range);
-        const dmg = gs.dmg * fall * Math.pow(0.7, k) * (head ? PLAYER.headshotMul : 1);
+        const dmg = gs.dmg * fall * Math.pow(0.7, k) * (head ? PLAYER.headshotMul * env.stats.headMul : 1);
         tg.hit(dmg, false);
         const info = { x: at(h.t).x, y: at(h.t).y, z: at(h.t).z, kill: tg.dead };
         if (!first) first = { kind: 'zombie', headshot: head, kill: tg.dead, dmg, end: at(h.t), also: [] };
@@ -153,7 +155,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
     const tg = rayGround(env.origin, d);
     const t = tg !== null && tg < def.range ? tg : def.range;
     const e = at(t);
-    pellets.push({ kind: tg !== null && tg < def.range ? 'ground' : 'air', headshot: false, kill: false, dmg: 0, end: { x: e.x, y: Math.max(0, e.y), z: e.z }, also: [] });
+    pellets.push({ kind: tg !== null && tg < def.range ? 'ground' : 'air', headshot: false, kill: false, dmg: 0, end: { x: e.x, y: e.y, z: e.z }, also: [] });
   }
   return { weapon: w.current, pellets, ammoLeft: w.ammo[w.current] };
 }

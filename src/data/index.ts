@@ -6,6 +6,14 @@ export type ResKey = 'wood' | 'stone' | 'iron' | 'herb' | 'parts';
 export const RES_KEYS: ResKey[] = ['wood', 'stone', 'iron', 'herb', 'parts'];
 export const RES_LABEL: Record<ResKey, string> = { wood: '나무', stone: '돌', iron: '철', herb: '약초', parts: '부품' };
 export const RES_PRICE: Record<ResKey, number> = { wood: 2, stone: 3, iron: 8, herb: 4, parts: 10 };
+/** 코인으로 자원을 살 때. 판매가의 3배라 팔고 다시 사면 코인이 늘지 않는다 */
+export const RES_BUY_PRICE: Record<ResKey, number> = { wood: 6, stone: 9, iron: 24, herb: 12, parts: 30 };
+
+/** 교환소 판매 단가 = 기본가 + 보너스. 항상 구매가보다 낮게 캡한다 (차익거래 방지) */
+export function exchangeSellUnit(res: ResKey, sellBonus = 0): number {
+  const cap = Math.max(0, RES_BUY_PRICE[res] - RES_PRICE[res] - 1);
+  return RES_PRICE[res] + Math.min(Math.max(0, sellBonus), cap);
+}
 
 // ── 채집 (소유: gathering) ─────────────────────────────────────────────
 // NodeKind 는 data/map.ts 의 ResNodeKind 와 같은 이름을 쓴다.
@@ -99,12 +107,12 @@ export interface WeaponDef {
 export const WEAPON_ORDER: WeaponId[] = ['pistol', 'shotgun', 'smg'];
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
   pistol: { name: '권총', dmg: 14, rate: 0.34, mag: 12, reload: 1.5, pellets: 1, spread: 0.004, range: 80, recoil: 0.035, bloom: 0.6, falloff: 0.2, tracer: 0xffe6a0 },
-  shotgun: { name: '샷건', dmg: 9, rate: 0.85, mag: 6, reload: 2.3, pellets: 7, spread: 0.075, range: 28, recoil: 0.11, bloom: 0.15, falloff: 0.6, tracer: 0xffb060 },
-  smg: { name: '기관총', dmg: 7, rate: 0.085, mag: 35, reload: 2.0, pellets: 1, spread: 0.035, range: 60, recoil: 0.018, bloom: 0.12, falloff: 0.35, tracer: 0xa8e0ff },
+  shotgun: { name: '샷건', dmg: 13, rate: 0.7, mag: 8, reload: 1.9, pellets: 9, spread: 0.052, range: 38, recoil: 0.1, bloom: 0.1, falloff: 0.4, tracer: 0xffb060 },
+  smg: { name: '기관총', dmg: 10, rate: 0.068, mag: 48, reload: 1.65, pellets: 1, spread: 0.02, range: 78, recoil: 0.013, bloom: 0.07, falloff: 0.2, tracer: 0xa8e0ff },
 };
 
 // ── 총기 전체 표 (소유: player). WEAPONS/WeaponId 는 기존 모듈(loot, playtest)이 쓰므로 그대로 두고,
-// W1 은 새 총기까지 포함한 GUNS 를 쓴다. 새 총기는 상자 보상표(loot)나 상점에서 id 로 지급한다.
+// W1 은 새 총기까지 포함한 GUNS 를 쓴다. 권총은 기본 지급이고, 나머지 총기는 강화창에서 코인으로 산다.
 export type GunId = WeaponId | 'magnum' | 'rifle' | 'sniper';
 export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle' | 'sniper';
 export interface GunDef extends WeaponDef {
@@ -127,8 +135,8 @@ export interface GunDef extends WeaponDef {
 export const GUN_ORDER: GunId[] = ['pistol', 'magnum', 'smg', 'shotgun', 'rifle', 'sniper'];
 export const GUNS: Record<GunId, GunDef> = {
   pistol: { ...WEAPONS.pistol, kind: 'pistol', auto: true, pierce: 1, adsFov: 58, scope: false, sway: 1, snd: { pitch: 170, len: 0.16, noise: 0.6, thump: 0.5 }, desc: '가볍고 안정적인 기본 권총' },
-  shotgun: { ...WEAPONS.shotgun, kind: 'shotgun', auto: false, pierce: 1, adsFov: 62, scope: false, sway: 0.7, snd: { pitch: 95, len: 0.3, noise: 0.85, thump: 1 }, desc: '근거리에서 압도적인 산탄' },
-  smg: { ...WEAPONS.smg, kind: 'smg', auto: true, pierce: 1, adsFov: 56, scope: false, sway: 1.2, snd: { pitch: 220, len: 0.11, noise: 0.7, thump: 0.35 }, desc: '빠른 연사, 탄이 퍼진다' },
+  shotgun: { ...WEAPONS.shotgun, kind: 'shotgun', auto: false, pierce: 1, adsFov: 62, scope: false, sway: 0.7, snd: { pitch: 95, len: 0.3, noise: 0.85, thump: 1 }, desc: '가까운 거리에서 산탄이 몰려 맞는다' },
+  smg: { ...WEAPONS.smg, kind: 'smg', auto: true, pierce: 1, adsFov: 56, scope: false, sway: 1.2, snd: { pitch: 220, len: 0.11, noise: 0.7, thump: 0.35 }, desc: '연사가 빠르고 탄 퍼짐이 적다' },
   magnum: { name: '매그넘', dmg: 42, rate: 0.55, mag: 6, reload: 2.2, pellets: 1, spread: 0.006, range: 95, recoil: 0.1, bloom: 0.9, falloff: 0.15, tracer: 0xffd070,
     kind: 'revolver', auto: false, pierce: 2, adsFov: 54, scope: false, sway: 0.8, snd: { pitch: 120, len: 0.26, noise: 0.65, thump: 0.9 }, desc: '한 방이 묵직하고 관통한다' },
   rifle: { name: '돌격소총', dmg: 12, rate: 0.105, mag: 30, reload: 2.3, pellets: 1, spread: 0.014, range: 110, recoil: 0.024, bloom: 0.1, falloff: 0.25, tracer: 0xffe29a,
@@ -146,6 +154,15 @@ export const GUN_UPGRADE = {
   gold: [60, 120, 220, 380, 600],
   parts: [1, 2, 3, 5, 8],
 };
+/** 미보유 총기 구매가(코인). 권총은 시작 지급.
+ *  매그넘 120·소총 600 = 강화 비용, 샷건 400·기관총/저격 1200 = 타이쿤 시작 보유 골드. */
+export const GUN_UNLOCK_GOLD: Partial<Record<GunId, number>> = {
+  magnum: 120,
+  shotgun: 400,
+  rifle: 600,
+  smg: 1200,
+  sniper: 1200,
+};
 
 // 플레이어 이동/전투 공통 수치 (소유: player)
 export const PLAYER = {
@@ -160,7 +177,9 @@ export const PLAYER = {
   sens: 0.0025,        // 마우스 감도 (라디안/픽셀)
   respawnDelay: 3,     // 사망 후 아무도 되살리지 않을 때 자동 부활까지 (초)
   headshotMul: 1.8,    // 머리(키의 78% 이상) 명중 배율
-  aimAssist: 0.15,     // 3인칭 조준 보정: 판정 반경에 더하는 여유(m)
+  aimAssist: 0.15,     // 조준 보정: 판정 반경에 더하는 여유(m)
+  /** 비행 거리 t(m)에서 y -= bulletDrop * t². 30m ≈ 0.7m, 50m ≈ 2m */
+  bulletDrop: 0.0008,
 };
 
 export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
@@ -178,13 +197,13 @@ export interface BuildingDef {
 }
 export const BUILDING_ORDER: BuildingId[] = ['tower', 'mgtower', 'barricade', 'trap', 'lab', 'barracks', 'shop'];
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lab: { name: '연구소', cost: { wood: 10, stone: 10, parts: 3 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작' },
+  lab: { name: '연구소', cost: { wood: 8, stone: 8, parts: 2 }, radius: 1.8, hp: 300, height: 3.2, desc: 'E: 백신 제작 · 준비 중 핵에서도 제작 가능' },
   barracks: { name: '숙소', cost: { wood: 12, stone: 4 }, radius: 1.8, hp: 300, height: 2.6, desc: '아군 상한 +3' },
   barricade: { name: '바리케이드', cost: { wood: 4 }, radius: 1, hp: 200, height: 1.5, desc: '좀비가 먼저 부순다' },
   tower: {
-    name: '감시탑', cost: { wood: 10, stone: 8 }, radius: 1, hp: 300, height: 5, desc: '자동 사격, 업그레이드',
+    name: '감시탑', cost: { wood: 36, stone: 28, iron: 10, parts: 6 }, radius: 1, hp: 300, height: 5, desc: '영구 포탑. 내구도를 다 쓰면 파괴',
     turret: {
-      ammo: 40, refill: { wood: 2, stone: 1 },
+      ammo: 80, refill: { wood: 99, stone: 99 },
       levels: [
         { dmg: 9, rate: 0.7, range: 15, upCost: {}, upGold: 0 },
         { dmg: 14, rate: 0.6, range: 17, upCost: { wood: 10, stone: 10, iron: 2 }, upGold: 0 },
@@ -192,11 +211,11 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       ],
     },
   },
-  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 판매, 열쇠 구매' },
+  shop: { name: '상점', cost: { wood: 15, stone: 10, iron: 5 }, radius: 1.8, hp: 300, height: 3, desc: 'E: 자원 교환' },
   mgtower: {
-    name: '기관포탑', cost: { wood: 10, stone: 10, iron: 8, parts: 4 }, radius: 1, hp: 350, height: 2.4, desc: '빠른 연사, 탄약 소모 큼',
+    name: '기관포탑', cost: { wood: 28, stone: 24, iron: 22, parts: 12 }, radius: 1, hp: 350, height: 2.4, desc: '영구 연사 포탑. 내구도를 다 쓰면 파괴',
     turret: {
-      ammo: 240, refill: { iron: 2, parts: 1 },
+      ammo: 140, refill: { iron: 99, parts: 99 },
       levels: [
         { dmg: 4, rate: 0.11, range: 13, upCost: {}, upGold: 0 },
         { dmg: 6, rate: 0.09, range: 14.5, upCost: { iron: 8, parts: 3 }, upGold: 0 },
@@ -246,12 +265,18 @@ export const SKILLS: SkillDef[] = [
   { id: 'cap', branch: '사령', name: '사령관', desc: '아군 상한 +2', max: 5 },
   { id: 'adm', branch: '사령', name: '아군 강화', desc: '아군 공격력 +20%', max: 5 },
   { id: 'ahp', branch: '사령', name: '아군 맷집', desc: '아군 체력 +25%', max: 4 },
+  { id: 'run', branch: '생존', name: '빠른 걸음', desc: '이동 속도 +8%', max: 4 },
+  { id: 'steady', branch: '생존', name: '안정된 조준', desc: '탄 퍼짐 -8%', max: 4 },
+  { id: 'hs', branch: '생존', name: '급소 사격', desc: '헤드샷 피해 +12%', max: 4 },
+  { id: 'loot', branch: '채집', name: '전리품', desc: '처치 코인 +15%', max: 4 },
+  { id: 'aspeed', branch: '사령', name: '행군', desc: '아군 이동 속도 +10%', max: 3 },
 ];
 
 export interface Stats {
   maxHp: number; dmgMul: number; dashCd: number; reloadMul: number; magMul: number;
   gatherSpeed: number; gatherExtra: number; vacBonus: number; vacCostMul: number; stunBonus: number;
   allyCap: number; allyDmg: number; allyHp: number;
+  speedMul: number; goldMul: number; headMul: number; spreadMul: number;
 }
 export function calcStats(l: Record<string, number>): Stats {
   const v = (id: string) => l[id] || 0;
@@ -269,14 +294,18 @@ export function calcStats(l: Record<string, number>): Stats {
     allyCap: 2 + 2 * v('cap'),
     allyDmg: 1 + 0.2 * v('adm'),
     allyHp: 1 + 0.25 * v('ahp'),
+    speedMul: 1 + 0.08 * v('run'),
+    goldMul: 1 + 0.15 * v('loot'),
+    headMul: 1 + 0.12 * v('hs'),
+    spreadMul: Math.max(0.55, 1 - 0.08 * v('steady')),
   };
 }
 
-export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number }
+export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number; uses: number }
 export const VACCINES: VaccineDef[] = [
-  { name: '초급 백신', herb: 3, sample: 2, sampleSp: 0, parts: 0, iron: 0, rate: 0.4 },
-  { name: '중급 백신', herb: 5, sample: 3, sampleSp: 0, parts: 1, iron: 0, rate: 0.6 },
-  { name: '고급 백신', herb: 8, sample: 0, sampleSp: 2, parts: 0, iron: 2, rate: 0.8 },
+  { name: '초급 백신', herb: 10, sample: 6, sampleSp: 0, parts: 2, iron: 0, rate: 0.4, uses: 4 },
+  { name: '중급 백신', herb: 16, sample: 8, sampleSp: 0, parts: 4, iron: 4, rate: 0.6, uses: 3 },
+  { name: '고급 백신', herb: 22, sample: 0, sampleSp: 4, parts: 6, iron: 8, rate: 0.8, uses: 3 },
 ];
 
 // ── 백신/아군 (소유: allies). 직렬화 가능한 값만 둔다. ──
@@ -294,7 +323,7 @@ export const ALLY = { hp: 60, speed: 5, dmg: 9, atkRate: 0.8, atkRange: 1.7, rad
 /** 주사: 시간(초), 체력이 낮을수록 더해지는 성공률(최대), 보스 감산 */
 export const INJECT = { time: 1.5, range: 2.2, lowHpBonus: 0.2, bossPenalty: 0.3, minRate: 0.05, maxRate: 0.95 };
 /** 백신 제작: 1개당 기본 시간(초)과 연구 보조 1명당 가속 비율 */
-export const CRAFT = { time: 3, perResearcher: 0.35 };
+export const CRAFT = { time: 14, perResearcher: 0.25 };
 export const GATHER = { time: 3, carryRange: 2.5 };
 /** 아군 동시 상한의 절대 천장 */
 export const ALLY_HARD_CAP = 30;
@@ -440,7 +469,7 @@ export const ENEMY_RULES = {
   windup: 0.45,           // 공격 준비 동작
   waveClearGold: 10,      // 웨이브 클리어 골드 = 이 값 + 웨이브 × 2
   gasRadius: 3.2, gasTime: 4, gasDps: 7, // 뚱보 사망 독가스
-  roamAggro: 14, roamPerDanger: 2, roamRespawn: 45, // 구역 배회 좀비 (zones[].danger 기준)
+  roamAggro: 14, roamPerDanger: 1.25, roamRespawn: 45, // 구역 배회 좀비: 위험도×이 값 ≈ 구역 최대 마리 (웨이브 스폰과 별개)
   laneSpread: 3,          // 레인 경유점 좌우 흩어짐(m)
 };
 
@@ -520,12 +549,13 @@ export const BOSS_KIT: Record<string, BossKit> = {
 export const ELITE = { fromWave: 20, chanceBase: 0.08, chancePerWave: 0.01, chanceMax: 0.35, hp: 2.5, dmg: 1.4, scale: 1.15, reward: 3 };
 export const eliteChance = (wave: number) => (wave < ELITE.fromWave ? 0 : Math.min(ELITE.chanceMax, ELITE.chanceBase + (wave - ELITE.fromWave) * ELITE.chancePerWave));
 
+/** 처치 코인 (상자 보상 대체 — 전투가 주 수입) */
 export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
-  normal: { gold: 2, xp: 5 }, runner: { gold: 2, xp: 7 }, fatty: { gold: 5, xp: 14 },
-  crawler: { gold: 2, xp: 5 }, swarmer: { gold: 1, xp: 2 }, leaper: { gold: 4, xp: 12 },
-  spitter: { gold: 6, xp: 16 }, bomber: { gold: 5, xp: 14 }, screamer: { gold: 8, xp: 20 }, tank: { gold: 12, xp: 28 },
-  boss: { gold: 80, xp: 150 }, bossBomb: { gold: 100, xp: 200 }, bossAcid: { gold: 120, xp: 250 }, bossLord: { gold: 160, xp: 350 },
-  king: { gold: 500, xp: 1000 },
+  normal: { gold: 4, xp: 5 }, runner: { gold: 4, xp: 7 }, fatty: { gold: 8, xp: 14 },
+  crawler: { gold: 3, xp: 5 }, swarmer: { gold: 2, xp: 2 }, leaper: { gold: 7, xp: 12 },
+  spitter: { gold: 10, xp: 16 }, bomber: { gold: 8, xp: 14 }, screamer: { gold: 13, xp: 20 }, tank: { gold: 18, xp: 28 },
+  boss: { gold: 120, xp: 150 }, bossBomb: { gold: 150, xp: 200 }, bossAcid: { gold: 180, xp: 250 }, bossLord: { gold: 240, xp: 350 },
+  king: { gold: 750, xp: 1000 },
 };
 
 /** 모든 웨이브 준비 시간 30초 + 영구 업그레이드 보너스(state.start.prepBonus) */

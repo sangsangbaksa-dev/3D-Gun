@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { input } from '../core/input';
 import { state } from '../core/state';
 import { zombies } from '../core/entities';
-import { resolveObstacles } from '../core/world';
+import { getGroundY, resolveObstacles } from '../core/world';
 import { GUNS } from '../data';
 import { PlayerController, type FrameIntent } from './logic/controller';
 import { createRng } from './logic/math';
@@ -14,6 +14,7 @@ import { Effects } from './view/effects';
 import { CombatHud, UpgradePanel } from './view/hud';
 import { GunSfx } from './view/sfx';
 import { events } from '../core/events';
+import type { CameraView } from './logic/camera';
 import { PlayerView } from './view/playerView';
 import type { System } from '../core/types';
 import type { Player } from './logic/player';
@@ -32,10 +33,11 @@ let ctrl: PlayerController | null = null;
 function controller() { return (ctrl ??= new PlayerController()); }
 
 const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
-// TODO(맵 담당): core/world.ts 에 getGroundY 가 생기면 교체
-const groundY = (_x: number, _z: number) => 0;
+const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
+/** 항상 1인칭. (3인칭 토글 제거) */
+const cameraView: CameraView = 'first';
 let shake = 0;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -81,8 +83,7 @@ export const PlayerSystem: System = {
     prevFire = input.mouseDown;
     if (panel && input.pressed.has('KeyV') && (state.mode === 'play' || panel.open)) togglePanel();
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
-
-    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat });
+    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: cameraView });
 
     // 카메라
     const cam = ctx.camera;
@@ -96,8 +97,12 @@ export const PlayerSystem: System = {
     ctx.world.sun.position.set(p.x + 30, 50, p.z + 20);
     ctx.world.sun.target.position.set(p.x, 0, p.z);
 
-    view.update(dt, p, w);
+    view.update(dt, p, w, cameraView);
     if (!playerOptions.combat) return;
+
+    const hudOn = state.mode === 'play' && state.phase !== 'ended';
+    hud.setVisible(hudOn);
+    if (!hudOn) return;
 
     // 사격 연출
     if (out.shot) {
