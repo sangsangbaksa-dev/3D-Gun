@@ -5,7 +5,7 @@ import { events } from './events';
 import { RES_KEYS, RES_LABEL } from '../data';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
-let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null;
+let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
 let acc = 0;
 let lastPct = 100;
 let lastWaveText = '';
@@ -27,6 +27,7 @@ export const HudSystem: System = {
     hpFill = document.getElementById('hpFill');
     hpText = document.getElementById('hpText');
     hpGhost = document.getElementById('hpGhost');
+    xpFill = document.getElementById('xpFill');
     if (help) help.style.display = 'none';
     events.on('toast', ({ text }) => showToast(text));
     events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
@@ -53,6 +54,8 @@ export const HudSystem: System = {
         ? `준비 ${Math.ceil(state.prepLeft)}초 · B 건설 · L 백신 · N 시작`
         : `남은 좀비 ${state.waveRemaining} · 핵 ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
     }
+    // 런 레벨 진행도: 킬 XP 가 쌓이면 청록 막대가 찬다
+    if (xpFill) xpFill.style.width = `${state.xpNext > 0 ? Math.min(100, (100 * state.xp) / state.xpNext) : 0}%`;
     if (res) {
       const vac = state.vaccines.reduce((s, n) => s + n, 0);
       res.textContent = [
