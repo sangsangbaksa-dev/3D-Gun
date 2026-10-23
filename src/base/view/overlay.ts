@@ -29,7 +29,7 @@ export class BuildOverlay {
     }
     const gg = new THREE.BufferGeometry();
     gg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    this.grid = new THREE.LineSegments(gg, new THREE.LineBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.2, depthWrite: false }));
+    this.grid = new THREE.LineSegments(gg, new THREE.LineBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.2, depthWrite: false }));
     this.group.add(this.grid);
 
     // 구역 테두리 띠
@@ -42,7 +42,7 @@ export class BuildOverlay {
     const rg = new THREE.BufferGeometry();
     rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     rg.setIndex(idx);
-    this.ring = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+    this.ring = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
     this.group.add(this.ring);
 
     // 레인 입구: 안쪽을 가리키는 화살표 3개 + 양옆 기둥
@@ -53,7 +53,7 @@ export class BuildOverlay {
     const pillarGeo = new THREE.BoxGeometry(0.35, 2.2, 0.35);
     for (const g of this.gates) {
       const yaw = Math.atan2(-g.dx, -g.dz);
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
       this.gateMats.push(mat);
       const grp = new THREE.Group();
       grp.position.set(g.x, groundY(g.x, g.z), g.z);
@@ -66,7 +66,7 @@ export class BuildOverlay {
       for (const s of [-1, 1]) {
         const p = new THREE.Mesh(pillarGeo, new THREE.MeshLambertMaterial({ color: 0x4a525c }));
         p.position.set(s * 3.2, 1.1, 0); p.castShadow = true;
-        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff8a2a }));
         cap.position.set(s * 3.2, 2.35, 0);
         grp.add(p, cap);
       }
