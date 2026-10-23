@@ -8,7 +8,7 @@ import { meta, loadMeta, saveMeta, resetMeta } from '../core/meta';
 import { state, recalcStats, changed } from '../core/state';
 import { RES_KEYS } from '../data';
 import { RUN_XP } from '../data/tycoon2d';
-import { addXp, bankRun, bonuses, settleOffline, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
+import { addXp, bankRun, bonuses, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
 import { mountAttract } from './view/attract';
 import { playDeath, deathActive } from '../ui/deathScreen';
@@ -56,12 +56,12 @@ function seedRun() {
   recalcStats();
 }
 
-function showPanel(report: RunReport | null, offline?: { secs: number; gold: number }) {
+function showPanel(report: RunReport | null) {
   state.mode = 'modal';
   input.modalOpen = true;
   document.exitPointerLock?.();
   events.emit('ui:modal', { open: true });
-  panel.open(report, offline);
+  panel.open(report);
 }
 
 function handleOver(snap: RunSnapshot, reason: 'player' | 'core' = 'player') {
@@ -70,7 +70,6 @@ function handleOver(snap: RunSnapshot, reason: 'player' | 'core' = 'player') {
   pending = null;
   const level = state.level;
   const report = bankRun(meta, snap);
-  meta.lastSeen = Date.now();
   saveMeta();
   state.gold = 0; // 정산된 재화는 지갑으로 옮겼다
   // 사망 연출 → 결과 카드 → 본부. 연출 중에도 창(modal) 상태로 둬서 사격·일시정지·director 대체 재시작이 돌지 않게 한다
@@ -92,14 +91,12 @@ function launch() {
   events.emit('ui:modal', { open: false });
   events.emit('run:start', { run: meta.totalRuns + 1, startWave });
   seedRun();
-  meta.lastSeen = Date.now();
   saveMeta();
 }
 
 export const Tycoon2dSystem: System = {
   init() {
     loadMeta();
-    const off = settleOffline(meta, Date.now());
     applyToState();
     seedRun();
     panel = new TycoonPanel({
@@ -112,7 +109,6 @@ export const Tycoon2dSystem: System = {
     input.modalOpen = true;
     events.emit('ui:modal', { open: true });
     attract.show();
-    if (off.secs > 0) events.emit('toast', { text: `부재 중 수익: 🪙 +${Math.floor(off.gains.gold ?? 0)}` });
 
     // W2 가 run:over 를 내면 그대로 쓰고, 아직 없으면 사망/핵 파괴 이벤트로 대신 감지한다 (같은 프레임 안 호출 순서상 먼저 스냅샷)
     events.on('run:over', (e) => handleOver(snapshot(e.wave, e.checkpoint, e.kills, e.gold), e.reason));
@@ -132,14 +128,16 @@ export const Tycoon2dSystem: System = {
       changed();
     });
     events.on('core:destroyed', fallback);
-    addEventListener('beforeunload', () => { meta.lastSeen = Date.now(); saveMeta(); });
+    addEventListener('beforeunload', () => saveMeta());
     if (import.meta.env.DEV) (window as unknown as { __t2d: unknown }).__t2d = { meta, panel, handleOver, snapshot, launch };
   },
   update(dt) {
     if (pending) { pending.t -= dt; if (pending.t <= 0) { const p = pending; pending = null; if (!overSeen) handleOver(p.snap); } }
-    if (panel.isOpen) { panel.update(dt); return; }
-    tick(meta, dt);
+    // 생산 시설 수익은 게임 화면을 보고 있는 동안에만 쌓인다 (부재 중·숨긴 탭 정산 없음)
+    const earning = !document.hidden;
+    if (panel.isOpen) { panel.update(earning ? dt : 0); return; }
+    if (earning) tick(meta, dt);
     acc += dt;
-    if (acc > 5) { acc = 0; meta.lastSeen = Date.now(); saveMeta(); }
+    if (acc > 5) { acc = 0; saveMeta(); }
   },
 };

@@ -43,7 +43,7 @@ export class TycoonPanel {
     this.root.id = 't2d';
     this.root.innerHTML = `
       <div class="bgfx"></div>
-      <header><h1>🏚️ 생존자 작전 본부<small>쓰러진 뒤에도 남는 것: 영구 업그레이드와 방치 수익</small></h1><div class="report"></div></header>
+      <header><h1>🏚️ 생존자 작전 본부<small>쓰러진 뒤에도 남는 것: 영구 업그레이드와 생산 시설 수익</small></h1><div class="report"></div></header>
       <div class="wallet"></div>
       <main><nav></nav><div class="content"></div><aside></aside></main>
       <footer><div><button class="ghost" data-act="refund">스킬 초기화(포인트 환급)</button> <button class="ghost" data-act="reset">진행 초기화</button></div><button class="launch" data-act="launch">⚔️ 출격</button></footer>`;
@@ -78,7 +78,7 @@ export class TycoonPanel {
     this.buildSide();
   }
 
-  open(report: RunReport | null, offline?: { secs: number; gold: number }) {
+  open(report: RunReport | null) {
     this.isOpen = true;
     this.root.classList.add('open');
     this.reportEl.innerHTML = '';
@@ -95,7 +95,6 @@ export class TycoonPanel {
       if (extras.length) chip(extras.map((k) => `${WALLET_ICON[k]}${fmt(report.total[k] ?? 0)}`).join(' '), '', i++);
       chip(`회수율 ${Math.round(report.keepRatio * 100)}%`, '', i++);
     } else chip('업그레이드를 고르고 출격하세요');
-    if (offline && offline.secs > 0) chip(`⏰ 부재 중 ${Math.floor(offline.secs / 60)}분 수익 🪙+${fmt(offline.gold)}`, 'best');
     for (const [k, w] of this.walletEl) w.shown = bal(meta, k);
     this.setTab(this.tab);
     this.refreshWallet(0);
@@ -125,7 +124,7 @@ export class TycoonPanel {
       });
     } else {
       const note = document.createElement('div'); note.className = 'sect';
-      note.textContent = '시설은 출격 중이든 접속 중이 아니든 계속 재화를 만듭니다 (부재 시 최대 4시간, 50%).';
+      note.textContent = '시설은 게임에 접속해 있는 동안(본부·출격 중)에만 재화를 만듭니다. 게임을 끄거나 탭을 숨기면 멈춥니다.';
       this.content.appendChild(note);
       PRODUCERS.forEach((p, i) => grid.appendChild(this.producerCard(p.id, i)));
     }

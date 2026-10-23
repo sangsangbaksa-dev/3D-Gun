@@ -114,10 +114,8 @@ export const PRODUCERS: ProducerDef[] = [
   { id: 'p_lab2', name: '특수 샘플 연구소', icon: '☣️', desc: '희귀한 특수 샘플을 얻는다', produces: 'samplesSp', perSec: 0.01, max: 20, cost: { gold: 2500, samples: 40, parts: 20 }, costGrowth: 1.3, unlockEarned: { key: 'samples', amount: 20 } },
 ];
 
-/** 방치 수입 규칙 */
+/** 방치 수입 규칙 (생산 시설은 접속 중에만 돈다, 오프라인 정산 없음) */
 export const IDLE = {
-  offlineCapSec: 4 * 3600, // 오프라인 정산 상한
-  offlineRatio: 0.5,       // 오프라인에서는 절반만
   baseClickGold: 3,
   skillCostBase: 1,        // 스킬 노드 구매 비용 = base + 현재 레벨 (스킬 포인트)
 };

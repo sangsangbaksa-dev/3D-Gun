@@ -8,7 +8,7 @@ export interface Meta {
   bestCheckpoint: number;                 // 도달한 가장 높은 체크포인트 웨이브
   upgrades: Record<string, number>;       // 영구 업그레이드 id → 레벨
   facilities: Record<string, number>;     // 2D 타이쿤 시설(생산 건물) id → 레벨
-  lastSeen: number;                       // 마지막 정산 시각(ms), 방치 수익 계산용
+  lastSeen: number;                       // 예전 오프라인 정산용. 지금은 쓰지 않음 (저장 호환)
   /** 쓸 수 있는 재화: gold, wood, stone, iron, herb, parts, samples, samplesSp, skillPoints (소수 허용) */
   wallet: Record<string, number>;
   /** 스킬트리 노드의 영구 레벨(SKILLS 의 id). 런 시작 때 state.skillLv 로 들어간다 */

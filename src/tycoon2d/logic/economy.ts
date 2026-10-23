@@ -149,15 +149,6 @@ export function tick(m: Meta, dt: number, ratio = 1): Gains {
   }
   return out;
 }
-/** 접속하지 않은 동안의 수입 정산 (상한, 비율 적용). nowMs 는 호출자가 넘긴다 */
-export function settleOffline(m: Meta, nowMs: number): { secs: number; gains: Gains } {
-  const last = m.lastSeen;
-  m.lastSeen = nowMs;
-  if (!last || nowMs <= last) return { secs: 0, gains: {} };
-  const secs = Math.min(IDLE.offlineCapSec, (nowMs - last) / 1000);
-  if (secs < 5) return { secs: 0, gains: {} };
-  return { secs, gains: tick(m, secs, IDLE.offlineRatio) };
-}
 
 /** 메타 지갑 교환소: 자원 → 골드 (인런 교환소와 동일 단가) */
 export function metaSell(m: Meta, res: ResKey, n: number): number {
