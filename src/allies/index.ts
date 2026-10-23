@@ -100,24 +100,31 @@ function fail(z: ZombieRef, tier: number, chance: number) {
   toast('백신이 듣지 않았다! 좀비가 분노한다');
 }
 
+/** 마지막으로 받은 ui:modal 상태 (상점·연구소·강화창 등 어떤 창이든) */
+let uiModal = false;
+/** 창이 열려 있거나 일시정지 중이면 E 주사를 막는다 (V 상점을 연 채 E 로 주사되던 문제) */
+const injectBlocked = () =>
+  uiModal || input.modalOpen || input.paused || state.mode !== 'play' || (panel?.open ?? false);
+
 const injectable = {
   get x() { return target?.x ?? 1e6; },
   get z() { return target?.z ?? 1e6; },
   range: INJECT.range,
   label(): string | null {
-    if (!target || target.dead || !target.stunned) return null;
+    if (!target || target.dead || !target.stunned || injectBlocked()) return null;
     const b = blockReason();
     if (b === 'nostock') return '백신이 없다 — 연구소에서 제작하자';
     if (b === 'cap') return `아군 상한에 도달 (${state.allyCount}) — 숙소·스킬로 늘리자`;
     return `E 길게 눌러 ${VACCINES[activeTier()].name} 주사 · 성공률 ${Math.round(chanceFor(target) * 100)}% · C 백신 변경`;
   },
   press() {
+    if (injectBlocked()) return;
     const b = blockReason();
     if (b === 'nostock') toast('백신이 없다. 연구소에서 만들어 오자');
     else if (b === 'cap') toast('아군이 가득 찼다');
   },
   hold(dt: number) {
-    if (!target || target.dead || !target.stunned || blockReason() !== 'none') return;
+    if (!target || target.dead || !target.stunned || injectBlocked() || blockReason() !== 'none') return;
     const z = target;
     const r = advance(dt, z, Math.random());
     if (r.kind === 'success') convert(z, r.tier, r.chance);
@@ -146,6 +153,7 @@ export const AlliesSystem: System = {
       else if (wave % 3 === 0 && state.vaccines.every((n) => n === 0) && state.samples >= 1) toast('백신이 비었어요 — L 키로 제작');
     });
     events.on('run:over', flushAllies);
+    events.on('ui:modal', ({ open }) => { uiModal = open; if (open) resetInject(); });
     addEventListener('pagehide', flushAllies);
     events.on('player:hit', () => {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
