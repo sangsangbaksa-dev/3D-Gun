@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import { MAP } from '../data/map';
+import { buildWorldView } from './worldview';
 import { terrainY } from './terrain';
 import { addScenery } from './scenery';
 
-export const WORLD_HALF = 62;
+export const WORLD_HALF = MAP.half;
 
 /** 지형 높이(m). 기지는 평평하고 바깥은 언덕이다. */
 export function getGroundY(x: number, z: number): number {
@@ -19,19 +21,21 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x8fa8bc);
-  scene.fog = new THREE.Fog(0x8fa8bc, 36, 115);
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 300);
+  scene.background = new THREE.Color(0xb8cde0);
+  scene.fog = new THREE.Fog(0xb8cde0, 80, 380);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
 
   scene.add(new THREE.HemisphereLight(0xd4e8ff, 0x4a4538, 0.95));
   const sun = new THREE.DirectionalLight(0xfff4e0, 1.55);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 140 });
+  Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160 });
   scene.add(sun, sun.target);
 
   addScenery(scene, obstacles);
+  buildWorldView(scene);
+  for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -57,4 +61,11 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
   }
   p.x = Math.max(-WORLD_HALF, Math.min(WORLD_HALF, p.x));
   p.z = Math.max(-WORLD_HALF, Math.min(WORLD_HALF, p.z));
+}
+
+/** 그림자 카메라와 해를 플레이어 주변으로 옮겨 넓은 맵에서도 가까운 그림자가 선명하게 한다. */
+export function followSun(world: World, x: number, z: number) {
+  world.sun.target.position.set(x, 0, z);
+  world.sun.position.set(x + 30, 50, z + 20);
+  world.sun.target.updateMatrixWorld();
 }

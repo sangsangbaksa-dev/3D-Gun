@@ -29,7 +29,7 @@ const cyl = (parent: THREE.Object3D, rt: number, rb: number, h: number, color: n
 
 function addTerrain(scene: THREE.Scene) {
   const span = HALF * 2 + 40;
-  const seg = 72;
+  const seg = 220;
   const geo = new THREE.PlaneGeometry(span, span, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;

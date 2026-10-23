@@ -20,7 +20,7 @@ export const EnemiesSystem: System = {
     director = new WaveDirector(sim);
     view = new EnemyView(ctx.scene, ctx.camera, sim);
     director.start();
-    if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as Record<string, unknown>).__enemies = { sim, director, state };
+    if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) (window as unknown as Record<string, unknown>).__enemies = { sim, director, state, player: ctx.player, camera: ctx.camera };
   },
   update(dt, _ctx) {
     // 창이 열려 있는 동안(상점, 연구소 등)은 시간을 멈춘다

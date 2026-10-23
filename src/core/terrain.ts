@@ -11,7 +11,8 @@ const bowl = (x: number, z: number, cx: number, cz: number, spread: number, amp:
 /** 월드 높이(m). 원점 기지(반경 14m)는 0 */
 export function terrainY(x: number, z: number): number {
   const r = Math.hypot(x, z);
-  const camp = smooth((r - 14) / 12);
+  // 기지 주변만 언덕이 있고 바깥(큰 맵 구역)은 평지로 이어진다
+  const camp = smooth((r - 14) / 12) * (1 - smooth((r - 70) / 50));
   const hills =
     Math.sin(x * 0.09 + 1.2) * Math.cos(z * 0.075) * 2.1
     + Math.sin(x * 0.04 - z * 0.05) * 1.35

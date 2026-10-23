@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createWorld } from './world';
+import { createWorld, followSun } from './world';
 import { initInput, endFrame, input, requestLock, pollKeyLook } from './input';
 import { createPlayer } from '../player/player';
 import type { Ctx, System } from './types';
@@ -29,6 +29,7 @@ export function startGame(canvas: HTMLCanvasElement, systems: System[]) {
       pollKeyLook(dt);
       for (const s of systems) s.update(dt, ctx);
     }
+    followSun(world, player.x, player.z);
     world.renderer.render(world.scene, world.camera);
     endFrame();
     requestAnimationFrame(frame);
