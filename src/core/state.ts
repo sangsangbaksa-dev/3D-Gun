@@ -15,7 +15,9 @@ export const state = {
   samples: 0,     // 좀비 샘플 (일반/달리기/뚱보)
   samplesSp: 0,   // 특수 샘플 (보스)
   vaccines: [0, 0, 0] as number[], // 초급/중급/고급. 이번 판 소모품, 런이 끝나면 사라짐
-  xp: 0,
+  xp: 0,          // 런 경험치: 현재 레벨 안의 진행량. 소유: tycoon2d (xp:gain 을 듣는다)
+  level: 0,       // 런 레벨 (레벨업마다 스킬 포인트)
+  xpNext: 60,     // 다음 레벨까지 필요한 경험치. HUD 막대 = xp / xpNext
   skillPoints: 0,
   skillLv: {} as Record<string, number>,
   pity: 0,        // 상자 천장 카운터

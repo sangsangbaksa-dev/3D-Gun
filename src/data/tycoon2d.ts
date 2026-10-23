@@ -25,7 +25,8 @@ export type UpgradeEffect =
   | { kind: 'startGold'; per: number }
   | { kind: 'startRes'; res: ResKey; per: number }
   | { kind: 'startSamples'; per: number }
-  | { kind: 'startSkillPoints'; per: number }
+  | { kind: 'startSkillPoints'; per: number }       // (레거시) 미사용 — 시작 포인트는 정산에서 빠지므로 xpMul 로 대체
+  | { kind: 'xpMul'; per: number }                  // 런 경험치 배율 (+per)
   | { kind: 'coreHp'; per: number }
   | { kind: 'maxHp'; per: number }
   | { kind: 'dmgMul'; per: number }
@@ -85,7 +86,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'e_gather', cat: 'econ', name: '채집 효율', desc: '채집 속도 +10%', icon: '⛏️', max: 8, cost: { gold: 80, wood: 15 }, costGrowth: 1.45, effect: { kind: 'gatherSpeed', per: 0.1 } },
   { id: 'e_prep', cat: 'base', name: '준비 시간 연장', desc: '웨이브 준비 시간 +3초', icon: '⏱️', max: 8, cost: { gold: 90, wood: 10 }, costGrowth: 1.5, effect: { kind: 'prepBonus', per: 3 } },
   { id: 'e_wave', cat: 'base', name: '전진 기지', desc: '시작 웨이브 +1 (달성한 체크포인트까지)', icon: '🚩', max: 10, cost: { gold: 250, iron: 5 }, costGrowth: 1.7, effect: { kind: 'startWave', per: 1 } },
-  { id: 'e_sp', cat: 'econ', name: '교범 학습', desc: '런 시작 스킬 포인트 +1', icon: '📘', max: 5, cost: { gold: 300, samples: 4 }, costGrowth: 1.9, effect: { kind: 'startSkillPoints', per: 1 } },
+  { id: 'e_sp', cat: 'econ', name: '교범 학습', desc: '런 경험치 +20% (레벨업마다 스킬 포인트)', icon: '📘', max: 5, cost: { gold: 300, samples: 4 }, costGrowth: 1.9, effect: { kind: 'xpMul', per: 0.2 } },
 ];
 
 /** 사망 시 런에 남은 재화를 지갑으로 옮기는 기본 비율 */
@@ -120,3 +121,7 @@ export const IDLE = {
   baseClickGold: 3,
   skillCostBase: 1,        // 스킬 노드 구매 비용 = base + 현재 레벨 (스킬 포인트)
 };
+
+/** 런 경험치: 처치 XP(ZOMBIE_REWARD.xp)로 레벨이 오르고, 레벨마다 스킬 포인트를 준다 (런 끝에 전부 저축).
+ *  다음 레벨까지 = base + perLevel × 현재 레벨. 일반 좀비 5 XP 기준 1~5웨이브에서 약 3레벨 */
+export const RUN_XP = { base: 60, perLevel: 40, spPerLevel: 1 };

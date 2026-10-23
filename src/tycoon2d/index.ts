@@ -5,9 +5,10 @@ import type { System } from '../core/types';
 import { events } from '../core/events';
 import { input } from '../core/input';
 import { meta, loadMeta, saveMeta, resetMeta } from '../core/meta';
-import { state, recalcStats } from '../core/state';
+import { state, recalcStats, changed } from '../core/state';
 import { RES_KEYS } from '../data';
-import { bankRun, bonuses, settleOffline, tick, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
+import { RUN_XP } from '../data/tycoon2d';
+import { addXp, bankRun, bonuses, settleOffline, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
 import { mountAttract } from './view/attract';
 
@@ -49,6 +50,7 @@ function seedRun() {
   state.skillLv = { ...bonuses(meta).skillLv };
   state.weapons = [...s.weapons];
   state.coreMaxHp = BASE_CORE_HP + s.coreHp; state.coreHp = state.coreMaxHp;
+  state.xp = 0; state.level = 0; state.xpNext = xpToNext(0);
   grant = { gold: state.gold, res: { ...state.res }, samples: state.samples, skillPoints: state.skillPoints };
   recalcStats();
 }
@@ -109,6 +111,19 @@ export const Tycoon2dSystem: System = {
     events.on('run:over', (e) => handleOver(snapshot(e.wave, e.checkpoint, e.kills, e.gold)));
     const fallback = () => { if (!pending && !panel.isOpen) pending = { snap: snapshot(state.wave, state.checkpoint, 0, state.gold), t: 0.1 }; };
     events.on('player:dead', fallback);
+    // 런 경험치 → 레벨업마다 스킬 포인트 (정산 때 전부 저축)
+    events.on('xp:gain', (e) => {
+      if (state.phase === 'ended' || panel.isOpen) return;
+      const ups = addXp(state, e.amount * bonuses(meta).xpMul);
+      state.xpNext = xpToNext(state.level);
+      if (ups > 0) {
+        const sp = ups * RUN_XP.spPerLevel;
+        state.skillPoints += sp;
+        events.emit('xp:levelup', { level: state.level, skillPoints: sp });
+        events.emit('toast', { text: `레벨 ${state.level}! 스킬 포인트 +${sp} (본부에서 사용)` });
+      }
+      changed();
+    });
     events.on('core:destroyed', fallback);
     addEventListener('beforeunload', () => { meta.lastSeen = Date.now(); saveMeta(); });
     if (import.meta.env.DEV) (window as unknown as { __t2d: unknown }).__t2d = { meta, panel, handleOver, snapshot, launch };

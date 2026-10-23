@@ -2,7 +2,7 @@
 import type { Meta } from '../../core/meta';
 import { RES_BUY_PRICE, RES_PRICE, SKILLS, exchangeSellUnit, type ResKey } from '../../data';
 import {
-  UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START,
+  UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START, RUN_XP,
   type Cost, type WalletKey, type UpgradeDef, type ProducerDef,
 } from '../../data/tycoon2d';
 
@@ -12,7 +12,7 @@ export interface Bonuses {
   startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSkillPoints: number;
   coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number; turretDmgMul: number;
   weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number;
-  clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; skillLv: Record<string, number>;
+  clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; xpMul: number; skillLv: Record<string, number>;
 }
 
 export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);
@@ -92,7 +92,7 @@ export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
     startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: BASE_START.parts },
     startSamples: 2, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
-    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE,
+    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE, xpMul: 1,
     skillLv: { ...m.skills },
   };
   let waveLv = 0;
@@ -117,6 +117,7 @@ export function bonuses(m: Meta): Bonuses {
       case 'startWave': waveLv += e.per * lv; break;
       case 'clickGold': b.exchangeSellBonus += e.per * lv; break;
       case 'incomeMul': b.incomeMul += e.per * lv; break;
+      case 'xpMul': b.xpMul += e.per * lv; break;
       case 'keepRatio': b.keepRatio = Math.min(1, b.keepRatio + e.per * lv); break;
     }
   }
@@ -180,6 +181,16 @@ export function metaBuy(m: Meta, res: ResKey, n: number): number {
   m.wallet.gold = bal(m, 'gold') - c * price;
   m.wallet[res] = bal(m, res) + c;
   return c;
+}
+
+/** 런 레벨 lv 에서 다음 레벨까지 필요한 경험치 */
+export const xpToNext = (lv: number) => RUN_XP.base + RUN_XP.perLevel * lv;
+/** 경험치를 더하고 오른 레벨 수를 돌려준다 (xp 는 현재 레벨 안의 진행량) */
+export function addXp(r: { xp: number; level: number }, amount: number): number {
+  r.xp += Math.max(0, amount);
+  let ups = 0;
+  while (r.xp >= xpToNext(r.level)) { r.xp -= xpToNext(r.level); r.level++; ups++; }
+  return ups;
 }
 
 export interface RunSnapshot {

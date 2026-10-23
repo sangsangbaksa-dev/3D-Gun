@@ -53,6 +53,7 @@ export interface GameEvents {
   'interact:shop': undefined;                        // 상점에서 E → base 가 교환소를 연다
   // skills
   'xp:gain': { amount: number; reason: string };
+  'xp:levelup': { level: number; skillPoints: number }; // 런 레벨업 (tycoon2d). skillPoints = 이번에 얻은 양
 }
 
 type Handler<T> = (payload: T) => void;
