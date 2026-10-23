@@ -6,6 +6,7 @@ import { state, changed } from '../../core/state';
 import { MAP } from '../../data/map';
 import {
   ENEMY_RULES, MAX_ALIVE, ZOMBIE_REWARD, ZOMBIE_TUNING, ELITE, BOSS_KIT, BOSS_MOVE, type ZType,
+  laneSpawnDist,
 } from '../../data';
 import { Zombie, type DamageSink, type TargetRefLike } from './zombie';
 import type { Fx, RingColor } from './fx';
@@ -77,12 +78,24 @@ export class EnemySim implements DamageSink {
     return zb;
   }
 
-  /** 레인 시작점에서 살짝 흩어진 위치로 웨이브 좀비를 만든다 */
+  /** 레인 위, 핵에서 경로로 laneSpawnDist(wave) 만큼 떨어진 곳에서 살짝 흩어진 위치로 웨이브 좀비를 만든다.
+   *  초반 웨이브는 가까이서 나와 금방 싸움이 붙고, 웨이브가 오를수록 레인 시작점 쪽으로 물러난다 */
   spawnOnLane(type: ZType, wave: number, lane: number, elite = false): Zombie {
-    const l = MAP.lanes[lane % MAP.lanes.length];
-    const p0 = l.waypoints[0];
+    const li = lane % MAP.lanes.length;
+    const wps = MAP.lanes[li].waypoints;
+    let i = wps.length - 1;
+    let px = wps[i].x, pz = wps[i].z;
+    let left = laneSpawnDist(wave) - Math.hypot(px - MAP.core.x, pz - MAP.core.z);
+    // 끝 경유점에서 시작점 쪽으로 경로를 거슬러 left 만큼 간다. i 는 스폰 뒤 처음 향할 경유점
+    while (left > 0 && i > 0) {
+      const a = wps[i - 1], seg = Math.hypot(a.x - px, a.z - pz);
+      if (left < seg) { const t = left / seg; px += (a.x - px) * t; pz += (a.z - pz) * t; break; }
+      left -= seg; px = a.x; pz = a.z; i--;
+    }
     const a = this.deps.rng() * TAU, r = this.deps.rng() * 3;
-    return this.spawn(type, wave, p0.x + Math.cos(a) * r, p0.z + Math.sin(a) * r, lane % MAP.lanes.length, undefined, elite);
+    const zb = this.spawn(type, wave, px + Math.cos(a) * r, pz + Math.sin(a) * r, li, undefined, elite);
+    zb.wp = i;
+    return zb;
   }
 
   waveAlive(): number {

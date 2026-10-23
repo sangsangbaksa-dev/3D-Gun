@@ -454,6 +454,9 @@ export function zombieStats(wave: number, t: ZType): ZStats {
 }
 export const MAX_ALIVE = 40;
 export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
+/** 웨이브 좀비가 레인을 따라 핵에서 이만큼(m, 경로 길이) 떨어진 곳에서 나온다.
+ *  1웨이브 60m(일반 좀비 ≈ 28초) → 웨이브마다 +6m, 레인 끝(≈200m)에서 멈춘다 */
+export const laneSpawnDist = (w: number) => 60 + Math.max(0, w - 1) * 6;
 
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;
