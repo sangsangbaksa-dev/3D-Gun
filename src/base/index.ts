@@ -2,6 +2,7 @@
 import { addInteractable, removeInteractable, type Interactable } from '../core/interact';
 import { events } from '../core/events';
 import { state } from '../core/state';
+import { input } from '../core/input';
 import { zombies } from '../core/entities';
 import { obstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
@@ -61,9 +62,10 @@ export const BaseSystem: System = {
       if (state.mode !== 'play') return;
       panels.openShop();
       state.mode = 'modal';
+      input.modalOpen = true; // Esc 로 창을 닫을 때 일시정지까지 걸리지 않게
       events.emit('ui:modal', { open: true });
     });
-    panels.onShopClose = () => { if (state.mode === 'modal') state.mode = 'play'; events.emit('ui:modal', { open: false }); canvas?.requestPointerLock?.(); };
+    panels.onShopClose = () => { if (state.mode === 'modal') { state.mode = 'play'; input.modalOpen = false; } events.emit('ui:modal', { open: false }); canvas?.requestPointerLock?.(); };
     events.on('run:start', () => {
       build.exit();
       panels.closeShop();
@@ -74,7 +76,8 @@ export const BaseSystem: System = {
   },
 
   update(dt, ctx) {
-    model.update(dt, zombies);
+    // 창(V 무기, 교환소, 본부)이 열려 있으면 좀비가 멈추므로 포탑·함정·핵 회복도 같이 멈춘다
+    if (state.mode !== 'modal') model.update(dt, zombies);
     // 건물 ↔ 상호작용 등록 동기화
     for (const b of model.buildings) if (!links.has(b)) { const l = linkFor(b); links.set(b, l); addInteractable(l); }
     for (const [b, l] of links) if (b.dead) { removeInteractable(l); links.delete(b); }

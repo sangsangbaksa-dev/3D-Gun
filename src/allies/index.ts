@@ -42,16 +42,18 @@ const researchers = () => countRole('researcher');
 function closePanel() {
   if (!panel.open) return;
   panel.hide(); panel.closedAt = time;
+  if (state.mode !== 'modal') input.modalOpen = false;
   events.emit('ui:modal', { open: false });
 }
 let labBuilt = false;
 function openPanel() {
   if (panel.open || time - panel.closedAt < 0.3) return;
   if (state.phase !== 'prep' && !labBuilt) {
-    toast('전투 중에는 연구소(건설 6번)를 지은 뒤 핵·연구소에서 제작하세요');
+    toast('전투 중에는 연구소(건설 5번)를 지은 뒤 핵·연구소에서 제작하세요');
     return;
   }
   panel.show();
+  input.modalOpen = true; // Esc 로 창을 닫을 때 일시정지까지 걸리지 않게
   document.exitPointerLock?.();
   events.emit('ui:modal', { open: true });
 }
@@ -179,7 +181,8 @@ export const AlliesSystem: System = {
     }
 
     dev?.update(dt);
-    for (const a of allies as Ally[]) updateAlly(a, dt, env);
+    // 창(V 무기, 교환소, 본부)이 열려 있으면 좀비가 멈추므로 아군도 멈춘다
+    if (state.mode !== 'modal') for (const a of allies as Ally[]) updateAlly(a, dt, env);
     for (const dead of reapDead()) {
       const v = views.get(dead.id);
       if (v) { views.delete(dead.id); dying.push({ v, m: dead }); }

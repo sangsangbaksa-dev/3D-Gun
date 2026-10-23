@@ -73,6 +73,8 @@ export class LabPanel {
     injectStyle('al-lab-css', CSS);
     this.ov.className = 'al-ov';
     document.body.appendChild(this.ov);
+    // 창 안을 클릭해도 총이 나가지 않게 (core/input 은 window mousedown 으로 사격을 읽는다)
+    this.ov.addEventListener('mousedown', (e) => e.stopPropagation());
     this.ov.addEventListener('click', (e) => {
       const el = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
       if (e.target === this.ov) return actions.close();
