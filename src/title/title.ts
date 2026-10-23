@@ -29,7 +29,7 @@ const CONTROLS: { keys: string; action: string; group: string }[] = [
   { keys: '1 ~ 6', action: '무기 바꾸기', group: '전투' },
   { keys: 'V', action: '무기 상점', group: '전투' },
   { keys: 'E', action: '상호작용 (채집 · 상자 · 상점)', group: '기지' },
-  { keys: 'B', action: '건설 모드 (1 포탑 · 6 연구소)', group: '기지' },
+  { keys: 'B', action: '건설 모드 (1 포탑 · 5 연구소)', group: '기지' },
   { keys: 'F / U / X', action: '건물 수리 / 강화 / 철거', group: '기지' },
   { keys: 'N', action: '다음 웨이브 바로 부르기', group: '기지' },
   { keys: 'L', action: '백신 제작 (연구소)', group: '백신' },
