@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="3D-GUN">
+  <rect width="240" height="64" rx="10" fill="#10141a"/>
+  <g transform="translate(32 32)" fill="none" stroke-linecap="round">
+    <circle r="20" stroke="#2EE6D6" stroke-width="3"/>
+    <circle r="9" stroke="#FF8A2A" stroke-width="2.5" stroke-dasharray="10 4.2"/>
+    <path d="M0-26V-14M0 14V26M-26 0H-14M14 0H26" stroke="#2EE6D6" stroke-width="3"/>
+    <circle r="2.6" fill="#E0303A"/>
+  </g>
+  <text x="64" y="43" font-family="Impact,'Arial Black',system-ui,sans-serif" font-size="32" font-weight="900" letter-spacing="2" fill="#E8EEF0">3D<tspan fill="#FF8A2A">-</tspan><tspan fill="#2EE6D6">GUN</tspan></text>
+  <path d="M66 50h104" stroke="#E0303A" stroke-width="2" stroke-dasharray="14 5 3 5"/>
+</svg>
