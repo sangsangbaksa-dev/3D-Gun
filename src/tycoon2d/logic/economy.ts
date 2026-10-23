@@ -2,7 +2,7 @@
 import type { Meta } from '../../core/meta';
 import { RES_BUY_PRICE, RES_PRICE, SKILLS, exchangeSellUnit, type ResKey } from '../../data';
 import {
-  UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START,
+  UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START, RUN_XP,
   type Cost, type WalletKey, type UpgradeDef, type ProducerDef,
 } from '../../data/tycoon2d';
 
@@ -12,7 +12,7 @@ export interface Bonuses {
   startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSkillPoints: number;
   coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number; turretDmgMul: number;
   weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number;
-  clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; skillLv: Record<string, number>;
+  clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; xpMul: number; skillLv: Record<string, number>;
 }
 
 export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);
@@ -92,7 +92,7 @@ export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
     startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: BASE_START.parts },
     startSamples: 2, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
-    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE,
+    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE, xpMul: 1,
     skillLv: { ...m.skills },
   };
   let waveLv = 0;
@@ -117,6 +117,7 @@ export function bonuses(m: Meta): Bonuses {
       case 'startWave': waveLv += e.per * lv; break;
       case 'clickGold': b.exchangeSellBonus += e.per * lv; break;
       case 'incomeMul': b.incomeMul += e.per * lv; break;
+      case 'xpMul': b.xpMul += e.per * lv; break;
       case 'keepRatio': b.keepRatio = Math.min(1, b.keepRatio + e.per * lv); break;
     }
   }
@@ -182,22 +183,37 @@ export function metaBuy(m: Meta, res: ResKey, n: number): number {
   return c;
 }
 
+/** 런 레벨 lv 에서 다음 레벨까지 필요한 경험치 */
+export const xpToNext = (lv: number) => RUN_XP.base + RUN_XP.perLevel * lv;
+/** 경험치를 더하고 오른 레벨 수를 돌려준다 (xp 는 현재 레벨 안의 진행량) */
+export function addXp(r: { xp: number; level: number }, amount: number): number {
+  r.xp += Math.max(0, amount);
+  let ups = 0;
+  while (r.xp >= xpToNext(r.level)) { r.xp -= xpToNext(r.level); r.level++; ups++; }
+  return ups;
+}
+
 export interface RunSnapshot {
   wave: number; checkpoint: number; kills: number; gold: number;
   res: Record<ResKey, number>; samples: number; samplesSp: number; skillPoints: number;
+  /** 런 시작 때 공짜로 받은 양. 정산은 이 양을 뺀 '번 만큼'만 한다 (시작 지급을 자살로 불리는 것 방지) */
+  grant?: RunGrant;
 }
+export interface RunGrant { gold: number; res: Partial<Record<ResKey, number>>; samples: number; skillPoints: number }
 export interface RunReport { wave: number; kills: number; kept: Gains; waveBonus: number; keepRatio: number; newBest: boolean; total: Gains }
 
-/** 런 종료 정산: 남은 재화의 일부 + 도달 웨이브/처치 보너스를 지갑에 넣는다 */
+/** 런 종료 정산: 시작 지급을 넘겨 번 재화의 일부 + 도달 웨이브/처치 보너스를 지갑에 넣는다 */
 export function bankRun(m: Meta, r: RunSnapshot): RunReport {
   const keepRatio = bonuses(m).keepRatio;
+  const g = r.grant;
+  const earned = (have: number, start = 0) => Math.max(0, have - start);
   const kept: Gains = {
-    gold: Math.floor(r.gold * keepRatio),
-    samples: Math.floor(r.samples * keepRatio),
+    gold: Math.floor(earned(r.gold, g?.gold) * keepRatio),
+    samples: Math.floor(earned(r.samples, g?.samples) * keepRatio),
     samplesSp: Math.floor(r.samplesSp * keepRatio),
-    skillPoints: r.skillPoints, // 스킬 포인트는 전부 보존
+    skillPoints: Math.floor(earned(r.skillPoints, g?.skillPoints)), // 번 스킬 포인트는 전부 보존
   };
-  for (const k of Object.keys(r.res) as ResKey[]) kept[k] = Math.floor(r.res[k] * keepRatio);
+  for (const k of Object.keys(r.res) as ResKey[]) kept[k] = Math.floor(earned(r.res[k], g?.res[k]) * keepRatio);
   const waveBonus = Math.floor(Math.max(0, r.wave - 1) * WAVE_BONUS_GOLD + r.kills * KILL_BONUS_GOLD);
   const total: Gains = { ...kept };
   total.gold = (total.gold ?? 0) + waveBonus;

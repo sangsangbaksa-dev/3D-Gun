@@ -3,12 +3,28 @@
 import * as THREE from 'three';
 import { makeHumanoid, animateWalk, type Humanoid } from '../../core/humanoid';
 import { GUNS, GUN_ORDER, type GunId } from '../../data';
-import type { CameraView } from '../logic/camera';
+import { cameraPose, type CameraView } from '../logic/camera';
 import type { Player } from '../logic/player';
 import type { WeaponState } from '../logic/weapons';
 import { buildGun, type GunModel, type GunPart } from './guns';
 
 const FLASH_LIFE = 0.06;
+// ── 1인칭 무기 배치 (빨간 배포판과 같은 값) ──
+/** 1인칭에서 총·손 크기 배율. 총 모델은 3인칭 기준 크기라 그대로 두면 화면 오른쪽 아래를 다 가린다 */
+const FP_SCALE = 0.45;
+/** 눈에서 총 피벗까지 시선 방향 거리 (m) */
+const FP_DIST = 0.5;
+/** 화면 중앙에서 오른쪽으로 비켜 두는 정도 (화면 반폭 비율, 최대) */
+const FP_RIGHT = 0.35;
+/** 오른쪽 아래 탄약 HUD 폭(px). 좁은 화면에서는 총을 이만큼 덜 비켜 둔다 */
+const FP_HUD_PX = 378;
+/** 화면 중앙에서 아래로 내리는 정도 (화면 반높이 비율) */
+const FP_DOWN = 0.64;
+/** 조준(ADS) 때 가늠자를 눈앞 이 거리에 둔다 */
+const ADS_DIST = 0.5;
+/** 기준 시야각 55° 에서 조준할 때 배율 */
+const ADS_SCALE = 0.5;
+const ADS_REF_TAN = Math.tan((55 * Math.PI) / 360);
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => { v = clamp01(v); return v * v * (3 - 2 * v); };
 /** a~b 구간에서 0→1 */
@@ -33,6 +49,12 @@ export class PlayerView {
   private lastShotAge = 9;
   /** 1인칭에서 가릴 몸통 (머리, 상체, 다리, 모자, 배낭). 팔과 총은 남긴다 */
   private fpsHide: THREE.Object3D[] = [];
+  /** 1인칭 전용 장갑 손 (3인칭 팔 대신) */
+  private hand: THREE.Group;
+  /** 총마다 가늠자 높이 (모델 원점 기준 위쪽 끝) */
+  private sightH = {} as Record<GunId, number>;
+  private fpPos = new THREE.Vector3();
+  private adsPos = new THREE.Vector3();
 
   constructor(scene: THREE.Scene) {
     this.model = makeHumanoid(0xe0b48c, 0x3a6ea5);
@@ -56,6 +78,8 @@ export class PlayerView {
     }
     for (const id of GUN_ORDER) {
       const gun = buildGun(id);
+      gun.root.updateMatrixWorld(true);
+      this.sightH[id] = new THREE.Box3().setFromObject(gun.root).max.y;
       gun.root.visible = false;
       this.pivot.add(gun.root);
       this.guns[id] = gun;
@@ -76,6 +100,9 @@ export class PlayerView {
     this.flash.visible = false;
     this.light = new THREE.PointLight(0xffb060, 0, 7, 2);
     this.flash.add(this.light);
+    this.hand = makeHand();
+    this.hand.visible = false;
+    this.pivot.add(this.hand);
     scene.add(g);
   }
 
@@ -221,6 +248,14 @@ export class PlayerView {
     right.rotation.set(Math.PI / 2, 0, -0.5);
     left.rotation.set(Math.PI / 2, 0, 0.95);
 
+    // ── 1인칭: 총을 눈앞 오른쪽 아래에 작게 둔다 (화면을 덜 가리게) ──
+    const fp = viewMode === 'first' && !p.dead;
+    for (const arm of this.model.arms) arm.visible = !fp;
+    this.hand.visible = fp && !(gun.scoped && p.aimT > 0.6);
+    this.pivot.visible = !(fp && gun.scoped && p.aimT > 0.6);
+    if (fp) this.placeFirstPerson(p, w.current, { bobX, bobY, breath, dip, roll, handShift, kickScale });
+    else this.pivot.scale.setScalar(1);
+
     // 불꽃 수명
     if (this.flashT > 0) {
       this.flashT -= dt;
@@ -234,6 +269,54 @@ export class PlayerView {
     const blink = p.iframes > 0 && !p.dead && Math.floor(p.iframes * 24) % 2 === 0;
     const dash = p.dashT > 0;
     for (const m of this.model.mats) { m.transparent = true; m.opacity = blink ? 0.4 : dash ? 0.65 : 1; }
+  }
+
+  /** 1인칭 총 위치: 눈앞 FP_DIST 에서 화면 오른쪽 아래로 비켜 두고, 조준하면 가늠자가 시선 위로 온다 */
+  private placeFirstPerson(p: Player, id: GunId, m: { bobX: number; bobY: number; breath: number; dip: number; roll: number; handShift: number; kickScale: number }) {
+    const def = GUNS[id];
+    const pose = cameraPose(p, def.adsFov, 'first');
+    // 카메라 위치를 몸 좌표(그룹 기준, -z 가 앞)로 옮긴다
+    const ox = pose.pos.x - p.x, oy = pose.pos.y - p.y, oz = pose.pos.z - p.z;
+    const cy = Math.cos(p.yaw), sy = Math.sin(p.yaw);
+    const ex = ox * cy - oz * sy, ey = oy, ez = ox * sy + oz * cy;
+    const pitch = p.pitch - p.kick;
+    const sp = Math.sin(pitch), cp = Math.cos(pitch);
+    // 앞 = (0, -sp, -cp), 위 = (0, cp, -sp)
+    const tanHalf = Math.tan((pose.fov * Math.PI) / 360);
+    const aspect = innerWidth / Math.max(1, innerHeight);
+    const halfW = innerWidth / 2;
+    const right = Math.min(FP_RIGHT, Math.max(0, (halfW - FP_HUD_PX) / halfW)) * FP_DIST * tanHalf * aspect;
+    const down = FP_DOWN * FP_DIST * tanHalf;
+    const recoilBack = this.recoil * 0.06 * m.kickScale;
+    const recoilPitch = this.recoil * 0.0524 * m.kickScale;
+    this.fpPos.set(
+      ex + right + m.bobX + this.swayX * 0.3,
+      ey - sp * FP_DIST - cp * down + m.bobY + m.breath - m.dip * 0.08,
+      ez - cp * FP_DIST + sp * down + recoilBack * 0.6 + m.handShift,
+    );
+    this.pivot.position.copy(this.fpPos);
+    this.pivot.rotation.set(
+      -pitch + 0.1 - 0.2 * p.aimT + recoilPitch - m.dip + this.swayY * 0.8,
+      this.swayX * 1.2,
+      m.roll + this.swayX * 0.5,
+    );
+    let scale = FP_SCALE;
+    if (p.aimT > 0) {
+      const u = smooth(p.aimT);
+      const adsScale = (ADS_SCALE * tanHalf) / ADS_REF_TAN;
+      const drop = this.sightH[id] * adsScale;
+      this.adsPos.set(
+        ex + this.swayX * 0.05,
+        ey - sp * ADS_DIST - cp * drop + m.bobY * 0.15 + m.breath * 0.5,
+        ez - cp * ADS_DIST + sp * drop + recoilBack * 0.4,
+      );
+      this.pivot.position.lerp(this.adsPos, u);
+      this.pivot.rotation.x += (-pitch + recoilPitch * 0.5 - this.pivot.rotation.x) * u;
+      this.pivot.rotation.y *= 1 - u;
+      this.pivot.rotation.z *= 1 - u;
+      scale += (adsScale - scale) * u;
+    }
+    this.pivot.scale.setScalar(scale);
   }
 
   /** 탄창이 빠졌다가 다시 들어간다. 권총·기관총·소총 공통 (k: 재장전 진행도 0~1) */
@@ -258,4 +341,29 @@ export class PlayerView {
     o.rotation.z = part.restRot.z - 1.0 * lift;
     o.position.set(part.rest.x, part.rest.y, part.rest.z + 0.1 * back);
   }
+}
+
+/** 1인칭 장갑 손: 손잡이를 쥔 손 + 소매 (청록 소맷부리). 총 피벗 기준 좌표 */
+function makeHand(): THREE.Group {
+  const g = new THREE.Group();
+  const glove = new THREE.MeshLambertMaterial({ color: 0x2a3640 });
+  const seam = new THREE.MeshBasicMaterial({ color: 0x3c4c58 });
+  const sleeve = new THREE.MeshLambertMaterial({ color: 0x1a242c });
+  const cuff = new THREE.MeshBasicMaterial({ color: 0x2ee6d6 });
+  const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number, rx = 0, parent: THREE.Object3D = g) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y, z); mesh.rotation.x = rx; mesh.castShadow = false;
+    parent.add(mesh);
+    return mesh;
+  };
+  box(0.066, 0.1, 0.085, glove, 0, -0.07, 0.03, 0.2);     // 손바닥 (손잡이를 감싼다)
+  box(0.02, 0.03, 0.06, glove, 0.03, -0.02, -0.02);       // 검지
+  box(0.068, 0.003, 0.012, seam, 0, -0.022, -0.012, 0.2); // 손가락 선
+  box(0.06, 0.07, 0.11, glove, 0, -0.13, 0.11, 0.55);     // 손목
+  const arm = new THREE.Group();
+  arm.position.set(0, -0.16, 0.15); arm.rotation.x = 0.55;
+  g.add(arm);
+  box(0.085, 0.09, 0.22, sleeve, 0, 0, 0.11, 0, arm);     // 소매
+  box(0.088, 0.093, 0.004, cuff, 0, 0, 0.001, 0, arm);    // 소맷부리
+  return g;
 }

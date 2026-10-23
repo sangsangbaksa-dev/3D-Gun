@@ -25,12 +25,7 @@ function speckle(g: CanvasRenderingContext2D, w: number, h: number, base: string
 
 export function buildWorldView(scene: THREE.Scene) {
   const H = MAP.half;
-  // 구역 바닥(흙/돌/아스팔트 느낌 원판)
-  const zoneColor: Record<string, number> = { base: 0x8a7656, forest: 0x4f6a3a, quarry: 0x8a8a84, mine: 0x5d5650, field: 0x8c9a4e, ruins: 0x6b6b68, wasteland: 0x8d7a5c, boss: 0x4a3a3a };
-  for (const z of MAP.zones.filter((q) => Math.hypot(q.x, q.z) - q.r > 70)) {
-    const m = new THREE.Mesh(new THREE.CircleGeometry(z.r, 40), new THREE.MeshLambertMaterial({ color: zoneColor[z.kind] ?? 0x777777, transparent: true, opacity: 0.85 }));
-    m.rotation.x = -Math.PI / 2; m.position.set(z.x, 0.02, z.z); m.receiveShadow = true; scene.add(m);
-  }
+  // 구역 바닥색은 지형 정점색(scenery.ts groundTone)이 맡는다
 
   // 도로: 좀비 레인을 따라 아스팔트 띠
   const asphalt = canvasTex(64, 128, (g) => {
@@ -58,12 +53,12 @@ export function buildWorldView(scene: THREE.Scene) {
 
   // 건물: 외벽 텍스처 3종 x (벽, 지붕) 별로 합친 메시
   const facades = [0, 1, 2].map((v) => canvasTex(128, 128, (g) => {
-    const base = ['#8d8a82', '#7a6f66', '#6c7580'][v];
+    const base = ['#5e5953', '#5e4d44', '#4a5058'][v];
     g.fillStyle = base; g.fillRect(0, 0, 128, 128);
     let s = 11 + v * 7; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
     for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
       const lit = r() < 0.12;
-      g.fillStyle = lit ? '#e8d08a' : (r() < 0.2 ? '#1c2630' : '#2c3a46');
+      g.fillStyle = lit ? '#ff8a2a' : (r() < 0.2 ? '#10141a' : '#1c2226');
       g.fillRect(x * 32 + 6, y * 32 + 7, 20, 18);
       g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x * 32 + 6, y * 32 + 7, 20, 3);
     }
@@ -72,7 +67,7 @@ export function buildWorldView(scene: THREE.Scene) {
   const wallGeo: THREE.BufferGeometry[][] = [[], [], []];
   const roofGeo: THREE.BufferGeometry[] = [];
   const small: THREE.BufferGeometry[] = [];
-  const smallMat = new THREE.MeshLambertMaterial({ color: 0x9a9a92 });
+  const smallMat = new THREE.MeshLambertMaterial({ color: 0x6c6a66 });
   const carGeo: THREE.BufferGeometry[] = [];
   const place = (g: THREE.BufferGeometry, p: MapProp, y: number) => { g.rotateY(p.rot ?? 0); g.translate(p.x, y, p.z); return g; };
   for (const p of MAP.props) {
@@ -105,26 +100,17 @@ export function buildWorldView(scene: THREE.Scene) {
     if (!arr.length) return;
     const m = new THREE.Mesh(mergeGeometries(arr)!, mat); m.castShadow = true; m.receiveShadow = true; scene.add(m);
   };
-  add(roofGeo, new THREE.MeshLambertMaterial({ color: 0x4a4a4a }));
+  add(roofGeo, new THREE.MeshLambertMaterial({ color: 0x2a2626 }));
   add(small, smallMat);
-  add(carGeo, new THREE.MeshLambertMaterial({ color: 0x7a3b32 }));
+  add(carGeo, new THREE.MeshLambertMaterial({ color: 0x6a3e26 }));
 
-  // 맵 가장자리 산맥
+  // 맵 가장자리: 낮고 완만한 모래 언덕 띠 (안개에 묻혀 붉은 갈색 능선으로 보인다)
   const mt: THREE.BufferGeometry[] = [];
   let s = 5; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-  for (let i = 0; i < 90; i++) {
-    const a = (i / 90) * Math.PI * 2, d = H * 1.08 + r() * 30, h = 25 + r() * 45, rad = 18 + r() * 14;
-    const g = new THREE.ConeGeometry(rad, h, 6); g.translate(Math.cos(a) * d, h / 2 - 2, Math.sin(a) * d); mt.push(g);
+  for (let i = 0; i < 110; i++) {
+    const a = (i / 110) * Math.PI * 2, d = H * 1.12 + r() * 25, h = 14 + r() * 22, rad = 30 + r() * 22;
+    const g = new THREE.ConeGeometry(rad, h, 9); g.scale(1, 1, 0.6); g.rotateY(-a); g.translate(Math.cos(a) * d, h / 2 - 2, Math.sin(a) * d); mt.push(g);
   }
-  scene.add(new THREE.Mesh(mergeGeometries(mt)!, new THREE.MeshLambertMaterial({ color: 0x4d5a4a })));
+  scene.add(new THREE.Mesh(mergeGeometries(mt)!, new THREE.MeshLambertMaterial({ color: 0x5c4a3c })));
 
-  // 하늘: 위아래 그라디언트 돔
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 24, 12), new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color(0x4d7fc4) }, mid: { value: new THREE.Color(0xb8cde0) }, bot: { value: new THREE.Color(0xd9d2c0) } },
-    vertexShader: 'varying vec3 vp; void main(){ vp = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);} ',
-    fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vp; void main(){ float h = clamp(vp.y,-0.2,1.0); vec3 c = h>0.0 ? mix(mid, top, pow(h,0.6)) : mix(mid, bot, -h*5.0); gl_FragColor = vec4(c,1.0);} ',
-  }));
-  sky.renderOrder = -1; scene.add(sky);
-  return { sky };
 }

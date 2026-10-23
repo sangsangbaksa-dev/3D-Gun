@@ -28,7 +28,7 @@ export function createPlayerState(maxHp: number): Player {
   return {
     x: MAP.playerStart.x, z: MAP.playerStart.z, y: 0,
     hp: maxHp, maxHp,
-    yaw: 0, pitch: 0.2,
+    yaw: Math.PI, pitch: 0.2, // 핵을 등지고 남쪽 도로를 바라보며 시작
     iframes: 0, dashT: 0, dashCd: 0, dashDirX: 0, dashDirZ: 0,
     speed: 0, moving: false, aiming: false, aimT: 0,
     dead: false, deadT: 0, kick: 0,
