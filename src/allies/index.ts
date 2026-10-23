@@ -16,11 +16,37 @@ import { Fx } from './view/fx';
 import { Camp } from './view/camp';
 import { LabPanel } from './view/labPanel';
 import { InjectHud } from './view/injectHud';
-import type { ZombieRef } from '../core/entities';
+import type { ZombieRef, GatherNodeRef } from '../core/entities';
 
 let gatherProvider: () => GatherNode[] = () => [];
 /** gathering 모듈의 자원 노드를 채집병에게 알려 준다. main.ts 등에서 한 번 연결한다 (docs/modules/allies.md) */
 export const setGatherNodeProvider = (fn: () => GatherNode[]) => { gatherProvider = fn; };
+
+/**
+ * core/entities 의 gatherNodes(gathering 모듈이 등록한 실제 노드)를 채집병용 노드로 바꾼다.
+ * 아군은 GATHER.time 동안 일한 뒤 take() 로 한 번에 수확하고, 노드는 플레이어가 캔 것처럼 고갈·재생성된다.
+ */
+export function gatherNodesFrom(refs: readonly GatherNodeRef[]): () => GatherNode[] {
+  const cache = new Map<GatherNodeRef, GatherNode>();
+  const out: GatherNode[] = [];
+  return () => {
+    out.length = 0;
+    for (const r of refs) {
+      let n = cache.get(r);
+      if (!n) {
+        n = {
+          id: r.id, x: r.x, z: r.z, res: r.res as GatherNode['res'],
+          available: () => r.ready,
+          // 남은 작업량을 한 번에 끝낸다 (큰 dt). 고갈 처리와 추가 수확 확률은 gathering 쪽 규칙을 따른다
+          take: () => r.harvest(1e6, 1)?.amount ?? 0,
+        };
+        cache.set(r, n);
+      }
+      out.push(n);
+    }
+    return out;
+  };
+}
 
 const toast = (text: string) => events.emit('toast', { text });
 const env: AllyEnv = {

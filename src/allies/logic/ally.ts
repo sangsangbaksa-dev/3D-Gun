@@ -222,6 +222,9 @@ export function virtualNodes(): GatherNode[] {
   });
 }
 
+/** 채집병이 기지에서 이만큼(m) 안의 노드만 캔다. 큰 맵 끝까지 걸어가 좀비 소굴에 빠지지 않게 */
+const GATHER_RADIUS = 60;
+
 function gatherer(a: Ally, dt: number, env: AllyEnv) {
   const c = anchor();
   // 좀비가 가까우면 기지로 도망
@@ -245,7 +248,7 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     for (const n of nodes) {
       if (!n.available() || taken.has(n.id)) continue;
       const d = dist(n.x, n.z, c.x, c.z);
-      if (d < bd) { bd = d; node = n; }
+      if (d <= GATHER_RADIUS && d < bd) { bd = d; node = n; }
     }
     a.nodeId = node ? node.id : 0;
     a.actT = 0;
@@ -258,7 +261,8 @@ function gatherer(a: Ally, dt: number, env: AllyEnv) {
     if (a.actT >= GATHER.time) {
       a.actT = 0;
       let n = node.take();
-      if (n > 0 && env.rng() < state.stats.gatherExtra) n += 1;
+      // 실제 노드는 수확할 때 이미 추가 수확 확률을 굴린다. 임시 채집장(id<0)만 여기서 굴린다
+      if (n > 0 && node.id < 0 && env.rng() < state.stats.gatherExtra) n += 1;
       if (n > 0) a.carry = { res: node.res, amount: n };
     }
   }
