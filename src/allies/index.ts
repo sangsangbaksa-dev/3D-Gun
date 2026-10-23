@@ -42,6 +42,7 @@ const researchers = () => countRole('researcher');
 function closePanel() {
   if (!panel.open) return;
   panel.hide(); panel.closedAt = time;
+  if (state.mode !== 'modal') input.modalOpen = false;
   events.emit('ui:modal', { open: false });
 }
 let labBuilt = false;
@@ -52,6 +53,7 @@ function openPanel() {
     return;
   }
   panel.show();
+  input.modalOpen = true; // Esc 로 창을 닫을 때 일시정지까지 걸리지 않게
   document.exitPointerLock?.();
   events.emit('ui:modal', { open: true });
 }
