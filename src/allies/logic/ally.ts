@@ -4,6 +4,7 @@ import { state, gain } from '../../core/state';
 import { events } from '../../core/events';
 import { meta, saveMeta } from '../../core/meta';
 import { allies, zombies, structures, nearest, newId, type AllyRef, type ZombieRef } from '../../core/entities';
+import { MAP } from '../../data/map';
 import { clamp, dist, turnToward, yawTo } from './math';
 
 const allyMove = (k = 1) => ALLY.speed * k * (1 + 0.1 * (state.skillLv.aspeed || 0));
@@ -273,7 +274,7 @@ export function updateAlly(a: Ally, dt: number, env: AllyEnv) {
     const dx = a.x - o.x, dz = a.z - o.z, d = Math.hypot(dx, dz), min = a.radius + o.radius;
     if (d < min && d > 1e-4) { const k = (min - d) * 0.5; a.x += (dx / d) * k; a.z += (dz / d) * k; }
   }
-  a.x = clamp(a.x, -70, 70); a.z = clamp(a.z, -70, 70);
+  a.x = clamp(a.x, -MAP.half, MAP.half); a.z = clamp(a.z, -MAP.half, MAP.half); // 맵 경계 (큰 맵: ±200)
 }
 
 /** 가장 가까운 아군 (역할 바꾸기 키용) */
