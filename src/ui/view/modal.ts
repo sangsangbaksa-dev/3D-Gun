@@ -4,14 +4,15 @@ import { events } from '../../core/events';
 
 let current: (() => void) | null = null;
 
-export function openBox(html: string, onClose?: () => void) {
+/** silent: ui:modal 을 내지 않는다(타이틀처럼 게임 모드와 무관한 화면 위에서 쓸 때) */
+export function openBox(html: string, silent = false) {
   const modal = document.getElementById('modal')!;
   const box = document.getElementById('box')!;
   if (current) closeBox();
   box.innerHTML = html;
   modal.classList.add('open');
-  current = onClose ?? (() => {});
-  events.emit('ui:modal', { open: true });
+  current = () => { if (!silent) events.emit('ui:modal', { open: false }); };
+  if (!silent) events.emit('ui:modal', { open: true });
   box.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => b.addEventListener('click', closeBox));
   modal.onclick = (e) => { if (e.target === modal) closeBox(); };
 }
@@ -22,7 +23,6 @@ export function closeBox() {
   current = null;
   document.getElementById('modal')!.classList.remove('open');
   cb();
-  events.emit('ui:modal', { open: false });
 }
 export const boxOpen = () => current !== null;
 

@@ -32,7 +32,6 @@ export function initTitle() {
   // 타이틀이 떠 있는 동안 게임 루프는 멈춘다(input.paused). Esc/P 로 일시정지가 풀리지 않게 modalOpen 도 켠다
   input.paused = true;
   document.body.classList.add('titled');
-  events.emit('ui:modal', { open: true });
   const start = $<HTMLButtonElement>('startBtn');
 
   if (!scene) {
@@ -47,13 +46,11 @@ export function initTitle() {
     started = true;
     title.classList.add('leaving');
     document.body.classList.remove('titled');
-    input.paused = false;
-    events.emit('ui:modal', { open: false });
-    lockCanvas();
+    input.paused = false; // 이어서 tycoon2d 의 프롤로그/업그레이드 화면 → 출격
     setTimeout(() => { document.body.classList.remove('booting'); }, 500);
     setTimeout(() => { scene.dispose(); title.style.display = 'none'; }, 900);
   });
-  $('controlsBtn').addEventListener('click', () => { playSfx('click'); openBox(CONTROLS_HTML); });
+  $('controlsBtn').addEventListener('click', () => { playSfx('click'); openBox(CONTROLS_HTML, true); });
   start.focus({ preventScroll: true });
 }
 

@@ -9,7 +9,6 @@ import { EnemiesSystem } from './enemies';
 import { PlaytestSystem } from './playtest';
 import { BaseSystem } from './base';
 import { AlliesSystem } from './allies';
-import { HudSystem } from './core/hud';
 import { Tycoon2dSystem } from './tycoon2d';
 import { AudioSystem } from './audio';
 import { SkillsSystem } from './skills';
@@ -29,7 +28,6 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     EnemiesSystem,
     AlliesSystem,
     InteractSystem,
-    HudSystem,
     AudioSystem,
     SkillsSystem, // 경험치/스킬트리
     UISystem,     // HUD/타이틀/일시정지 화면 (항상 마지막)

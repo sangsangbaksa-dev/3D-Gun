@@ -152,7 +152,7 @@ body.booting #pauseBanner, body.titled #pauseBanner { display: none !important; 
 .pause-card p { margin: 0 0 22px; color: var(--dim); }
 @keyframes pop2 { from { opacity: 0; transform: translateY(14px) scale(.98); } }
 
-#modal { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(4, 6, 9, .72); backdrop-filter: blur(3px); }
+#modal { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; background: rgba(4, 6, 9, .72); backdrop-filter: blur(3px); }
 #modal.open { display: flex; animation: fade .2s; }
 #box { min-width: 420px; max-width: min(760px, 94vw); max-height: 88vh; overflow: auto; padding: 22px 26px; animation: pop2 .28s var(--ease); }
 #box h2 { margin: 0 0 14px; font-size: 22px; font-weight: 800; }
@@ -165,7 +165,7 @@ body.booting #pauseBanner, body.titled #pauseBanner { display: none !important; 
 .keys-table dd { margin: 0; color: #cfd6dc; }
 
 /* ── 타이틀 ── */
-#title { z-index: 50; overflow: hidden; background: #07090c; transition: opacity .7s, visibility .7s; }
+#title { z-index: 70; overflow: hidden; background: #07090c; transition: opacity .7s, visibility .7s; }
 #title.leaving { opacity: 0; visibility: hidden; }
 #titleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .title-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5, 7, 10, .92) 0%, rgba(5, 7, 10, .72) 34%, rgba(5, 7, 10, .12) 68%, rgba(5, 7, 10, .35) 100%), linear-gradient(0deg, rgba(5, 7, 10, .8), transparent 30%); }

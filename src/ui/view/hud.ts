@@ -107,7 +107,7 @@ export function createHud() {
     el.innerHTML = `<span>${text.replace(/</g, '&lt;')}</span>${t.count > 1 ? `<em>×${t.count}</em>` : ''}`;
   };
   events.on('toast', ({ text }) => toast(text));
-  events.on('resource:gathered', ({ res, amount }) => toast(`+${amount} ${RES_LABEL[res as ResKey] ?? res}`, 'good'));
+  events.on('resource:gathered', ({ res, amount }) => toast(`+${amount} ${RES_LABEL[res as ResKey] ?? (res === 'samples' ? '샘플' : res === 'samplesSp' ? '특수 샘플' : res)}`, 'good'));
   events.on('chest:opened', ({ text }) => toast(text, 'good'));
   events.on('building:placed', ({ kind }) => toast(`건설 완료: ${kind}`, 'good'));
   events.on('building:destroyed', ({ kind }) => toast(`건물 파괴: ${kind}`, 'bad'));
