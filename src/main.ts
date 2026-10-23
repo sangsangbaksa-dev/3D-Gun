@@ -13,6 +13,7 @@ import { gatherNodes } from './core/entities';
 import { HudSystem } from './core/hud';
 import { Tycoon2dSystem } from './tycoon2d';
 import { TitleSystem } from './title';
+import { AudioSystem } from './audio';
 import { saveMeta } from './core/meta';
 
 // 기능 모듈은 System 을 만들어 이 배열에 한 줄씩 등록한다. (실행 순서 = 배열 순서)
@@ -32,6 +33,7 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     AlliesSystem,
     InteractSystem,
     HudSystem,
+    AudioSystem, // 효과음·배경음 (WebAudio 합성). 카메라 위치를 쓰므로 PlayerSystem 뒤
     TitleSystem, // 타이틀 카메라 궤도(PlayerSystem 뒤에 카메라를 덮어씀) + 첫 출격 안내 띠
   ]);
 
