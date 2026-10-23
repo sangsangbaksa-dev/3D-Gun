@@ -3,6 +3,7 @@ import type { System } from './types';
 import { state } from './state';
 import { events } from './events';
 import { RES_KEYS, RES_LABEL } from '../data';
+import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
@@ -29,6 +30,7 @@ export const HudSystem: System = {
     hpGhost = document.getElementById('hpGhost');
     xpFill = document.getElementById('xpFill');
     if (help) help.style.display = 'none';
+    mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
     events.on('toast', ({ text }) => showToast(text));
     events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
     events.on('ui:modal', ({ open }) => {
@@ -37,6 +39,7 @@ export const HudSystem: System = {
     });
   },
   update(dt) {
+    updateKeyBar();
     acc += dt;
     if (acc < 0.2) return;
     acc = 0;
@@ -51,7 +54,7 @@ export const HudSystem: System = {
     }
     if (sub) {
       sub.textContent = state.phase === 'prep'
-        ? `준비 ${Math.ceil(state.prepLeft)}초 · B 건설 · L 백신 · N 시작`
+        ? `준비 ${Math.ceil(state.prepLeft)}초 · N 으로 바로 시작`
         : `남은 좀비 ${state.waveRemaining} · 핵 ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
     }
     // 런 레벨 진행도: 킬 XP 가 쌓이면 청록 막대가 찬다

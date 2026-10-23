@@ -34,7 +34,7 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
 #ztTitle .tmenu button,#ztTitle .tpanel .x{padding:8px 18px;font:600 15px ${FONT};color:${TEAL};background:#121A20b3;border:1px solid ${TEAL};border-radius:6px;cursor:pointer;transition:background .25s ease-out,box-shadow .25s ease-out}
 #ztTitle .tmenu button:hover,#ztTitle .tmenu button[aria-expanded=true],#ztTitle .tpanel .x:hover{background:#2EE6D61f;box-shadow:0 0 12px #2EE6D655}
 #ztTitle .tmenu button:focus-visible,#ztTitle .tpanel .x:focus-visible{outline:2px solid ${TEAL};outline-offset:2px}
-#ztTitle .tpanel{position:absolute;right:24px;top:24px;width:min(360px,calc(100vw - 48px));max-height:min(70vh,calc(91vh - 136px));overscroll-behavior:contain;overflow:auto;box-sizing:border-box;padding:16px 18px;background:#121A20b3;border:1px solid ${TEAL};border-radius:8px;color:#e6f2f1;font:14px/1.5 ${FONT};backdrop-filter:blur(6px);transform:translateY(-16px);opacity:0;visibility:hidden;transition:transform .25s ease-out,opacity .25s ease-out,visibility 0s .25s;z-index:2;scrollbar-width:thin;scrollbar-color:#2EE6D655 transparent}
+#ztTitle .tpanel{position:absolute;right:24px;top:24px;width:min(420px,calc(100vw - 48px));max-height:min(70vh,calc(91vh - 136px));overscroll-behavior:contain;overflow:auto;box-sizing:border-box;padding:16px 18px;background:#121A20b3;border:1px solid ${TEAL};border-radius:8px;color:#e6f2f1;font:14px/1.5 ${FONT};backdrop-filter:blur(6px);transform:translateY(-16px);opacity:0;visibility:hidden;transition:transform .25s ease-out,opacity .25s ease-out,visibility 0s .25s;z-index:2;scrollbar-width:thin;scrollbar-color:#2EE6D655 transparent}
 #ztTitle .tpanel.open{transform:none;opacity:1;visibility:visible;transition:transform .25s ease-out,opacity .25s ease-out}
 #ztTitle .tpanel h3{margin:0 0 10px;font-size:16px;color:${TEAL};display:flex;justify-content:space-between;align-items:center}
 #ztTitle .tpanel .x{padding:2px 10px;font-size:13px}
@@ -47,6 +47,10 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
 #ztTitle .tpanel output{font:600 12px ui-monospace,monospace;color:${ORANGE};min-width:3.2em;text-align:right}
 #ztTitle .tpanel input[type=range]{width:120px;accent-color:${TEAL}}
 #ztTitle .tpanel .ctl{display:flex;align-items:center;gap:8px}
+#ztTitle .tpanel kbd.zk{font:700 12px/1.45 ${FONT};color:#e9fbf9}
+#ztTitle .tpanel .zk-grp h4{color:#2EE6D6aa}
+#ztTitle .tpanel .khint{margin:8px 0 0;font-size:12px;color:#9aa8ba}
+#ztTitle .tpanel .x:disabled{opacity:.7;cursor:default}
 
 #ztTitle .intro{position:absolute;inset:0;z-index:5;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease-out;cursor:default}
 #ztTitle .intro.out{opacity:0;pointer-events:none}
@@ -75,9 +79,17 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
 export const STORY_FADE_S = STORY_FADE;
 
 export const TUTORIAL_CSS = `
-#ztTut{position:fixed;left:50%;top:108px;transform:translate(-50%,-6px);z-index:7;pointer-events:none;padding:6px 16px;border:1px solid ${TEAL};border-radius:6px;background:#121A20b3;color:#e6f2f1;font:600 15px ${FONT};white-space:nowrap;opacity:0;transition:opacity .3s ease-out,transform .3s ease-out}
+#ztTut{position:fixed;left:50%;top:104px;transform:translate(-50%,-6px);z-index:7;pointer-events:none;box-sizing:border-box;width:max-content;max-width:min(560px,calc(100vw - 32px));padding:8px 14px 7px;border:1px solid ${TEAL};border-radius:8px;background:#121A20d9;color:#e6f2f1;font:600 15px ${FONT};opacity:0;transition:opacity .3s ease-out,transform .3s ease-out;box-shadow:0 6px 24px #0008}
 #ztTut.on{opacity:1;transform:translate(-50%,0)}
-#ztTut b{color:${TEAL};margin-right:8px;font-weight:700}
-@media (max-width:600px){#ztTut{white-space:normal;max-width:calc(100vw - 32px);text-align:center}}
+#ztTut .tt-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#ztTut .tt-n{color:${TEAL};font-weight:700;font-size:13px}
+#ztTut .tt-k{display:inline-flex;align-items:center;gap:2px}
+#ztTut .tt-k kbd.zk{font-size:14px;padding:1px 8px;border-color:${ORANGE};color:#fff}
+#ztTut .tt-t{font-size:16px}
+#ztTut .tt-skip{margin-left:auto;pointer-events:auto;cursor:pointer;font:600 12px ${FONT};color:#9aa8ba;background:transparent;border:1px solid #ffffff33;border-radius:5px;padding:2px 9px}
+#ztTut .tt-skip:hover{color:${TEAL};border-color:${TEAL}}
+#ztTut .tt-why{margin-top:4px;font-weight:500;font-size:13px;color:#c9d6dc;line-height:1.45}
+#ztTut .tt-hint{margin-top:3px;font-weight:600;font-size:12.5px;color:${ORANGE}}
+#ztTut .tt-foot{margin-top:4px;font-weight:500;font-size:11px;color:#7f8d9e}
 @media (prefers-reduced-motion:reduce){#ztTut{transition:opacity .1s;transform:translate(-50%,0)}}
 `;
