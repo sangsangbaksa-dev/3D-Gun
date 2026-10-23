@@ -250,27 +250,52 @@ export const CORE_REBUILD_PCT = 0.6;
 export const KEY_PRICE = { iron: 80, gold: 260 };
 
 export type Branch = '생존' | '채집' | '연구' | '사령';
-export interface SkillDef { id: string; branch: Branch; name: string; desc: string; max: number }
+export const BRANCHES: Branch[] = ['생존', '채집', '연구', '사령'];
+/** 가지 표시 설정. color 는 UI 강조색(#rrggbb), blurb 는 가지 설명 */
+export const BRANCH_INFO: Record<Branch, { color: string; blurb: string }> = {
+  생존: { color: '#ff6b5e', blurb: '버티고 쏘는 힘' },
+  채집: { color: '#8be15f', blurb: '모으고 채우는 손' },
+  연구: { color: '#5fd0ff', blurb: '백신과 기절 사격' },
+  사령: { color: '#c39bff', blurb: '아군을 이끄는 지휘' },
+};
+/** tier: 트리에서의 줄(1이 뿌리). req: 이 스킬을 찍기 위해 먼저 필요한 스킬과 최소 레벨 */
+export interface SkillDef {
+  id: string; branch: Branch; name: string; desc: string; max: number;
+  icon: string; tier: number; req?: { id: string; lv: number };
+}
 export const SKILLS: SkillDef[] = [
-  { id: 'hp', branch: '생존', name: '튼튼한 몸', desc: '최대 체력 +20', max: 5 },
-  { id: 'dash', branch: '생존', name: '날쌘 발', desc: '대시 쿨타임 -0.3초', max: 4 },
-  { id: 'dmg', branch: '생존', name: '화력 강화', desc: '공격력 +10%', max: 5 },
-  { id: 'reload', branch: '생존', name: '빠른 손', desc: '재장전 시간 -13%', max: 4 },
-  { id: 'gspeed', branch: '채집', name: '채집 속도', desc: '채집 속도 +25% (아군 포함)', max: 4 },
-  { id: 'gextra', branch: '채집', name: '풍작', desc: '추가 획득 확률 +12%', max: 5 },
-  { id: 'mag', branch: '채집', name: '대용량 탄창', desc: '탄창 +20%', max: 3 },
-  { id: 'vrate', branch: '연구', name: '백신 개량', desc: '아군화 성공률 +8%', max: 5 },
-  { id: 'vcost', branch: '연구', name: '재료 절약', desc: '백신 재료 -10%', max: 3 },
-  { id: 'stun', branch: '연구', name: '기절 사격', desc: '기절 확률 +10%', max: 4 },
-  { id: 'cap', branch: '사령', name: '사령관', desc: '아군 상한 +2', max: 5 },
-  { id: 'adm', branch: '사령', name: '아군 강화', desc: '아군 공격력 +20%', max: 5 },
-  { id: 'ahp', branch: '사령', name: '아군 맷집', desc: '아군 체력 +25%', max: 4 },
-  { id: 'run', branch: '생존', name: '빠른 걸음', desc: '이동 속도 +8%', max: 4 },
-  { id: 'steady', branch: '생존', name: '안정된 조준', desc: '탄 퍼짐 -8%', max: 4 },
-  { id: 'hs', branch: '생존', name: '급소 사격', desc: '헤드샷 피해 +12%', max: 4 },
-  { id: 'loot', branch: '채집', name: '전리품', desc: '처치 코인 +15%', max: 4 },
-  { id: 'aspeed', branch: '사령', name: '행군', desc: '아군 이동 속도 +10%', max: 3 },
+  { id: 'hp', branch: '생존', name: '튼튼한 몸', desc: '최대 체력 +20', max: 5, icon: 'heart', tier: 1 },
+  { id: 'dash', branch: '생존', name: '날쌘 발', desc: '대시 쿨타임 -0.3초', max: 4, icon: 'dash', tier: 2, req: { id: 'hp', lv: 2 } },
+  { id: 'dmg', branch: '생존', name: '화력 강화', desc: '공격력 +10%', max: 5, icon: 'flame', tier: 2, req: { id: 'hp', lv: 2 } },
+  { id: 'reload', branch: '생존', name: '빠른 손', desc: '재장전 시간 -13%', max: 4, icon: 'reload', tier: 3, req: { id: 'dmg', lv: 2 } },
+  { id: 'gspeed', branch: '채집', name: '채집 속도', desc: '채집 속도 +25% (아군 포함)', max: 4, icon: 'pick', tier: 1 },
+  { id: 'gextra', branch: '채집', name: '풍작', desc: '추가 획득 확률 +12%', max: 5, icon: 'star', tier: 2, req: { id: 'gspeed', lv: 2 } },
+  { id: 'mag', branch: '채집', name: '대용량 탄창', desc: '탄창 +20%', max: 3, icon: 'mag', tier: 3, req: { id: 'gextra', lv: 2 } },
+  { id: 'vrate', branch: '연구', name: '백신 개량', desc: '아군화 성공률 +8%', max: 5, icon: 'flask', tier: 1 },
+  { id: 'vcost', branch: '연구', name: '재료 절약', desc: '백신 재료 -10%', max: 3, icon: 'leaf', tier: 2, req: { id: 'vrate', lv: 2 } },
+  { id: 'stun', branch: '연구', name: '기절 사격', desc: '기절 확률 +10%', max: 4, icon: 'bolt', tier: 2, req: { id: 'vrate', lv: 2 } },
+  { id: 'cap', branch: '사령', name: '사령관', desc: '아군 상한 +2', max: 5, icon: 'crown', tier: 1 },
+  { id: 'adm', branch: '사령', name: '아군 강화', desc: '아군 공격력 +20%', max: 5, icon: 'sword', tier: 2, req: { id: 'cap', lv: 2 } },
+  { id: 'ahp', branch: '사령', name: '아군 맷집', desc: '아군 체력 +25%', max: 4, icon: 'shield', tier: 2, req: { id: 'cap', lv: 2 } },
+  { id: 'run', branch: '생존', name: '빠른 걸음', desc: '이동 속도 +8%', max: 4, icon: 'dash', tier: 3, req: { id: 'hp', lv: 2 } },
+  { id: 'steady', branch: '생존', name: '안정된 조준', desc: '탄 퍼짐 -8%', max: 4, icon: 'bolt', tier: 4, req: { id: 'reload', lv: 1 } },
+  { id: 'hs', branch: '생존', name: '급소 사격', desc: '헤드샷 피해 +12%', max: 4, icon: 'skull', tier: 4, req: { id: 'reload', lv: 1 } },
+  { id: 'loot', branch: '채집', name: '전리품', desc: '처치 코인 +15%', max: 4, icon: 'coin', tier: 2, req: { id: 'gspeed', lv: 2 } },
+  { id: 'aspeed', branch: '사령', name: '행군', desc: '아군 이동 속도 +10%', max: 3, icon: 'people', tier: 3, req: { id: 'adm', lv: 1 } },
 ];
+
+// ── 경험치/스킬 포인트 (소유: skills/ui). 레벨업마다 스킬 포인트 1 ──
+/** 레벨 L 에서 L+1 이 되기 위한 경험치 */
+export const xpToNext = (level: number) => Math.round(24 + 12 * level + 1.5 * level * level);
+/** 처치 경험치 (아군 처치는 절반) */
+export const XP_KILL: Record<string, number> = { normal: 6, runner: 8, fatty: 14, boss: 120, king: 500 };
+export const XP_KILL_DEFAULT = 6;
+export const XP_GATHER = 1;        // 자원 채집 1회
+export const XP_CHEST = [4, 10, 25]; // 상자 등급별
+export const XP_CONVERT = 30;      // 아군화 성공
+export const XP_WAVE_CLEAR = 15;   // 웨이브 클리어 (+웨이브 번호)
+/** 리스펙(초기화) 골드 비용: 쓴 포인트가 많을수록 비싸다 */
+export const respecCost = (spent: number) => 30 + 15 * spent;
 
 export interface Stats {
   maxHp: number; dmgMul: number; dashCd: number; reloadMul: number; magMul: number;
@@ -300,6 +325,96 @@ export function calcStats(l: Record<string, number>): Stats {
     spreadMul: Math.max(0.55, 1 - 0.08 * v('steady')),
   };
 }
+
+// ── 효과음 레시피 (소유: audio). WebAudio 합성 파라미터. Unity 에서는 클립/AudioSource 설정으로 대응 ──
+export interface SfxLayer {
+  kind: 'osc' | 'noise';
+  wave?: 'sine' | 'square' | 'sawtooth' | 'triangle';
+  f0?: number; f1?: number;           // 시작/끝 주파수 (osc)
+  dur: number; gain: number;
+  delay?: number; attack?: number;
+  filter?: { type: 'lowpass' | 'highpass' | 'bandpass'; f0: number; f1?: number; q?: number };
+}
+export interface SfxDef { layers: SfxLayer[]; vol: number; /** 같은 소리를 다시 낼 수 있는 최소 간격(초) */ cooldown: number; /** 피치 무작위 폭(0~1) */ jitter: number }
+export type SfxId =
+  | 'hurt' | 'kill' | 'stun' | 'waveStart' | 'waveClear' | 'boss'
+  | 'chest0' | 'chest1' | 'chest2' | 'gather' | 'convert' | 'build' | 'coreHit' | 'levelUp'
+  | 'click' | 'buy' | 'deny' | 'toast' | 'dead' | 'victory' | 'defeat' | 'allyDead';
+export const SFX: Record<SfxId, SfxDef> = {
+  hurt: { vol: 0.6, cooldown: 0.15, jitter: 0.05, layers: [
+    { kind: 'osc', wave: 'sawtooth', f0: 180, f1: 55, dur: 0.28, gain: 0.7, filter: { type: 'lowpass', f0: 900 } },
+    { kind: 'noise', dur: 0.16, gain: 0.5, filter: { type: 'lowpass', f0: 700 } } ] },
+  kill: { vol: 0.35, cooldown: 0.06, jitter: 0.15, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 160, f1: 50, dur: 0.18, gain: 0.7 },
+    { kind: 'noise', dur: 0.1, gain: 0.4, filter: { type: 'lowpass', f0: 1200 } } ] },
+  stun: { vol: 0.3, cooldown: 0.2, jitter: 0.05, layers: [
+    { kind: 'osc', wave: 'square', f0: 900, f1: 300, dur: 0.18, gain: 0.5 },
+    { kind: 'osc', wave: 'square', f0: 700, f1: 250, dur: 0.18, gain: 0.35, delay: 0.05 } ] },
+  waveStart: { vol: 0.6, cooldown: 1, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sawtooth', f0: 110, f1: 110, dur: 0.9, gain: 0.5, attack: 0.1, filter: { type: 'lowpass', f0: 600 } },
+    { kind: 'osc', wave: 'sawtooth', f0: 165, f1: 150, dur: 0.9, gain: 0.4, attack: 0.1, filter: { type: 'lowpass', f0: 700 } },
+    { kind: 'osc', wave: 'sawtooth', f0: 82, f1: 70, dur: 1.2, gain: 0.5, delay: 0.5, attack: 0.1, filter: { type: 'lowpass', f0: 500 } } ] },
+  waveClear: { vol: 0.5, cooldown: 1, jitter: 0, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 523, dur: 0.35, gain: 0.5 },
+    { kind: 'osc', wave: 'triangle', f0: 659, dur: 0.35, gain: 0.5, delay: 0.14 },
+    { kind: 'osc', wave: 'triangle', f0: 784, dur: 0.6, gain: 0.5, delay: 0.28 } ] },
+  boss: { vol: 0.8, cooldown: 2, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sawtooth', f0: 90, f1: 40, dur: 1.6, gain: 0.8, attack: 0.05, filter: { type: 'lowpass', f0: 500, f1: 120 } },
+    { kind: 'noise', dur: 1.4, gain: 0.5, filter: { type: 'lowpass', f0: 400, f1: 80 } } ] },
+  chest0: { vol: 0.4, cooldown: 0.2, jitter: 0.03, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 400, f1: 520, dur: 0.15, gain: 0.5 },
+    { kind: 'noise', dur: 0.08, gain: 0.3, filter: { type: 'highpass', f0: 3000 } } ] },
+  chest1: { vol: 0.5, cooldown: 0.2, jitter: 0, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 520, dur: 0.2, gain: 0.5 },
+    { kind: 'osc', wave: 'triangle', f0: 780, dur: 0.3, gain: 0.5, delay: 0.1 } ] },
+  chest2: { vol: 0.6, cooldown: 0.2, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sine', f0: 660, dur: 0.25, gain: 0.5 },
+    { kind: 'osc', wave: 'sine', f0: 880, dur: 0.25, gain: 0.5, delay: 0.1 },
+    { kind: 'osc', wave: 'sine', f0: 1320, dur: 0.6, gain: 0.5, delay: 0.2 },
+    { kind: 'noise', dur: 0.5, gain: 0.15, delay: 0.2, filter: { type: 'highpass', f0: 5000 } } ] },
+  gather: { vol: 0.35, cooldown: 0.08, jitter: 0.12, layers: [
+    { kind: 'osc', wave: 'sine', f0: 500, f1: 800, dur: 0.1, gain: 0.5 },
+    { kind: 'noise', dur: 0.05, gain: 0.3, filter: { type: 'bandpass', f0: 2000, q: 2 } } ] },
+  convert: { vol: 0.5, cooldown: 0.5, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sine', f0: 392, dur: 0.2, gain: 0.5 },
+    { kind: 'osc', wave: 'sine', f0: 523, dur: 0.2, gain: 0.5, delay: 0.12 },
+    { kind: 'osc', wave: 'sine', f0: 659, dur: 0.2, gain: 0.5, delay: 0.24 },
+    { kind: 'osc', wave: 'sine', f0: 784, dur: 0.5, gain: 0.5, delay: 0.36 } ] },
+  build: { vol: 0.55, cooldown: 0.1, jitter: 0.05, layers: [
+    { kind: 'osc', wave: 'square', f0: 120, f1: 50, dur: 0.14, gain: 0.6 },
+    { kind: 'noise', dur: 0.12, gain: 0.5, filter: { type: 'lowpass', f0: 1500 } } ] },
+  coreHit: { vol: 0.55, cooldown: 0.6, jitter: 0, layers: [
+    { kind: 'osc', wave: 'square', f0: 440, dur: 0.14, gain: 0.4 },
+    { kind: 'osc', wave: 'square', f0: 330, dur: 0.14, gain: 0.4, delay: 0.18 } ] },
+  levelUp: { vol: 0.55, cooldown: 0.5, jitter: 0, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 523, dur: 0.12, gain: 0.5 },
+    { kind: 'osc', wave: 'triangle', f0: 659, dur: 0.12, gain: 0.5, delay: 0.09 },
+    { kind: 'osc', wave: 'triangle', f0: 784, dur: 0.12, gain: 0.5, delay: 0.18 },
+    { kind: 'osc', wave: 'triangle', f0: 1047, dur: 0.5, gain: 0.5, delay: 0.27 } ] },
+  click: { vol: 0.3, cooldown: 0.03, jitter: 0.03, layers: [
+    { kind: 'osc', wave: 'square', f0: 1200, f1: 800, dur: 0.04, gain: 0.5 } ] },
+  buy: { vol: 0.5, cooldown: 0.05, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sine', f0: 880, dur: 0.1, gain: 0.5 },
+    { kind: 'osc', wave: 'sine', f0: 1320, dur: 0.25, gain: 0.5, delay: 0.07 } ] },
+  deny: { vol: 0.4, cooldown: 0.1, jitter: 0, layers: [
+    { kind: 'osc', wave: 'square', f0: 180, f1: 140, dur: 0.18, gain: 0.5 } ] },
+  toast: { vol: 0.2, cooldown: 0.12, jitter: 0.02, layers: [
+    { kind: 'osc', wave: 'sine', f0: 760, dur: 0.07, gain: 0.5 } ] },
+  dead: { vol: 0.7, cooldown: 1, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sawtooth', f0: 220, f1: 40, dur: 1.2, gain: 0.7, filter: { type: 'lowpass', f0: 800, f1: 100 } } ] },
+  victory: { vol: 0.7, cooldown: 3, jitter: 0, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 523, dur: 0.3, gain: 0.5 },
+    { kind: 'osc', wave: 'triangle', f0: 659, dur: 0.3, gain: 0.5, delay: 0.25 },
+    { kind: 'osc', wave: 'triangle', f0: 784, dur: 0.3, gain: 0.5, delay: 0.5 },
+    { kind: 'osc', wave: 'triangle', f0: 1047, dur: 1.2, gain: 0.55, delay: 0.75 },
+    { kind: 'osc', wave: 'triangle', f0: 784, dur: 1.2, gain: 0.4, delay: 0.75 } ] },
+  defeat: { vol: 0.7, cooldown: 3, jitter: 0, layers: [
+    { kind: 'osc', wave: 'sawtooth', f0: 196, dur: 0.5, gain: 0.5, filter: { type: 'lowpass', f0: 700 } },
+    { kind: 'osc', wave: 'sawtooth', f0: 147, dur: 0.5, gain: 0.5, delay: 0.45, filter: { type: 'lowpass', f0: 600 } },
+    { kind: 'osc', wave: 'sawtooth', f0: 98, dur: 1.4, gain: 0.6, delay: 0.9, filter: { type: 'lowpass', f0: 500, f1: 150 } } ] },
+  allyDead: { vol: 0.4, cooldown: 0.3, jitter: 0.05, layers: [
+    { kind: 'osc', wave: 'triangle', f0: 330, f1: 130, dur: 0.4, gain: 0.5 } ] },
+};
 
 export interface VaccineDef { name: string; herb: number; sample: number; sampleSp: number; parts: number; iron: number; rate: number; uses: number }
 export const VACCINES: VaccineDef[] = [

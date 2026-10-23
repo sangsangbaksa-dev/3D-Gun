@@ -53,6 +53,8 @@ export interface GameEvents {
   'interact:shop': undefined;                        // 상점에서 E → base 가 교환소를 연다
   // skills
   'xp:gain': { amount: number; reason: string };
+  'skill:levelup': { level: number };                // 레벨업 → HUD 배너, 효과음
+  'skill:bought': { id: string; lv: number };        // 스킬을 찍음
 }
 
 type Handler<T> = (payload: T) => void;
