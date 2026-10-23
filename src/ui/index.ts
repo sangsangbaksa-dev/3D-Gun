@@ -1,7 +1,7 @@
 // UI 모듈: HUD, 토스트, 타이틀/일시정지/엔딩 화면, 공용 모달 처리(ui:modal).
 import './view/ui.css';
 import { events } from '../core/events';
-import { input } from '../core/input';
+import { input, requestLock } from '../core/input';
 import { state } from '../core/state';
 import type { System } from '../core/types';
 import { audio } from '../audio';
@@ -23,9 +23,10 @@ export const UISystem: System = {
     // 창이 열리면 포인터 락을 풀고 입력 모드를 modal 로, 모두 닫히면 원래대로 돌리고 락을 다시 요청한다
     events.on('ui:modal', ({ open }) => {
       state.mode = open ? tracker.open(state.mode) : tracker.close(state.mode);
+      input.modalOpen = tracker.isOpen; // 포인터 락을 풀기 전에 켜야 일시정지로 오인되지 않는다
       document.body.classList.toggle('modal-open', tracker.isOpen);
       if (open) { if (document.pointerLockElement) document.exitPointerLock(); }
-      else if (!tracker.isOpen && started) { try { ctx.world.renderer.domElement.requestPointerLock(); } catch { /* 제스처 없음 */ } }
+      else if (!tracker.isOpen && started && !input.paused) requestLock(ctx.world.renderer.domElement);
     });
 
     const soundBtn = document.getElementById('soundBtn')!;
@@ -34,13 +35,16 @@ export const UISystem: System = {
     pauseSound.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.toggleMute(); paintSound(); });
     paintSound();
 
+    // 게임 루프가 멈춘(일시정지) 동안에도 창을 닫을 수 있게 키 입력은 직접 듣는다
+    addEventListener('keydown', (e) => {
+      // P 로 일시정지하면 포인터 락을 풀어 마우스로 일시정지 메뉴를 누를 수 있게 한다 (core 의 keydown 이 먼저 paused 를 바꾼다)
+      if ((e.code === 'KeyP' || e.code === 'Escape') && input.paused && document.pointerLockElement) document.exitPointerLock();
+      if (e.code === 'Escape' && !e.repeat && boxOpen()) closeBox(); if (e.code === 'KeyM' && !e.repeat) { audio.toggleMute(); paintSound(); } });
     initPause();
     initEnd(hud);
     initTitle();
   },
   update(dt, ctx) {
     hud.update(dt, ctx);
-    if (input.pressed.has('KeyM')) { audio.toggleMute(); paintSound(); }
-    if (input.pressed.has('Escape') && boxOpen()) closeBox();
   },
 };

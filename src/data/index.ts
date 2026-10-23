@@ -337,19 +337,10 @@ export interface SfxLayer {
 }
 export interface SfxDef { layers: SfxLayer[]; vol: number; /** 같은 소리를 다시 낼 수 있는 최소 간격(초) */ cooldown: number; /** 피치 무작위 폭(0~1) */ jitter: number }
 export type SfxId =
-  | 'pistol' | 'shotgun' | 'smg' | 'hurt' | 'kill' | 'stun' | 'waveStart' | 'waveClear' | 'boss'
+  | 'hurt' | 'kill' | 'stun' | 'waveStart' | 'waveClear' | 'boss'
   | 'chest0' | 'chest1' | 'chest2' | 'gather' | 'convert' | 'build' | 'coreHit' | 'levelUp'
   | 'click' | 'buy' | 'deny' | 'toast' | 'dead' | 'victory' | 'defeat' | 'allyDead';
 export const SFX: Record<SfxId, SfxDef> = {
-  pistol: { vol: 0.5, cooldown: 0.05, jitter: 0.04, layers: [
-    { kind: 'noise', dur: 0.12, gain: 0.9, filter: { type: 'bandpass', f0: 2600, f1: 600, q: 0.8 } },
-    { kind: 'osc', wave: 'square', f0: 220, f1: 60, dur: 0.12, gain: 0.5 } ] },
-  shotgun: { vol: 0.65, cooldown: 0.1, jitter: 0.04, layers: [
-    { kind: 'noise', dur: 0.32, gain: 1, filter: { type: 'lowpass', f0: 3200, f1: 300, q: 0.6 } },
-    { kind: 'osc', wave: 'sawtooth', f0: 130, f1: 38, dur: 0.28, gain: 0.7 } ] },
-  smg: { vol: 0.35, cooldown: 0.04, jitter: 0.07, layers: [
-    { kind: 'noise', dur: 0.07, gain: 0.8, filter: { type: 'bandpass', f0: 3400, f1: 900, q: 1 } },
-    { kind: 'osc', wave: 'square', f0: 300, f1: 90, dur: 0.06, gain: 0.35 } ] },
   hurt: { vol: 0.6, cooldown: 0.15, jitter: 0.05, layers: [
     { kind: 'osc', wave: 'sawtooth', f0: 180, f1: 55, dur: 0.28, gain: 0.7, filter: { type: 'lowpass', f0: 900 } },
     { kind: 'noise', dur: 0.16, gain: 0.5, filter: { type: 'lowpass', f0: 700 } } ] },

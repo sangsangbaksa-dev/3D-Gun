@@ -1,10 +1,6 @@
 // 이벤트 → 효과음 매핑과 재생 간격 제한. 엔진을 모르는 순수 로직(WebAudio 는 view/synth.ts).
 import type { SfxId } from '../../data';
 
-export function weaponCue(weapon: string): SfxId {
-  return weapon === 'shotgun' ? 'shotgun' : weapon === 'smg' ? 'smg' : 'pistol';
-}
-
 /** 보상 등급(0 일반~3 전설) → 상자 효과음 */
 export function chestCue(rarity: number): SfxId {
   return rarity >= 2 ? 'chest2' : rarity === 1 ? 'chest1' : 'chest0';

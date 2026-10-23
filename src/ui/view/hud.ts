@@ -3,7 +3,7 @@ import { events } from '../../core/events';
 import { state } from '../../core/state';
 import { zombies } from '../../core/entities';
 import type { Ctx } from '../../core/types';
-import { RES_KEYS, RES_LABEL, WEAPONS, xpToNext, type WeaponId, type ResKey } from '../../data';
+import { FINAL_WAVE, RES_KEYS, RES_LABEL, xpToNext, type ResKey } from '../../data';
 import { levelOf } from '../../skills/logic/skilltree';
 import { ToastQueue, type ToastKind } from '../logic/toasts';
 import { dangerLevel, int, mmss, pct, phaseLabel, ratio } from '../logic/hudFormat';
@@ -56,9 +56,7 @@ export function createHud() {
     setChip('allies', `${state.allyCount}/${state.stats.allyCap + state.allyCapBonus}`, false);
 
     $('waveNum').textContent = String(state.wave);
-    const pill = $('phasePill');
-    pill.textContent = phaseLabel(state.phase);
-    pill.className = `pill ${state.phase}`;
+    paintPhase();
 
     $('coreLabel').textContent = `기지 핵  ${int(state.coreHp)} / ${int(state.coreMaxHp)}`;
     $('coreFill').style.width = pct(state.coreHp, state.coreMaxHp);
@@ -75,21 +73,16 @@ export function createHud() {
     $('spNum').textContent = String(state.skillPoints);
     $('skillHint').classList.toggle('show', state.skillPoints > 0);
 
-    // 탄창 보정(스킬)이 바뀌면 최대치 표기를 맞춘다
-    if (!firedOnce) { const m = Math.round(WEAPONS.pistol.mag * state.stats.magMul); $('ammoNow').textContent = String(m); $('ammoMax').textContent = String(m); }
   };
-  let firedOnce = false;
+  /** 준비 단계는 남은 시간, 전투는 남은 좀비 수를 보여 준다 */
+  const paintPhase = () => {
+    const pill = $('phasePill');
+    const text = state.phase === 'prep' ? `준비 ${Math.ceil(state.prepLeft)}초` : state.phase === 'combat' ? `남은 좀비 ${state.waveRemaining}` : phaseLabel(state.phase);
+    if (pill.textContent !== text) pill.textContent = text;
+    pill.className = `pill ${state.phase}`;
+    $('waveNum').textContent = state.phase === 'ended' ? (state.wave >= FINAL_WAVE ? '클리어' : '종료') : String(state.wave);
+  };
   events.on('state:changed', refreshState);
-
-  // ── 탄약 ──
-  events.on('weapon:fired', (e) => {
-    firedOnce = true;
-    $('weaponName').textContent = WEAPONS[e.weapon as WeaponId]?.name ?? e.weapon;
-    $('ammoNow').textContent = String(e.ammo);
-    $('ammoMax').textContent = String(e.mag);
-    document.querySelector('.ammo')!.classList.toggle('empty', e.ammo === 0);
-    $('reloadHint').classList.toggle('show', e.ammo <= Math.max(1, Math.floor(e.mag * 0.2)));
-  });
 
   // ── 상호작용 안내 ──
   events.on('interact:prompt', ({ text }) => {
@@ -145,13 +138,9 @@ export function createHud() {
   });
   events.on('boss:dead', () => { bossType = ''; $('bossMeter').classList.remove('on'); banner('보스 처치', 'BOSS DOWN', 'gold'); });
 
-  // ── 조준점 피드백 ──
-  let hitT = 0;
-  events.on('enemy:killed', () => { stats.kills++; $('cross').classList.add('hit'); hitT = 0.12; });
-
-  // ── 화면 피격 효과 ──
-  let lastHp = -1, flashT = 0;
-  events.on('player:dead', () => { const d = $('death'); d.classList.remove('show'); void d.offsetWidth; d.classList.add('show'); });
+  // 조준점, 피격 화면 효과, 탄약 표시는 player 모듈(view/hud.ts)이 맡는다. 여기서는 처치 수만 센다.
+  events.on('enemy:killed', () => { stats.kills++; });
+  events.on('run:start', () => { stats.kills = 0; stats.startedAt = performance.now(); });
 
   refreshState();
 
@@ -167,21 +156,7 @@ export function createHud() {
       const d = dangerLevel(r);
       bar.classList.toggle('mid', d === 1);
       bar.classList.toggle('low', d === 2);
-
-      if (lastHp >= 0 && p.hp < lastHp - 0.01) flashT = 0.18;
-      lastHp = p.hp;
-      const v = $('vignette');
-      if (flashT > 0) { flashT -= dt; v.classList.add('hit'); } else v.classList.remove('hit');
-      v.classList.toggle('low', d === 2 && p.hp > 0);
-
-      const dashMax = state.stats.dashCd;
-      const dashBar = $('dashFill').parentElement!;
-      const dashFill = $('dashFill');
-      const cd = p.dashCd > 0 ? p.dashCd : 0;
-      dashFill.style.width = `${(1 - ratio(cd, dashMax)) * 100}%`;
-      dashBar.classList.toggle('ready', cd <= 0);
-
-      if (hitT > 0) { hitT -= dt; if (hitT <= 0) $('cross').classList.remove('hit'); }
+      paintPhase();
 
       // 보스 체력
       if (bossType) {

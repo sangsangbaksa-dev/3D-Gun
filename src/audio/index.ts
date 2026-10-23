@@ -4,7 +4,7 @@ import { state } from '../core/state';
 import { zombies } from '../core/entities';
 import { SFX, type SfxId } from '../data';
 import type { System } from '../core/types';
-import { CueGate, ambientTarget, chestCue, weaponCue } from './logic/cues';
+import { CueGate, ambientTarget, chestCue } from './logic/cues';
 import { Synth } from './view/synth';
 
 const synth = new Synth();
@@ -31,7 +31,6 @@ export const AudioSystem: System = {
     addEventListener('pointerdown', unlock);
     addEventListener('keydown', unlock);
 
-    events.on('weapon:fired', (e) => playSfx(weaponCue(e.weapon)));
     events.on('player:hit', () => playSfx('hurt'));
     events.on('enemy:killed', () => playSfx('kill'));
     events.on('zombie:stunned', () => playSfx('stun'));
@@ -40,7 +39,7 @@ export const AudioSystem: System = {
     events.on('boss:spawn', () => { bossAlive = true; playSfx('boss'); });
     events.on('boss:dead', () => { bossAlive = false; playSfx('waveClear'); });
     events.on('chest:opened', (e) => playSfx(chestCue(e.rarity)));
-    events.on('resource:gathered', () => playSfx('gather'));
+    events.on('gather:hit', () => playSfx('gather')); // 총기 소리는 player 모듈이 weapon:sound 로 직접 낸다
     events.on('zombie:converted', () => playSfx('convert'));
     events.on('building:placed', () => playSfx('build'));
     events.on('core:damaged', () => playSfx('coreHit'));
