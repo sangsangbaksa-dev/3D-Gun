@@ -8,7 +8,7 @@ import { input } from '../core/input';
 import { addInteractable } from '../core/interact';
 import { resolveObstacles } from '../core/world';
 import type { Ctx, System } from '../core/types';
-import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, restoreAllies, persistAllies, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
+import { updateAlly, reapDead, spawnAlly, setRole, canSetRole, countRole, syncCount, restoreAllies, persistAllies, flushAllies, saveTick, type Ally, type AllyEnv, type GatherNode } from './logic/ally';
 import { injector, stunnedNear, advance, resetInject, activeTier, blockReason, chanceFor } from './logic/inject';
 import { enqueueCraft, updateCraft, nextOwnedTier, craftQueue } from './logic/vaccine';
 import { AllyView } from './view/allyView';
@@ -119,6 +119,8 @@ export const AlliesSystem: System = {
       if (wave === 1) toast('준비 시간: B 로 포탑(1·2) · 핵 L 백신 제작 · 좀비 처치로 샘플');
       else if (wave % 3 === 0 && state.vaccines.every((n) => n === 0) && state.samples >= 1) toast('백신이 비었어요 — L 키로 제작');
     });
+    events.on('run:over', flushAllies);
+    addEventListener('pagehide', flushAllies);
     events.on('player:hit', () => {
       if (injector.progress > 0.05) toast('주사가 취소됐다!');
       resetInject();
@@ -190,6 +192,7 @@ export const AlliesSystem: System = {
       fx.burst(dead.x, 1, dead.z, 0x9aa5a0, 12, 3);
     }
     syncCount();
+    saveTick(dt);
     for (const a of allies as Ally[]) if (!views.has(a.id)) views.set(a.id, new AllyView(a, ctx.scene));
     for (const v of views.values()) v.update(dt, ctx.camera);
     for (let i = dying.length - 1; i >= 0; i--) if (dying[i].v.update(dt, ctx.camera)) dying.splice(i, 1);

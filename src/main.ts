@@ -12,6 +12,7 @@ import { AlliesSystem } from './allies';
 import { HudSystem } from './core/hud';
 import { Tycoon2dSystem } from './tycoon2d';
 import { TitleSystem } from './title';
+import { saveMeta } from './core/meta';
 
 // 기능 모듈은 System 을 만들어 이 배열에 한 줄씩 등록한다. (실행 순서 = 배열 순서)
 // 기본은 모듈 조합(W1~W6). `?playtest` 를 붙이면 예전 통합 슬라이스(playtest)로 실행한다.
@@ -30,3 +31,6 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     HudSystem,
     TitleSystem, // 타이틀 카메라 궤도(PlayerSystem 뒤에 카메라를 덮어씀) + 첫 출격 안내 띠
   ]);
+
+// 포탑 내구도·아군 체력은 저장을 몇 초씩 미루므로(localStorage 쓰기 줄이기) 페이지를 떠날 때 한 번 더 쓴다
+addEventListener('pagehide', () => saveMeta());
