@@ -53,7 +53,7 @@ export class BuildController {
     this.active = true; state.mode = 'build'; this.overlay.setBuilding(true);
     if (!this.buildTipShown) {
       this.buildTipShown = true;
-      this.toast('1·2 포탑 배치 후 6 연구소(선택) · 준비 중 핵에서 L 로 백신 제작');
+      this.toast('1·2 포탑 배치 후 5 연구소(선택) · 준비 중 핵에서 L 로 백신 제작');
     }
   }
   exit(msg?: string) {

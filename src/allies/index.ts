@@ -49,7 +49,7 @@ let labBuilt = false;
 function openPanel() {
   if (panel.open || time - panel.closedAt < 0.3) return;
   if (state.phase !== 'prep' && !labBuilt) {
-    toast('전투 중에는 연구소(건설 6번)를 지은 뒤 핵·연구소에서 제작하세요');
+    toast('전투 중에는 연구소(건설 5번)를 지은 뒤 핵·연구소에서 제작하세요');
     return;
   }
   panel.show();
