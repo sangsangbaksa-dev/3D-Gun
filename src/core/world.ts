@@ -3,6 +3,7 @@ import { MAP } from '../data/map';
 import { buildWorldView } from './worldview';
 import { terrainY } from './terrain';
 import { addScenery } from './scenery';
+import { Atmosphere } from './atmosphere';
 
 export const WORLD_HALF = MAP.half;
 
@@ -21,12 +22,14 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xb8cde0);
-  scene.fog = new THREE.Fog(0xb8cde0, 80, 380);
+  // 색·강도는 Atmosphere 가 페이즈(준비/전투/종료)에 맞춰 매 프레임 덮어쓴다
+  scene.background = new THREE.Color(0x10141a);
+  scene.fog = new THREE.Fog(0x8a4a2a, 40, 140);
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
 
-  scene.add(new THREE.HemisphereLight(0xd4e8ff, 0x4a4538, 0.95));
-  const sun = new THREE.DirectionalLight(0xfff4e0, 1.55);
+  const hemi = new THREE.HemisphereLight(0x2ee6d6, 0x3a332c, 1);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xff8a2a, 1.6);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -35,6 +38,7 @@ export function createWorld(canvas: HTMLCanvasElement): World {
 
   addScenery(scene, obstacles);
   buildWorldView(scene);
+  new Atmosphere(scene, sun, hemi);
   for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
 
   const resize = () => {

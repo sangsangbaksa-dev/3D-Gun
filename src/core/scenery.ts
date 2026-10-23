@@ -27,6 +27,46 @@ const cyl = (parent: THREE.Object3D, rt: number, rb: number, h: number, color: n
   return m;
 };
 
+// 지면 색: 어두운 잿빛 사막 바탕에 구역별 색을 번지게 섞고, 레인은 마른 흙길로 칠한다.
+const hash = (x: number, z: number) => { const v = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return v - Math.floor(v); };
+function vnoise(x: number, z: number) {
+  const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+  const a = hash(ix, iz), b = hash(ix + 1, iz), c = hash(ix, iz + 1), d = hash(ix + 1, iz + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+const fbm = (x: number, z: number) => vnoise(x, z) * 0.5 + vnoise(x * 2.1, z * 2.1) * 0.3 + vnoise(x * 4.3, z * 4.3) * 0.2;
+const sstep = (a: number, b: number, t: number) => { const k = Math.max(0, Math.min(1, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+const rgb = (h: number): [number, number, number] => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
+const mix3 = (p: number[], q: number[], t: number): [number, number, number] => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+const ZONE_TONE: Record<string, number> = { base: 0x1c2226, forest: 0x24331e, quarry: 0x3a3a36, mine: 0x1a1816, field: 0x3b3222, ruins: 0x24222a, wasteland: 0x2a2520, boss: 0x2e1a1c };
+const ZONE_LIGHT: Record<string, number> = { base: 1.05, field: 1.08, forest: 0.95, quarry: 1, boss: 0.92, mine: 1, ruins: 1, wasteland: 1 };
+const GROUND = 0x2a2520, TRAIL = 0x5a4a36;
+function laneDist(x: number, z: number) {
+  let best = 1e9;
+  for (const l of MAP.lanes) for (let i = 0; i < l.waypoints.length - 1; i++) {
+    const a = l.waypoints[i], b = l.waypoints[i + 1], dx = b.x - a.x, dz = b.z - a.z;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+    best = Math.min(best, Math.hypot(x - a.x - dx * t, z - a.z - dz * t));
+  }
+  return best;
+}
+function groundTone(x: number, z: number, y: number): [number, number, number] {
+  const e = fbm(x * 0.08, z * 0.08);
+  let col = rgb(GROUND), light = 1;
+  for (const q of MAP.zones) {
+    const w = 1 - sstep(q.r - 5, q.r + 5, Math.hypot(x - q.x, z - q.z) + (e - 0.5) * 6);
+    if (w > 0) { col = mix3(col, rgb(ZONE_TONE[q.kind] ?? GROUND), w); light += ((ZONE_LIGHT[q.kind] ?? 1) - light) * w; }
+  }
+  const cross = Math.min(Math.abs(x), Math.abs(z)) + (Math.hypot(x, z) < 15 ? 99 : 0);
+  col = mix3(col, rgb(TRAIL), 1 - sstep(1.8, 6, Math.min(laneDist(x, z), cross) + (e - 0.5) * 3));
+  col = mix3(col, y > 0 ? rgb(0x3b3222) : rgb(0x14181a), Math.min(0.25, Math.abs(y) * 0.15));
+  const patch = sstep(0.55, 0.75, fbm(x * 0.025 + 17, z * 0.025 - 9)) * 0.16;
+  const grain = (fbm(x * 0.9, z * 0.9) - 0.5) * 0.08;
+  const k = (0.82 + e * 0.36) * 2.2 * light * (1 - patch + grain);
+  return [col[0] * k, col[1] * k, col[2] * k];
+}
+
 function addTerrain(scene: THREE.Scene) {
   const span = HALF * 2 + 40;
   const seg = 220;
@@ -39,14 +79,8 @@ function addTerrain(scene: THREE.Scene) {
     const x = pos.getX(i), z = pos.getZ(i);
     const y = terrainY(x, z);
     pos.setY(i, y);
-    const r = Math.hypot(x, z);
-    const road = Math.min(Math.abs(x), Math.abs(z)) < 3.2 && r > 15;
-    const n = Math.sin(x * 0.73) * Math.cos(z * 0.61);
-    if (r < 15) c.setHex(0x7c6a4c);
-    else if (road) c.setHex(0x8d7b5c);
-    else if (y < -0.7) c.setHex(0xa08a62);
-    else if (y > 1.7) c.setHex(0x8b8478);
-    else c.setHex(0x5c7242).offsetHSL(n * 0.02, 0, n * 0.05);
+    const [r, g, b] = groundTone(x, z, y);
+    c.setRGB(r, g, b, THREE.SRGBColorSpace);
     colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
