@@ -2,6 +2,7 @@
 // W7 오디오가 같은 이벤트로 실제 소리를 붙이려면 BUILTIN_SFX 를 false 로 끄면 된다.
 import { GUNS, type GunId } from '../../data';
 import { events } from '../../core/events';
+import { audioBus } from '../../audio/engine';
 
 export const BUILTIN_SFX = true;
 
@@ -15,20 +16,17 @@ export class GunSfx {
     events.on('weapon:sound', ({ weapon, kind }) => this.play(weapon as GunId, kind));
   }
 
+  /** 공용 오디오 버스(src/audio/engine.ts)를 쓴다: 설정의 마스터 볼륨이 총소리에도 걸린다 */
   private ensure() {
-    if (this.ac) return this.ac.state === 'suspended' ? (void this.ac.resume(), this.ac) : this.ac;
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return null;
-    try {
-      this.ac = new AC();
+    const bus = audioBus();
+    if (!bus) return null;
+    if (this.ac !== bus.ctx) {
+      this.ac = bus.ctx;
+      this.noise = bus.noise;
       this.master = this.ac.createGain();
       this.master.gain.value = 0.32;
-      this.master.connect(this.ac.destination);
-      const len = this.ac.sampleRate;
-      this.noise = this.ac.createBuffer(1, len, this.ac.sampleRate);
-      const d = this.noise.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    } catch { this.ac = null; }
+      this.master.connect(bus.master);
+    }
     return this.ac;
   }
 

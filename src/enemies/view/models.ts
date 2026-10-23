@@ -1,204 +1,192 @@
-// 좀비 3D 모델: core/humanoid 를 바탕으로 종류별 체형·장식을 더한다. (외부 에셋 없음)
+// 좀비 3D 모델: core/humanoid 몸통에 종류별 체형·장식을 더한다. (외부 에셋 없음)
+// 모델 키는 ZOMBIE_TUNING.height 에 맞춘다 → 머리(키의 78% 위)가 헤드샷 판정 구간과 일치.
+// 지오메트리와 장식 재질은 공유 캐시 (userData.shared), 몸 재질 4개 + 눈만 개체별 (피격 번쩍임용).
 // Unity: 종류별 프리팹. 장식 메시는 자식 오브젝트.
 import * as THREE from 'three';
-import { makeHumanoid, type Humanoid } from '../../core/humanoid';
-import type { ZType } from '../../data';
+import { makeHumanoid, sharedGeo, boxesGeo, type Humanoid, type BodyOpts } from '../../core/humanoid';
+import { ZOMBIE_TUNING, type ZType } from '../../data';
 
 const CLOTHES = [0x5a4a3a, 0x3d4a5c, 0x6a5a3a, 0x4a3d5c, 0x55603f, 0x6c4040];
+const PANTS = [0x2d3340, 0x3a3328, 0x2a2f2a, 0x403a44];
+/** 단위 몸의 머리 꼭대기 높이 */
+const UNIT_H = 1.88;
 
 export interface ZombieModel {
   h: Humanoid;
   eyes: THREE.MeshBasicMaterial;
   /** 이름 있는 장식 조각 (view 가 애니메이션할 때 찾는다) */
   parts: Record<string, THREE.Object3D>;
+  /** 몸 비율 (뷰가 자세를 고를 때 쓴다) */
+  hunch: number;
 }
 
-const lambert = (color: number, emissive = 0) => new THREE.MeshLambertMaterial({ color, emissive });
+// ── 공유 장식 재질 ───────────────────────────
+const matCache = new Map<string, THREE.Material>();
+function smat(key: string, make: () => THREE.Material) {
+  let m = matCache.get(key);
+  if (!m) { m = make(); m.userData.shared = true; matCache.set(key, m); }
+  return m;
+}
+const lam = (c: number, e = 0) => () => new THREE.MeshLambertMaterial({ color: c, emissive: e });
+const glow = (c: number) => () => new THREE.MeshBasicMaterial({ color: c, fog: false });
+const M = {
+  steel: () => smat('steel', lam(0x6f767e)),
+  steelDk: () => smat('steelDk', lam(0x3a3f46)),
+  bone: () => smat('bone', lam(0xcfc6a8)),
+  dyn: () => smat('dyn', lam(0xd23a2a, 0x2a0000)),
+  rope: () => smat('rope', lam(0x2a2420)),
+  gold: () => smat('gold', lam(0xf2c230, 0x6a4a00)),
+  acid: () => smat('acid', lam(0x9bff3a, 0x3f9a10)),
+  fuse: () => smat('fuse', glow(0xffb030)),
+  core: () => smat('core', glow(0xff3322)),
+  capeP: () => smat('capeP', lam(0x4a1a5a)),
+  capeR: () => smat('capeR', lam(0x6a1020)),
+  barrel: () => smat('barrel', lam(0x7a4a22, 0x1a0a00)),
+};
 
-function box(w: number, h: number, d: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, emissive = 0) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lambert(color, emissive));
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  parent.add(mesh);
-  return mesh;
+const G = {
+  box: () => sharedGeo('d-box', () => new THREE.BoxGeometry(1, 1, 1)),
+  cone4: () => sharedGeo('d-cone4', () => new THREE.ConeGeometry(1, 1, 4)),
+  cone6: () => sharedGeo('d-cone6', () => new THREE.ConeGeometry(1, 1, 6)),
+  cyl: () => sharedGeo('d-cyl', () => new THREE.CylinderGeometry(1, 1, 1, 8)),
+  ball: () => sharedGeo('d-ball', () => new THREE.IcosahedronGeometry(1, 1)),
+  oct: () => sharedGeo('d-oct', () => new THREE.OctahedronGeometry(1, 0)),
+};
+
+/** 공유 지오메트리 + 공유 재질 장식 하나. s = [sx, sy, sz] */
+function deco(geo: THREE.BufferGeometry, mat: THREE.Material, parent: THREE.Object3D, x: number, y: number, z: number, s: [number, number, number], rot: [number, number, number] = [0, 0, 0], shadow = false) {
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, y, z); m.scale.set(...s); m.rotation.set(...rot);
+  m.castShadow = shadow;
+  parent.add(m);
+  return m;
 }
-function cone(r: number, h: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, emissive = 0) {
-  const mesh = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6), lambert(color, emissive));
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
-function ball(r: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, emissive = 0) {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), lambert(color, emissive));
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
-function cyl(rt: number, rb: number, h: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, emissive = 0) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 10), lambert(color, emissive));
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
+
+const EYE: Partial<Record<ZType, number>> = {
+  boss: 0xff3322, bossBomb: 0xffa020, bossAcid: 0xb6ff3a, bossLord: 0xff3aff, king: 0xff2a1a,
+  spitter: 0xb6ff3a, bomber: 0xff7a2a, screamer: 0xffffff, tank: 0xff5a3a, swarmer: 0xff8a2a, runner: 0xffe066,
+};
 
 export function buildZombieModel(type: ZType, id: number, wave: number, elite = false): ZombieModel {
   const cloth = CLOTHES[id % CLOTHES.length];
   const parts: Record<string, THREE.Object3D> = {};
-  const isBoss = type === 'boss' || type === 'bossBomb' || type === 'bossAcid' || type === 'bossLord' || type === 'king';
-  const eyeColor = isBoss ? ({ boss: 0xff3322, bossBomb: 0xffa020, bossAcid: 0xb6ff3a, bossLord: 0xff3aff, king: 0xff3322 } as Record<string, number>)[type]
-    : type === 'spitter' ? 0xb6ff3a : type === 'bomber' ? 0xff7a2a : type === 'screamer' ? 0xffffff : type === 'tank' ? 0xff5a3a : 0xffe066;
-  const eyes = new THREE.MeshBasicMaterial({ color: eyeColor });
-  const addEyes = (g: THREE.Object3D, y: number, z: number, s = 1) => {
-    for (const sx of [-1, 1]) {
-      const e = new THREE.Mesh(new THREE.BoxGeometry(0.09 * s, 0.06 * s, 0.04), eyes);
-      e.position.set(sx * 0.1, y, z);
-      g.add(e);
-    }
-  };
-  let h: Humanoid;
+  const base: BodyOpts = { torn: 1, variant: id, hair: id % 3 !== 0, pants: PANTS[id % PANTS.length], eye: EYE[type] ?? 0xffd23a };
+  // 종류별: 피부, 옷, 몸 옵션, 가로 배율, 깊이 배율, 구부정함
+  let skin = 0x7f9a6a, shirt = cloth, opts: BodyOpts = {}, wx = 1, wz = 1, hunch = 0.22;
   switch (type) {
-    case 'runner':
-      h = makeHumanoid(0x9bb86a, 0x7a2f2f, 0.95);
-      h.group.scale.x = 0.88; // 마르고 날렵한 체형
-      addEyes(h.group, 1.72, -0.215);
+    case 'runner': skin = 0xa3b07a; shirt = 0x7a2f2f; opts = { arm: 1.15 }; wx = 0.84; hunch = 0.3; break;
+    case 'fatty': skin = 0x8fae7a; opts = { belly: 1, head: 0.9, hair: false }; wx = 1.4; wz = 1.3; hunch = 0.08; break;
+    case 'crawler': skin = 0x8aa86a; shirt = 0x4a4036; opts = { stump: true, arm: 1.25 }; break;
+    case 'swarmer': skin = 0xb7c97a; shirt = 0xb0402a; opts = { head: 1.15 }; hunch = 0.35; break;
+    case 'leaper': skin = 0x6fa08a; shirt = 0x23302c; opts = { arm: 1.35, hair: false }; wx = 0.9; hunch = 0.4; break;
+    case 'spitter': skin = 0x9ad04a; shirt = 0x3d5a2a; break;
+    case 'bomber': skin = 0xa88a5a; shirt = 0x7a2a22; wx = 1.12; hunch = 0.12; break;
+    case 'screamer': skin = 0xc9d6c0; shirt = 0x5a3a7a; opts = { arm: 1.15 }; wx = 0.85; hunch = 0.05; break;
+    case 'tank': skin = 0x7f8f6f; shirt = 0x4a4f55; opts = { hair: false }; wx = 1.25; wz = 1.15; hunch = 0.15; break;
+    case 'boss': skin = 0x6a8f5c; shirt = [0x7a1f1f, 0x1f4f7a, 0x5a1f7a, 0x7a5a1f][Math.max(0, Math.min(3, Math.floor(wave / 10) - 1))]; opts = { arm: 1.2, hair: false }; wx = 1.3; wz = 1.15; hunch = 0.28; break;
+    case 'bossBomb': skin = 0x8a7a5a; shirt = 0xd9822b; opts = { belly: 0.5 }; wx = 1.3; wz = 1.2; hunch = 0.15; break;
+    case 'bossAcid': skin = 0x8fd04a; shirt = 0x2f4a2a; opts = { belly: 0.6, hair: false, arm: 1.15 }; wx = 1.4; wz = 1.25; hunch = 0.3; break;
+    case 'bossLord': skin = 0x7f8f7a; shirt = 0x3a3f4a; opts = { hair: false }; wx = 1.25; wz = 1.15; hunch = 0.06; break;
+    case 'king': skin = 0x5a7f55; shirt = 0x3a1030; opts = { arm: 1.2, hair: false }; wx = 1.2; wz = 1.1; hunch = 0.1; break;
+    default:
+  }
+  const h = makeHumanoid(skin, shirt, 1, { ...base, ...opts });
+  const torso = h.torso!, head = h.head!;
+  // 키를 판정 키에 맞춘다 (crawler 는 기어다니므로 서 있는 몸 기준 0.9)
+  const k = type === 'crawler' ? 0.9 : ZOMBIE_TUNING[type].height / UNIT_H;
+  h.group.scale.set(k * wx, k, k * wz);
+
+  const steel = M.steel(), bone = M.bone();
+  switch (type) {
+    case 'leaper':
+      for (let i = 0; i < 4; i++) deco(G.cone4(), bone, torso, 0, 0.62 - i * 0.16, 0.2, [0.06, 0.26, 0.06], [-1.0, 0, 0]); // 등 가시
+      for (const f of h.fore!) for (const sx of [-0.05, 0.05]) deco(G.cone4(), bone, f, sx, -0.62, -0.02, [0.03, 0.2, 0.03], [Math.PI, 0, 0]); // 긴 발톱
       break;
-    case 'fatty':
-      h = makeHumanoid(0x8fae7a, cloth, 1.5);
-      h.group.scale.set(1.5 * 1.35, 1.5, 1.5 * 1.25);
-      box(0.78, 0.5, 0.5, 0x6f8c5e, 0, 0.92, -0.06, h.group); // 불룩한 배
-      addEyes(h.group, 1.72, -0.215);
+    case 'spitter':
+      parts.sac = deco(G.ball(), M.acid(), torso, 0, 0.62, -0.16, [0.17, 0.15, 0.15]); // 부푼 산성 목주머니
+      deco(G.box(), M.acid(), head, 0.03, -0.06, -0.19, [0.05, 0.16, 0.03]);         // 흘러내리는 침
+      for (const [x, y] of [[0.18, 0.4], [-0.2, 0.25]]) deco(G.ball(), M.acid(), torso, x, y, -0.17, [0.06, 0.06, 0.04]); // 산성 물집
       break;
-    case 'crawler':
-      h = makeHumanoid(0x8aa86a, 0x4a4036, 0.9);
-      addEyes(h.group, 1.72, -0.215);
-      box(0.3, 0.12, 0.1, 0x3a2f28, 0.1, 1.32, -0.2, h.group); // 찢어진 옷자락
-      break;
-    case 'swarmer':
-      h = makeHumanoid(0xb7c97a, 0xb0402a, 0.6);
-      addEyes(h.group, 1.72, -0.215, 1.5);
-      break;
-    case 'leaper': {
-      h = makeHumanoid(0x6fa08a, 0x23302c, 1.05);
-      h.group.scale.y = 1.12; // 긴 다리
-      addEyes(h.group, 1.72, -0.215, 1.2);
-      for (let i = 0; i < 4; i++) cone(0.07, 0.3, 0x2b4a40, 0, 1.45 - i * 0.2, 0.2, h.group).rotation.x = 0.9; // 등 가시
-      for (const a of h.arms) box(0.06, 0.28, 0.06, 0xdfe7d8, 0, -0.72, -0.05, a); // 발톱
-      break;
-    }
-    case 'spitter': {
-      h = makeHumanoid(0x9ad04a, 0x3d5a2a, 1);
-      addEyes(h.group, 1.72, -0.215);
-      parts.sac = ball(0.2, 0x9bff3a, 0, 1.38, -0.08, h.group, 0x2a6a0a); // 산성 주머니
-      box(0.16, 0.08, 0.05, 0x1a3a0a, 0, 1.6, -0.22, h.group); // 입
-      break;
-    }
     case 'bomber': {
-      h = makeHumanoid(0xa88a5a, 0x7a2a22, 1.15);
-      h.group.scale.x = 1.12;
-      addEyes(h.group, 1.72, -0.215);
-      for (let i = 0; i < 4; i++) cyl(0.045, 0.045, 0.3, 0xd23a2a, -0.27 + i * 0.18, 1.05, -0.2, h.group); // 다이너마이트
-      box(0.7, 0.07, 0.4, 0x2a2420, 0, 1.0, 0, h.group);
-      parts.fuse = ball(0.07, 0xffb030, 0, 2.02, 0, h.group, 0xff7a10);
+      const dyn = M.dyn(), rope = M.rope();
+      for (let i = 0; i < 5; i++) deco(G.cyl(), dyn, torso, -0.24 + i * 0.12, 0.34, -0.2, [0.045, 0.3, 0.045]); // 다이너마이트 조끼
+      deco(G.box(), rope, torso, 0, 0.34, -0.2, [0.66, 0.06, 0.06]);
+      deco(G.box(), rope, torso, 0, 0.46, -0.2, [0.66, 0.05, 0.06]);
+      deco(G.box(), M.steelDk(), torso, 0.12, 0.56, -0.21, [0.14, 0.1, 0.05]);    // 기폭 장치
+      parts.fuse = deco(G.ball(), M.fuse(), torso, 0.12, 0.63, -0.22, [0.05, 0.05, 0.05]);
       break;
     }
-    case 'screamer': {
-      h = makeHumanoid(0xc9d6c0, 0x5a3a7a, 1.05);
-      h.group.scale.y = 1.1;
-      addEyes(h.group, 1.74, -0.215, 1.3);
-      parts.mouth = box(0.24, 0.2, 0.05, 0x14060a, 0, 1.6, -0.215, h.group); // 쩍 벌린 입
+    case 'screamer':
+      parts.mouth = deco(G.box(), M.rope(), head, 0, 0.1, -0.205, [0.2, 0.16, 0.02]); // 쩍 벌린 입
+      for (const sx of [-1, 1]) deco(G.box(), M.rope(), head, sx * 0.17, 0.12, 0.08, [0.06, 0.4, 0.2], [0.15, 0, sx * 0.08]); // 늘어진 머리카락
       break;
-    }
-    case 'tank': {
-      h = makeHumanoid(0x7f8f6f, 0x4a4f55, 1.45);
-      h.group.scale.set(1.45 * 1.15, 1.45, 1.45 * 1.1);
-      addEyes(h.group, 1.72, -0.215);
-      const steel = 0x8a9097;
-      box(0.7, 0.55, 0.42, steel, 0, 1.12, -0.03, h.group);            // 흉갑
-      box(0.28, 0.14, 0.34, steel, -0.42, 1.46, 0, h.group);           // 어깨 갑옷
-      box(0.28, 0.14, 0.34, steel, 0.42, 1.46, 0, h.group);
-      box(0.5, 0.2, 0.5, steel, 0, 1.92, 0, h.group);                  // 투구
+    case 'tank':
+      deco(G.box(), steel, torso, 0, 0.42, -0.02, [0.7, 0.55, 0.42], [0, 0, 0], true);   // 흉갑
+      deco(G.box(), M.steelDk(), torso, 0, 0.42, -0.24, [0.5, 0.06, 0.02]);               // 리벳 줄
+      for (const a of h.arms) deco(G.box(), steel, a, 0, 0.0, 0, [0.3, 0.14, 0.32], [0, 0, 0], true); // 어깨 갑옷
+      deco(G.box(), steel, head, 0, 0.37, 0, [0.46, 0.14, 0.46], [0, 0, 0], true);         // 투구
+      deco(G.box(), steel, head, 0, 0.31, -0.22, [0.46, 0.05, 0.06]);                      // 챙
+      deco(G.box(), M.steelDk(), head, 0, 0.12, -0.21, [0.44, 0.09, 0.05]);                // 면갑 (눈 아래)
       break;
-    }
-    case 'boss': {
-      const bi = Math.max(0, Math.min(3, Math.floor(wave / 10) - 1));
-      h = makeHumanoid(0x6a8f5c, [0x7a1f1f, 0x1f4f7a, 0x5a1f7a, 0x7a5a1f][bi], 2.2);
-      addEyes(h.group, 1.72, -0.215, 1.4);
-      for (const sx of [-1, 1]) cone(0.14, 0.55, 0xcfc6a8, sx * 0.46, 1.62, 0, h.group).rotation.z = -sx * 0.7; // 어깨 뿔
-      box(0.7, 0.18, 0.4, 0x2a2420, 0, 0.78, 0, h.group);
+    case 'boss':
+      for (const a of h.arms) deco(G.cone6(), bone, a, 0, 0.12, 0, [0.12, 0.45, 0.12], [0, 0, a.position.x < 0 ? 0.7 : -0.7]); // 어깨 뼈뿔
+      for (let i = 0; i < 3; i++) deco(G.box(), bone, torso, -0.18 + i * 0.18, 0.06, -0.2, [0.1, 0.1, 0.06]); // 해골 벨트 장식
+      for (let i = 0; i < 3; i++) deco(G.box(), bone, torso, 0, 0.32 + i * 0.09, -0.19, [0.36 - i * 0.04, 0.03, 0.03]); // 드러난 갈비뼈
       break;
-    }
     case 'bossBomb': {
-      h = makeHumanoid(0x8a7a5a, 0xd9822b, 2.3);
-      addEyes(h.group, 1.72, -0.215, 1.4);
-      for (let i = 0; i < 6; i++) cyl(0.07, 0.07, 0.55, 0xd23a2a, -0.28 + i * 0.11, 1.15, 0.26, h.group); // 등짐 다이너마이트
-      cyl(0.26, 0.26, 0.5, 0x7a4a22, -0.5, 1.7, 0, h.group, 0x1a0a00);   // 어깨 화약통
-      parts.fuse = ball(0.1, 0xffb030, 0.28, 1.5, 0.28, h.group, 0xff7a10);
-      box(0.7, 0.18, 0.4, 0x2a2420, 0, 0.78, 0, h.group);
+      const dyn = M.dyn();
+      for (let i = 0; i < 6; i++) deco(G.cyl(), dyn, torso, -0.28 + i * 0.11, 0.38, 0.24, [0.06, 0.5, 0.06]); // 등짐 다이너마이트
+      deco(G.cyl(), M.barrel(), torso, -0.48, 0.82, 0, [0.22, 0.42, 0.22], [0, 0, 0.3], true); // 어깨 화약통
+      deco(G.box(), M.rope(), torso, 0, 0.5, 0, [0.7, 0.06, 0.4], [0, 0, 0.6]);           // 멜빵
+      parts.fuse = deco(G.ball(), M.fuse(), torso, 0.28, 0.72, 0.26, [0.08, 0.08, 0.08]);
       break;
     }
-    case 'bossAcid': {
-      h = makeHumanoid(0x8fd04a, 0x2f4a2a, 2.4);
-      h.group.scale.x = 2.4 * 1.15;
-      addEyes(h.group, 1.72, -0.215, 1.4);
-      cyl(0.16, 0.16, 0.8, 0x9bff3a, -0.18, 1.2, 0.3, h.group, 0x2f8a0a);  // 등 산성 탱크
-      cyl(0.16, 0.16, 0.8, 0x9bff3a, 0.18, 1.2, 0.3, h.group, 0x2f8a0a);
-      for (const [x, y, z] of [[-0.42, 1.6, -0.05], [0.4, 1.45, 0.1], [0.05, 1.9, 0.15]] as const) ball(0.13, 0xb6ff3a, x, y, z, h.group, 0x3f9a10); // 산성 혹
+    case 'bossAcid':
+      for (const sx of [-0.18, 0.18]) deco(G.cyl(), M.acid(), torso, sx, 0.42, 0.28, [0.15, 0.7, 0.15], [0, 0, 0], true); // 등 산성 탱크
+      for (const [x, y, z, r] of [[-0.36, 0.62, -0.05, 0.13], [0.34, 0.5, 0.1, 0.11], [0.05, 0.22, -0.28, 0.1]] as const) deco(G.ball(), M.acid(), torso, x, y, z, [r, r, r]); // 산성 혹
+      deco(G.ball(), M.acid(), head, 0.14, 0.32, 0.05, [0.09, 0.09, 0.09]);
       parts.tanks = h.group;
       break;
-    }
-    case 'bossLord': {
-      h = makeHumanoid(0x7f8f7a, 0x3a3f4a, 2.6);
-      addEyes(h.group, 1.72, -0.215, 1.5);
-      const steel = 0x6a7078;
-      box(0.72, 0.6, 0.42, steel, 0, 1.1, -0.03, h.group);
-      for (const sx of [-1, 1]) {
-        box(0.34, 0.2, 0.4, steel, sx * 0.46, 1.5, 0, h.group);
-        cone(0.1, 0.4, 0xcfc6a8, sx * 0.24, 2.05, 0, h.group).rotation.z = -sx * 0.45; // 투구 뿔
-      }
-      box(0.52, 0.22, 0.52, steel, 0, 1.92, 0, h.group);
-      const cape = box(0.8, 1.3, 0.06, 0x5a1a6a, 0, 1.0, 0.26, h.group);
-      cape.rotation.x = 0.12;
+    case 'bossLord':
+      deco(G.box(), steel, torso, 0, 0.44, -0.02, [0.72, 0.6, 0.42], [0, 0, 0], true);
+      for (const a of h.arms) deco(G.box(), steel, a, 0, 0.02, 0, [0.36, 0.2, 0.4], [0, 0, 0], true);
+      deco(G.box(), steel, head, 0, 0.37, 0, [0.48, 0.14, 0.48], [0, 0, 0], true);
+      for (const sx of [-1, 1]) deco(G.cone6(), bone, head, sx * 0.24, 0.5, 0, [0.08, 0.38, 0.08], [0, 0, -sx * 0.45]); // 투구 뿔
+      deco(G.box(), M.capeP(), torso, 0, 0.2, 0.24, [0.78, 1.2, 0.05], [0.12, 0, 0], true).name = 'cape';
       break;
-    }
     case 'king': {
-      h = makeHumanoid(0x5a7f55, 0x3a1030, 3.2);
-      addEyes(h.group, 1.72, -0.215, 1.6);
-      const gold = lambert(0xf2c230, 0x6a4a00);
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.1, 10), gold);
-      band.position.y = 1.96; h.group.add(band);
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22, 4), gold);
-        sp.position.set(Math.cos(a) * 0.23, 2.1, Math.sin(a) * 0.23);
-        h.group.add(sp);
-      }
-      box(0.8, 1.3, 0.06, 0x7a1022, 0, 1.0, 0.26, h.group).rotation.x = 0.12;
-      for (const sx of [-1, 1]) cone(0.16, 0.7, 0xcfc6a8, sx * 0.5, 1.7, 0, h.group).rotation.z = -sx * 0.8;
+      const gold = M.gold();
+      deco(G.cyl(), gold, head, 0, 0.42, 0, [0.24, 0.08, 0.24]);                           // 왕관 띠
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; deco(G.cone4(), gold, head, Math.cos(a) * 0.21, 0.54, Math.sin(a) * 0.21, [0.05, 0.18, 0.05]); }
+      deco(G.oct(), M.core(), head, 0, 0.44, -0.24, [0.05, 0.06, 0.03]);                  // 왕관 보석
+      deco(G.box(), M.capeR(), torso, 0, 0.2, 0.24, [0.8, 1.25, 0.05], [0.12, 0, 0], true).name = 'cape';
+      for (const a of h.arms) deco(G.cone6(), bone, a, 0, 0.14, 0, [0.14, 0.6, 0.14], [0, 0, a.position.x < 0 ? 0.8 : -0.8]);
+      for (let i = 0; i < 3; i++) deco(G.box(), bone, torso, 0, 0.3 + i * 0.1, -0.19, [0.4 - i * 0.05, 0.035, 0.03]);
+      parts.core = deco(G.oct(), M.core(), torso, 0, 0.5, -0.2, [0.09, 0.12, 0.05]);   // 가슴의 붉은 핵
       break;
     }
     default:
-      h = makeHumanoid(0x7fa36a, cloth, 1);
-      addEyes(h.group, 1.72, -0.215);
   }
   if (elite) {
     // 엘리트: 금빛 견장과 머리 위에 떠 있는 보석
-    for (const sx of [-1, 1]) box(0.32, 0.1, 0.4, 0xf2c230, sx * 0.42, 1.5, 0, h.group, 0x5a3a00);
-    parts.gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), lambert(0xffd84a, 0x8a5a00));
-    parts.gem.position.set(0, 2.35, 0);
-    h.group.add(parts.gem);
+    const gold = M.gold();
+    for (const a of h.arms) deco(G.box(), gold, a, 0, 0.02, 0, [0.3, 0.09, 0.34]);
+    parts.gem = deco(G.oct(), gold, h.group, 0, 2.3, 0, [0.14, 0.14, 0.14]);
   }
   h.group.rotation.order = 'YXZ';
-  return { h, eyes, parts };
+  return { h, eyes: h.eyes!, parts, hunch };
 }
 
+/** 개체 전용 지오메트리·재질만 버린다 (공유 캐시는 남긴다) */
 export function disposeModel(group: THREE.Object3D) {
   group.traverse((o) => {
     const m = o as THREE.Mesh;
-    if (m.geometry) m.geometry.dispose();
+    if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose();
     const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-    if (Array.isArray(mat)) mat.forEach((x) => x.dispose()); else mat?.dispose();
+    const drop = (x: THREE.Material) => { if (!x.userData.shared) x.dispose(); };
+    if (Array.isArray(mat)) mat.forEach(drop); else if (mat) drop(mat);
   });
 }
+
+// 미리 쓰는 지오메트리 하나를 만들어 둬 첫 스폰 때 끊김을 줄인다
+boxesGeo('warm', [[0.1, 0.1, 0.1, 0, 0, 0]]);

@@ -91,16 +91,16 @@ export class BaseView {
       if (e.t === 'shot') {
         const mg = e.kind === 'mgtower';
         const gy = groundY(e.fx, e.fz);
-        this.fx.tracer(e.fx, gy + e.fy, e.fz, e.tx, groundY(e.tx, e.tz) + e.ty, e.tz, e.crit ? 0xff7a40 : mg ? 0xffc470 : 0xfff3b8, mg ? 0.05 : 0.07);
-        this.fx.flash(e.fx, gy + e.fy, e.fz, 0xffe9a0, mg ? 0.28 : 0.4);
+        this.fx.tracer(e.fx, gy + e.fy, e.fz, e.tx, groundY(e.tx, e.tz) + e.ty, e.tz, e.crit ? 0xff5a3a : mg ? 0xffa850 : 0xffd890, mg ? 0.05 : 0.07);
+        this.fx.flash(e.fx, gy + e.fy, e.fz, 0xffc070, mg ? 0.22 : 0.32);
         this.fx.flash(e.tx, groundY(e.tx, e.tz) + e.ty, e.tz, e.crit ? 0xff6a30 : 0xffd9a0, e.crit ? 0.5 : 0.28, 0.1);
         const rec = this.recs.get(e.id);
-        if (rec) rec.kick = 1;
+        if (rec) { rec.kick = 1; rec.model.fire?.(); }
       } else if (e.t === 'pulse') {
         this.fx.ring(e.x, e.z, e.r, 0xffb347, 0.5, 0.4);
       } else if (e.t === 'placed') {
         const y = groundY(e.x, e.z);
-        this.fx.ring(e.x, e.z, e.r * 2.2, 0x7fe3ff, 0.6, 0.3);
+        this.fx.ring(e.x, e.z, e.r * 2.2, 0x2ee6d6, 0.6, 0.3);
         this.fx.burst(e.x, y + 0.3, e.z, 8, 0x9a8f7a, 2.2, false);
       } else if (e.t === 'boom') {
         const y = groundY(e.x, e.z);
@@ -147,8 +147,8 @@ export class BaseView {
         const idle = b.tracking ? 0 : Math.sin(t * 0.7 + b.id) * 0.5;
         m.head.rotation.y = b.aimYaw - rec.yaw + idle;
         rec.kick = Math.max(0, rec.kick - dt * 9);
-        m.head.position.z = rec.kick * 0.14;
       }
+      m.tick?.(dt);
       m.anim?.(t, dt);
       for (const g of m.glows) g.mat.emissiveIntensity = g.base + Math.sin(t * g.speed + b.id) * g.amp;
       // 피격 번쩍임
@@ -193,7 +193,7 @@ export class BaseView {
       this.coreRoot.remove(cm.group);
       this.core = buildCoreModel(c.level);
       this.coreRoot.add(this.core.group);
-      this.fx.ring(c.x, c.z, 7, 0x7fe3ff, 0.9, 0.2);
+      this.fx.ring(c.x, c.z, 7, 0x2ee6d6, 0.9, 0.2);
     }
     const k = this.core;
     if (c.hitFlash > this.coreFlash) { this.coreFlash = c.hitFlash; }
@@ -209,8 +209,12 @@ export class BaseView {
     k.crystal.scale.set(0.85 * sc, 1.4 * sc, 0.85 * sc);
     k.rings.forEach((rg, i) => { rg.rotation.z = t * (0.6 + i * 0.25) * (i % 2 ? -1 : 1); rg.rotation.x = Math.PI / 2 + Math.sin(t * 0.5 + i) * 0.5; rg.position.y = k.crystal.position.y; });
     for (const g of k.glows) g.mat.emissiveIntensity = g.base + Math.sin(t * g.speed) * g.amp;
+    k.anim?.(t, dt);
+    k.innerMat.emissiveIntensity = dead ? 0.05 : 0.7 + Math.max(0, Math.sin(t * 2.4)) * 0.6 + this.coreFlash;
     (k.shield.material as THREE.MeshBasicMaterial).opacity = dead ? 0 : 0.05 + 0.07 * r + this.coreFlash * 0.25;
     (k.shield.material as THREE.MeshBasicMaterial).color.copy(col);
+    const lat = k.lattice.material as THREE.MeshBasicMaterial;
+    lat.color.copy(col); lat.opacity = dead ? 0 : 0.06 + 0.1 * r + this.coreFlash * 0.4;
     const light = k.group.userData.light as THREE.PointLight;
     light.color.copy(col);
     light.intensity = dead ? 0.2 : (1.6 + r * 1.4 + this.coreFlash * 3) * flick;

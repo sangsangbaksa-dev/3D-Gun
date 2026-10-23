@@ -21,9 +21,9 @@ export class BuildController {
   private ghost: Model | null = null;
   private ghostKind: BuildingId | null = null;
   private ghostRoot = new THREE.Group();
-  private ghostMats = { ok: new THREE.MeshBasicMaterial({ color: 0x66ff99, transparent: true, opacity: 0.5, depthWrite: false }), bad: new THREE.MeshBasicMaterial({ color: 0xff5a4f, transparent: true, opacity: 0.5, depthWrite: false }) };
+  private ghostMats = { ok: new THREE.MeshBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.5, depthWrite: false }), bad: new THREE.MeshBasicMaterial({ color: 0xe0303a, transparent: true, opacity: 0.5, depthWrite: false }) };
   private range: THREE.Mesh;
-  private rangeMat = new THREE.MeshBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
+  private rangeMat = new THREE.MeshBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
   private prevLeft = false; private prevRight = false;
   private lastCell = '';
   private tipText: { text: string; ok: boolean } | null = null;
@@ -38,7 +38,7 @@ export class BuildController {
     const rg = new THREE.RingGeometry(0.97, 1, 64); rg.rotateX(-Math.PI / 2);
     const disc = new THREE.CircleGeometry(1, 48); disc.rotateX(-Math.PI / 2);
     this.range = new THREE.Mesh(disc, this.rangeMat);
-    this.range.add(new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.8, depthWrite: false })));
+    this.range.add(new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.8, depthWrite: false })));
     this.range.visible = false;
     scene.add(this.range);
     events.on('wave:start', () => { if (this.active) this.exit('전투가 시작돼 건설 모드를 종료했어요'); });
@@ -69,7 +69,7 @@ export class BuildController {
     if (this.ghostKind === kind && this.ghost) return;
     if (this.ghost) this.ghostRoot.remove(this.ghost.group);
     this.ghost = buildModel(kind, 1);
-    this.ghost.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) { (o as THREE.Mesh).castShadow = false; } });
+    this.ghost.group.traverse((o) => { if (o.userData.fx) o.visible = false; if ((o as THREE.Mesh).isMesh) { (o as THREE.Mesh).castShadow = false; } });
     this.ghostRoot.add(this.ghost.group);
     this.ghostKind = kind;
   }
@@ -118,7 +118,7 @@ export class BuildController {
       const rr = def.turret ? def.turret.levels[0].range : def.trap ? def.trap.radius : 0;
       this.range.position.set(sx, y + 0.1, sz);
       this.range.scale.set(rr || 1, 1, rr || 1);
-      this.rangeMat.color.setHex(check.ok ? 0x7fe3ff : 0xff5a4f);
+      this.rangeMat.color.setHex(check.ok ? 0x2ee6d6 : 0xe0303a);
     }
 
     // 입력
