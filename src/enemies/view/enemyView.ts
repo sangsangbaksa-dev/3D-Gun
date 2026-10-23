@@ -16,7 +16,14 @@ interface ZView {
   stars: THREE.Group;
   dying: number;     // -1 = 생존, 아니면 사망 후 경과 시간
   spin: number;
-  fallDir: number;
+  fallDir: number;   // 1 = 뒤로, -1 = 앞으로 쓰러짐
+  fallSide: number;
+  limp: number;      // 절뚝이는 다리
+  flinch: number;    // 피격 젖힘 (1 → 0)
+  strike: number;    // 내려찍기 (1 → 0)
+  prevState: string;
+  eyeBase: THREE.Color;
+  ash: boolean;
 }
 interface RingFx { mesh: THREE.Group; inner?: THREE.Mesh; t: number; dur: number; r: number; warn: boolean }
 interface GasFx { group: THREE.Group; t: number; dur: number; r: number; puffs: THREE.Mesh[]; base: number }
@@ -24,7 +31,8 @@ interface Float { el: HTMLDivElement; x: number; y: number; z: number; t: number
 interface ProjFx { mesh: THREE.Mesh; sx: number; sz: number; tx: number; tz: number; t: number; dur: number }
 interface Flash { mesh: THREE.Mesh; t: number; dur: number; r: number }
 
-const DEATH_TIME = 2.2;
+const DEATH_TIME = 2.4;
+const WHITE = new THREE.Color(0xffffff);
 const RING_COLOR: Record<RingColor, number> = { warn: 0xff3a2a, impact: 0xfff0d0, scream: 0xb36bff, acid: 0x9bff3a };
 
 const diskGeo = new THREE.CircleGeometry(1, 40);
@@ -114,13 +122,17 @@ export class EnemyView {
     for (let i = 0; i < 3; i++) { const s = new THREE.Mesh(starGeo, starMat); stars.add(s); }
     stars.visible = false;
     this.scene.add(stars);
-    return { z, m, bar, barFill: fill, barW: bw, stars, dying: -1, spin: Math.random() * 6, fallDir: Math.random() < 0.5 ? 1 : -1 };
+    return {
+      z, m, bar, barFill: fill, barW: bw, stars, dying: -1, spin: Math.random() * 6,
+      fallDir: Math.random() < 0.6 ? 1 : -1, fallSide: Math.random() * 2 - 1, limp: z.id % 2,
+      flinch: 0, strike: 0, prevState: z.state, eyeBase: m.eyes.color.clone(), ash: false,
+    };
   }
 
   private removeView(v: ZView, keepModel = false) {
     this.scene.remove(v.bar, v.stars);
     disposeModel(v.bar);
-    if (!keepModel) { this.scene.remove(v.m.h.group); disposeModel(v.m.h.group); v.m.eyes.dispose(); }
+    if (!keepModel) { this.scene.remove(v.m.h.group); disposeModel(v.m.h.group); }
     this.views.delete(v.z);
   }
 
@@ -143,6 +155,8 @@ export class EnemyView {
       switch (e.k) {
         case 'spawn': this.views.set(e.z, this.makeView(e.z)); this.dust(e.z.x, e.z.z, Math.min(1.5, 0.6 + e.z.scale * 0.5)); break;
         case 'hit': {
+          const hv = this.views.get(e.z);
+          if (hv) hv.flinch = Math.min(1, hv.flinch + 0.35 + Math.min(0.65, e.dmg / Math.max(1, e.z.maxHp)));
           const armored = e.z.armor > 0 && !e.z.stunned;
           this.addFloat(e.z.x, e.z.height, e.z.z, String(Math.round(e.dmg)), armored ? '#9fb4c4' : e.dmg >= e.z.maxHp * 0.25 ? '#ffd24a' : '#fff');
           break;
@@ -174,98 +188,124 @@ export class EnemyView {
 
   private syncZombie(v: ZView, dt: number) {
     const z = v.z, h = v.m.h, g = h.group;
+    const torso = h.torso!, head = h.head!, fore = h.fore!;
     const gy = groundY(z.x, z.z);
     g.position.set(z.x, gy, z.z);
     g.rotation.y = z.yaw;
     const sway = this.time * 3 + v.spin;
-    let lean = 0, roll = 0, armX = 1.35 + Math.sin(sway) * 0.1, lift = 0;
 
-    if (v.dying >= 0) {
-      v.dying += dt;
-      const p = Math.min(1, v.dying / 0.55);
-      const e = 1 - (1 - p) * (1 - p);
-      g.rotation.x = e * (Math.PI / 2) * 0.96;
-      g.rotation.z = v.fallDir * 0.15 * e;
-      g.position.y = gy - Math.max(0, v.dying - 1.2) * 0.45;
-      h.arms.forEach((a, i) => (a.rotation.x = 1.2 - e * 1.6 + i * 0.3));
-      h.legs.forEach((l) => (l.rotation.x = 0));
-      const fade = Math.min(1, Math.max(0, (v.dying - 1.3) / 0.9));
-      if (fade > 0) for (const m of h.mats) { m.transparent = true; m.opacity = 1 - fade; }
-      if (v.dying >= DEATH_TIME) this.removeView(v);
-      return;
-    }
+    if (v.dying >= 0) { this.animateDeath(v, dt, gy); return; }
 
-    // 스폰: 땅에서 올라온다
+    // 공격 타이밍: 내려찍기(windup → chase 전환 순간)와 피격 젖힘은 잠깐 남는 값
+    if (v.prevState === 'windup' && z.state !== 'windup') v.strike = 1;
+    v.prevState = z.state;
+    v.strike = Math.max(0, v.strike - dt * 4.5);
+    v.flinch = Math.max(0, v.flinch - dt * 7);
+
+    let lean = 0, roll = 0, armX = 1.35 + Math.sin(sway) * 0.1, lift = 0, foreX = -0.3 + Math.sin(sway * 0.7) * 0.12;
+    let hunch = v.m.hunch, headX = 0.12, headZ = Math.sin(this.time * 1.3 + v.spin) * 0.14, twist = 0, armSpread = 0.08;
+
+    // 스폰: 땅에서 손부터 기어오른다
     if (z.state === 'spawn') {
       const p = 1 - Math.max(0, z.stateT) / 0.8;
       lift = -z.height * (1 - p);
-      armX = 2.4 - p;
+      armX = 2.9 - p * 1.2; foreX = 0.4; hunch += (1 - p) * 0.4;
     }
-    // 이동 애니메이션
-    animateWalk(h, dt, z.moveSpeed * (z.type === 'runner' || z.type === 'swarmer' ? 0.8 : 1));
+    // 이동 애니메이션: 절뚝임(한 다리 보폭이 짧다) + 걸음마다 몸통 비틀기
+    const sp = z.moveSpeed * (z.type === 'runner' || z.type === 'swarmer' ? 0.8 : 1);
+    animateWalk(h, dt, sp);
+    const amp = Math.min(1, sp / 3);
+    h.legs[v.limp].rotation.x *= 0.55;
+    twist = Math.sin(h.walk) * 0.14 * amp;
+    roll = Math.sin(h.walk) * 0.04 * amp;
     switch (z.type) {
-      case 'runner': lean = -0.3; armX = 0.9 + Math.sin(sway * 2) * 0.5; break;
-      case 'swarmer': lean = -0.35; armX = 1.0 + Math.sin(sway * 3) * 0.5; break;
-      case 'fatty': roll = Math.sin(h.walk) * 0.07; break;
-      case 'tank': roll = Math.sin(h.walk * 0.7) * 0.04; armX = 1.1; break;
-      case 'crawler': { // 바닥을 기어 다닌다
-        lean = -1.3; lift = 0.18; armX = 2.7 + Math.sin(h.walk * 1.4) * 0.5;
-        h.legs.forEach((l) => (l.rotation.x = 0.2));
+      case 'runner': lean = -0.32; armX = 0.6 + Math.sin(h.walk) * 0.9; foreX = 0.9; armSpread = 0.25; break; // 팔을 휘저으며 질주
+      case 'swarmer': lean = -0.35; armX = 1.2 + Math.sin(sway * 3) * 0.5; foreX = 0.3; break;
+      case 'fatty': roll = Math.sin(h.walk) * 0.1; armX = 0.9 + Math.sin(sway) * 0.15; armSpread = 0.45; headX = -0.1; break;
+      case 'tank': roll = Math.sin(h.walk * 0.7) * 0.05; armX = 0.9; foreX = 0.5; armSpread = 0.3; break;
+      case 'crawler': { // 다리 없이 팔로 바닥을 끌며 기어 온다
+        lean = -1.25; lift = 0.18; headX = 0.95;
+        const c = Math.sin(h.walk * 1.4);
+        h.arms[0].rotation.x = 2.5 + c * 0.6; h.arms[1].rotation.x = 2.5 - c * 0.6;
+        fore[0].rotation.x = 0.3 - c * 0.3; fore[1].rotation.x = 0.3 + c * 0.3;
+        h.legs.forEach((l, i) => (l.rotation.x = 0.25 + (i ? c : -c) * 0.15));
+        armX = NaN;
         break;
       }
-      case 'leaper': lean = -0.18; armX = 0.8; break;
-      case 'spitter': lean = 0.1 + Math.sin(sway) * 0.03; armX = 1.1; break;
-      case 'bomber': armX = 0.6; roll = Math.sin(h.walk) * 0.05; break;
-      case 'screamer': lean = 0.1; armX = 0.3 + Math.sin(sway * 0.7) * 0.1; break;
+      case 'leaper': lean = -0.2; armX = 0.5; foreX = -0.2; armSpread = 0.35; hunch += Math.sin(sway * 2) * 0.05; break;
+      case 'spitter': lean = 0.05 + Math.sin(sway) * 0.03; armX = 0.9; headX = -0.1; break;
+      case 'bomber': armX = 0.35; foreX = 0.2; armSpread = 0.2; break;
+      case 'screamer': lean = 0.08; armX = 0.25 + Math.sin(sway * 0.7) * 0.1; foreX = 0.1; armSpread = 0.2; headX = 0.3; break;
       default:
+        if (z.isBoss) { armX = 0.6 + Math.sin(sway * 0.8) * 0.15; foreX = 0.5; armSpread = 0.3; roll = Math.sin(h.walk * 0.7) * 0.05; }
     }
 
     switch (z.state) {
-      case 'windup': {
+      case 'windup': { // 팔을 번쩍 들고 몸을 젖혔다가
         const p = 1 - z.stateT / ENEMY_RULES.windup;
-        armX = 1.4 + p * 1.5;          // 팔을 번쩍 든다
-        lean = Math.min(lean, 0) - p * 0.25;
+        armX = 1.4 + p * 1.6; foreX = 0.6 * p;
+        lean = Math.min(lean, 0) - p * 0.1; hunch -= p * 0.35; headX = -0.2 * p;
         break;
       }
       case 'stunned':
-        lean = -0.55; lift = -0.4; armX = 0.25;
+        lean = -0.55; lift = -0.4; armX = 0.25; foreX = 0; headX = -0.6; headZ = Math.sin(this.time * 2) * 0.35;
         g.rotation.z = Math.sin(this.time * 5 + v.spin) * 0.07;
         h.legs.forEach((l) => (l.rotation.x = -0.9));
         break;
       default:
     }
+    // 내려찍기: 들었던 팔을 앞으로 휘두르며 몸을 숙인다
+    if (v.strike > 0 && z.state !== 'stunned') {
+      const s = v.strike;
+      armX = armX * (1 - s) + 0.5 * s; foreX = -0.2 * s; hunch += s * 0.35; lean -= s * 0.15;
+    }
     // 특수 동작 자세
     let pulse = 0;
     switch (z.move) {
-      case 'slam': armX = 2.9; lean = 0.15; break;
-      case 'charge': lean = -0.5; armX = z.phase === 1 ? 0.2 : 1.4; break;
-      case 'summon': case 'bombRain': armX = 2.7; lean = 0.1; break;
-      case 'volley': case 'spit': armX = 2.8; lean = 0.35 + Math.sin(this.time * 18) * 0.04; break;
-      case 'scream': armX = 2.4; lean = 0.45 + Math.sin(this.time * 30) * 0.05; break;
+      case 'slam': armX = 2.9; foreX = 0.5; lean = 0.15; hunch -= 0.3; break;
+      case 'charge': lean = -0.5; armX = z.phase === 1 ? 0.2 : 1.4; hunch += 0.2; break;
+      case 'summon': case 'bombRain': armX = 2.7; lean = 0.1; armSpread = 0.5; headX = 0.4; break;
+      case 'volley': case 'spit': armX = 1.0; lean = 0.3 + Math.sin(this.time * 18) * 0.04; headX = -0.2; break;
+      case 'scream': armX = 2.2; armSpread = 0.6; lean = 0.4 + Math.sin(this.time * 30) * 0.05; headX = 0.55; break;
       case 'leap': {
-        if (z.phase === 0) { lift = -0.35; lean = -0.5; armX = 0.2; }
+        if (z.phase === 0) { lift = -0.35; lean = -0.5; armX = 0.2; hunch += 0.3; h.legs.forEach((l) => (l.rotation.x = -0.7)); }
         else {
           const p = 1 - Math.max(0, z.moveT) / ZOMBIE_TUNING.leaper.leap!.time;
-          lift = Math.sin(Math.PI * p) * 3.6; lean = -0.9; armX = 2.9;
+          lift = Math.sin(Math.PI * p) * 3.6; lean = -0.9; armX = 2.9; foreX = 0.3;
         }
         break;
       }
-      case 'fuse': pulse = Math.sin(this.time * 45) > 0 ? 1 : 0; break;
+      case 'fuse': pulse = Math.sin(this.time * 45) > 0 ? 1 : 0; armSpread = 0.7; armX = 0.4; break;
       default:
     }
     if (z.state !== 'stunned') g.rotation.z = roll;
     g.rotation.x = lean;
     g.position.y = gy + lift;
-    const swing = Math.sin(h.walk) * Math.min(0.45, z.moveSpeed * 0.08);
-    h.arms.forEach((a, i) => { a.rotation.x = armX + (i === 0 ? swing : -swing); });
+    // 상체: 구부정함(-x 가 앞) + 피격 젖힘 + 숨쉬기
+    torso.rotation.x = -hunch + v.flinch * 0.45 + Math.sin(sway * 0.5) * 0.02;
+    torso.rotation.y = twist;
+    head.rotation.x = headX + v.flinch * 0.5;
+    head.rotation.z = headZ;
+    if (!Number.isNaN(armX)) {
+      const swing = Math.sin(h.walk) * Math.min(0.45, z.moveSpeed * 0.08);
+      h.arms.forEach((a, i) => {
+        a.rotation.x = armX + (i === 0 ? swing : -swing) + (i ? 0.08 : -0.06) * Math.sin(sway);
+        a.rotation.z = (i ? 1 : -1) * armSpread;
+      });
+      fore.forEach((f, i) => (f.rotation.x = foreX + (i ? 0.15 : 0)));
+    }
 
     // 장식 애니메이션
     const parts = v.m.parts;
-    if (parts.gem) { parts.gem.rotation.y = this.time * 2.5; parts.gem.position.y = 2.35 + Math.sin(this.time * 3) * 0.06; }
-    if (parts.sac) parts.sac.scale.setScalar(1 + Math.sin(this.time * 4) * 0.08 + (z.move === 'spit' ? 0.5 : 0));
-    if (parts.mouth) parts.mouth.scale.y = z.move === 'scream' ? 2.4 : 1 + Math.sin(this.time * 3) * 0.1;
-    if (parts.fuse) parts.fuse.scale.setScalar(0.8 + Math.abs(Math.sin(this.time * 14)) * 0.7);
-
+    if (parts.gem) { parts.gem.rotation.y = this.time * 2.5; parts.gem.position.y = 2.3 + Math.sin(this.time * 3) * 0.06; }
+    const s0 = (o: THREE.Object3D) => (o.userData.s0 ??= o.scale.x) as number;
+    if (parts.sac) parts.sac.scale.setScalar((1 + Math.sin(this.time * 4) * 0.1 + (z.move === 'spit' ? 0.6 : 0)) * s0(parts.sac));
+    if (parts.mouth) { const m0 = (parts.mouth.userData.y0 ??= parts.mouth.scale.y) as number; parts.mouth.scale.y = m0 * (z.move === 'scream' ? 2.2 : 1 + Math.sin(this.time * 3) * 0.12); }
+    if (parts.fuse) parts.fuse.scale.setScalar((0.8 + Math.abs(Math.sin(this.time * 14)) * 0.7) * s0(parts.fuse));
+    if (parts.core) parts.core.scale.setScalar(s0(parts.core) * (1 + Math.sin(this.time * 4) * 0.25));
+    // 눈: 공격 준비·분노 때 하얗게 달아오른다
+    const hot = z.state === 'windup' ? 1 - z.stateT / ENEMY_RULES.windup : z.rage ? 0.35 : 0;
+    v.m.eyes.color.copy(v.eyeBase).lerp(WHITE, hot * 0.6);
     // 피격 반짝임 / 분노·광폭·엘리트·자폭 발광
     const flash = z.hitFlash > 0 ? z.hitFlash / 0.14 : 0;
     const enraged = z.rage || (z.isBoss && z.hp < z.maxHp * 0.5);
@@ -273,7 +313,7 @@ export class EnemyView {
     const fr = z.frenzy > 0 ? 0.2 + Math.sin(this.time * 12) * 0.1 : 0;
     const gold = z.elite ? 0.14 + Math.sin(this.time * 3) * 0.06 : 0;
     for (const m of h.mats) {
-      m.emissive.setRGB(flash * 0.9 + rp + gold + pulse * 0.9 + fr * 0.7, flash * 0.35 + gold * 0.75 + pulse * 0.3, flash * 0.3 + fr + pulse * 0.05);
+      m.emissive.setRGB(flash * 0.95 + rp + gold + pulse * 0.9 + fr * 0.7, flash * 0.75 + gold * 0.75 + pulse * 0.3, flash * 0.6 + fr + pulse * 0.05);
     }
 
     // 체력바
@@ -297,6 +337,38 @@ export class EnemyView {
         s.rotation.y = a * 2;
       });
     }
+  }
+
+  /** 사망: 무릎이 꺾이며 쓰러지고(팔다리 축 늘어짐), 잠시 뒤 잿불처럼 달아오르며 땅으로 꺼진다. 반투명 전환 없음 */
+  private animateDeath(v: ZView, dt: number, gy: number) {
+    const h = v.m.h, g = h.group, torso = h.torso!, head = h.head!, fore = h.fore!;
+    v.dying += dt;
+    const t = v.dying;
+    const p = Math.min(1, t / 0.6);
+    const e = p * p * (3 - 2 * p);                       // 부드럽게
+    const bounce = t > 0.6 && t < 0.85 ? Math.sin(((t - 0.6) / 0.25) * Math.PI) * 0.06 : 0; // 바닥에 닿아 한 번 튕김
+    const dir = v.fallDir;
+    g.rotation.x = dir * (e * Math.PI / 2 * 0.92 - bounce);
+    g.rotation.z = v.fallSide * 0.35 * e;
+    const kneel = Math.min(1, t / 0.25);                 // 먼저 무릎이 꺾인다
+    const drop = Math.sin(Math.min(1, t / 0.35) * Math.PI) * 0.25 * g.scale.y;
+    torso.rotation.x = -dir * 0.35 * kneel + v.fallSide * 0.1;
+    torso.rotation.y = v.fallSide * 0.3 * e;
+    head.rotation.x = dir * 0.6 * e;
+    head.rotation.z = v.fallSide * 0.5 * e;
+    h.legs[0].rotation.x = -0.9 * kneel * (1 - e * 0.6);
+    h.legs[1].rotation.x = -0.4 * kneel * (1 - e * 0.5);
+    h.arms.forEach((a, i) => { a.rotation.x = (dir > 0 ? 2.6 : 0.4) * e + (1 - e) * 1.4; a.rotation.z = (i ? 1 : -1) * (0.3 + 0.9 * e); });
+    fore.forEach((f) => (f.rotation.x = 0.6 * e));
+    // 땅으로 꺼지며 잿불 발광
+    const sink = Math.max(0, t - 1.3) / (DEATH_TIME - 1.3);
+    g.position.y = gy - drop * 0.3 - sink * sink * 0.9 * g.scale.y;
+    const ember = sink > 0 ? Math.min(1, sink * 1.6) : 0;
+    const flash = t < 0.12 ? 1 - t / 0.12 : 0;
+    for (const m of h.mats) m.emissive.setRGB(flash * 0.9 + ember * 0.45, flash * 0.6 + ember * 0.12, flash * 0.5 + ember * 0.02);
+    v.m.eyes.color.copy(v.eyeBase).multiplyScalar(Math.max(0, 1 - t / 0.8)); // 눈빛이 꺼진다
+    if (sink > 0 && !v.ash) { v.ash = true; this.addRing(v.z.x, v.z.z, 1.2 * g.scale.x + 0.4, 0.8, 'impact'); }
+    if (v.dying >= DEATH_TIME) this.removeView(v);
   }
 
   // ── 이펙트 ───────────────────────────────────────────

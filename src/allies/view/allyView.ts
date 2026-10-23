@@ -10,7 +10,14 @@ const mk = (w: number, h: number, d: number, c: number, x: number, y: number, z:
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: c }));
   m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m;
 };
-const SKIN = 0x86d86a;
+const SKIN = 0x8fd6b0;      // 백신 맞은 피부: 건강한 민트빛
+const CLOTH = 0x1f5f5c;     // 청록 작업복
+const BANDAGE = 0xd8d2c0;   // 상처·얼룩 자리는 붕대
+const TEAL = 0x2ee6d6;
+/** 눈을 가리는 청록 바이저 (아군 표시). 모든 아군이 공유 */
+const visorMat = new THREE.MeshBasicMaterial({ color: TEAL, fog: false });
+const visorGeo = new THREE.BoxGeometry(0.46, 0.075, 0.05);
+visorGeo.userData.shared = true; visorMat.userData.shared = true;
 
 export class AllyView {
   readonly hum: Humanoid;
@@ -29,6 +36,7 @@ export class AllyView {
     else { this.hum = makeHumanoid(SKIN, 0x888888); scene.add(this.hum.group); }
     m.view = this.hum;
     this.hum.group.position.set(m.x, 0, m.z);
+    this.resetPose();
     this.tint();
 
     // 모자 (챙 + 둥근 모자)
@@ -38,7 +46,15 @@ export class AllyView {
     const dome = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.16, 12), this.hatMat); dome.position.y = 1.96;
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 12), this.hatMat); brim.position.set(0, 1.89, -0.04);
     hat.add(dome, brim); hat.traverse((o) => (o.castShadow = true));
-    this.hum.group.add(hat, this.props);
+    const head = this.hum.head;
+    if (head) {
+      // 머리 축 좌표 (머리 꼭대기 = 0.40) 로 옮겨 머리와 함께 움직이게 한다
+      hat.position.y = -1.48;
+      const visor = new THREE.Mesh(visorGeo, visorMat);
+      visor.position.set(0, 0.27, -0.215);
+      head.add(hat, visor);
+      this.hum.group.add(this.props);
+    } else this.hum.group.add(hat, this.props);
 
     this.marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), new THREE.MeshBasicMaterial({ color }));
     this.marker.position.y = 2.55; this.hum.group.add(this.marker);
@@ -52,10 +68,22 @@ export class AllyView {
   private hatMat: THREE.MeshLambertMaterial;
   private held: THREE.Object3D[] = [];
 
-  /** 좀비 → 아군: 초록 피부 + 역할 색 조끼 */
+  /** 좀비였던 모델의 자세(기절해 숙인 몸, 비튼 팔)를 바로 세운다 */
+  private resetPose() {
+    const h = this.hum;
+    h.group.rotation.x = h.group.rotation.z = 0;
+    h.torso?.rotation.set(0, 0, 0);
+    h.head?.rotation.set(0, 0, 0);
+    h.arms.forEach((a) => a.rotation.set(0, 0, 0));
+    h.legs.forEach((l) => l.rotation.set(0, 0, 0));
+  }
+
+  /** 좀비 → 아군: 민트 피부 + 청록 옷 + 붕대 + 청록 눈/바이저 */
   private tint() {
     const { mats, group } = this.hum;
-    if (mats.length >= 2) { mats[0].color.setHex(0x4a6b48); mats[1].color.setHex(SKIN); }
+    if (this.hum.eyes) { this.hum.eyes.color.setHex(TEAL); this.hum.eyes.fog = false; }
+    if (mats.length >= 4) mats[3].color.setHex(BANDAGE);
+    if (mats.length >= 2) { mats[0].color.setHex(CLOTH); mats[1].color.setHex(SKIN); }
     else group.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -81,8 +109,9 @@ export class AllyView {
     if (role === 'gatherer') { box(0.08, 0.08, 0.9, 0x8a5a2b, 0, -0.62, -0.3, arms[1]); box(0.5, 0.1, 0.12, 0x9aa3ad, 0, -0.62, -0.75, arms[1]); }
     if (role === 'researcher') {
       box(0.34, 0.42, 0.04, 0xf2f2f2, 0, -0.62, -0.18, arms[0]);
-      box(0.46, 0.1, 0.04, 0x2a2f38, 0, 1.72, -0.23, this.props); // 고글
-      box(0.1, 0.1, 0.1, 0x66ccff, 0, 1.72, -0.27, this.props);
+      const hd = this.hum.head;
+      if (hd) box(0.1, 0.1, 0.1, 0x66ccff, 0.24, 0.27, -0.18, hd); // 바이저 옆 램프
+      else { box(0.46, 0.1, 0.04, 0x2a2f38, 0, 1.72, -0.23, this.props); box(0.1, 0.1, 0.1, 0x66ccff, 0, 1.72, -0.27, this.props); } // 고글
     }
   }
 
