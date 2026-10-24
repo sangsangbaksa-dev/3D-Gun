@@ -41,12 +41,12 @@ export interface MapDef {
 
 
 const lanes: Lane[] = [
-  { id: 'N', waypoints: [{ x: 0, z: -190 }, { x: 22, z: -120 }, { x: 0, z: -60 }, { x: 0, z: -16 }] },
-  { id: 'E', waypoints: [{ x: 190, z: 12 }, { x: 110, z: 24 }, { x: 60, z: 0 }, { x: 16, z: 0 }] },
-  { id: 'S', waypoints: [{ x: 30, z: 190 }, { x: 10, z: 110 }, { x: 0, z: 60 }, { x: 0, z: 16 }] },
-  { id: 'W', waypoints: [{ x: -190, z: -10 }, { x: -110, z: 10 }, { x: -60, z: 0 }, { x: -16, z: 0 }] },
-  { id: 'NE', waypoints: [{ x: 160, z: -160 }, { x: 80, z: -80 }, { x: 40, z: -40 }, { x: 12, z: -12 }] },
-  { id: 'SW', waypoints: [{ x: -160, z: 160 }, { x: -80, z: 80 }, { x: -40, z: 40 }, { x: -12, z: 12 }] },
+  { id: 'N', waypoints: [{ x: 0, z: -196 }, { x: 22, z: -120 }, { x: 0, z: -60 }, { x: 0, z: -16 }] },
+  { id: 'E', waypoints: [{ x: 196, z: 14 }, { x: 110, z: 24 }, { x: 60, z: 0 }, { x: 16, z: 0 }] },
+  { id: 'S', waypoints: [{ x: 34, z: 196 }, { x: 10, z: 110 }, { x: 0, z: 60 }, { x: 0, z: 16 }] },
+  { id: 'W', waypoints: [{ x: -196, z: -12 }, { x: -110, z: 10 }, { x: -60, z: 0 }, { x: -16, z: 0 }] },
+  { id: 'NE', waypoints: [{ x: 172, z: -172 }, { x: 80, z: -80 }, { x: 40, z: -40 }, { x: 12, z: -12 }] },
+  { id: 'SW', waypoints: [{ x: -172, z: 172 }, { x: -80, z: 80 }, { x: -40, z: 40 }, { x: -12, z: 12 }] },
 ];
 
 const zones: Zone[] = [
@@ -88,8 +88,8 @@ function genProps(): MapProp[] {
       }
     }
   }
-  // 곳곳의 폐차와 콘크리트 벽
-  for (let i = 0; i < 70; i++) {
+  // 곳곳의 폐차와 콘크리트 벽 (외곽까지 흩어 구역 사이 빈 공간을 채운다)
+  for (let i = 0; i < 88; i++) {
     const x = (rnd() * 2 - 1) * 180, z = (rnd() * 2 - 1) * 180;
     if (Math.hypot(x, z) < 26 || nearLane(x, z, 6)) continue;
     if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && Math.hypot(x - q.x, z - q.z) < q.r * 0.8)) continue;

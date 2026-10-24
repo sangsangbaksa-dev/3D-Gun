@@ -39,9 +39,9 @@ const fbm = (x: number, z: number) => vnoise(x, z) * 0.5 + vnoise(x * 2.1, z * 2
 const sstep = (a: number, b: number, t: number) => { const k = Math.max(0, Math.min(1, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
 const rgb = (h: number): [number, number, number] => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
 const mix3 = (p: number[], q: number[], t: number): [number, number, number] => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
-const ZONE_TONE: Record<string, number> = { base: 0x1c2226, forest: 0x24331e, quarry: 0x3a3a36, mine: 0x1a1816, field: 0x3b3222, ruins: 0x24222a, wasteland: 0x2a2520, boss: 0x2e1a1c };
-const ZONE_LIGHT: Record<string, number> = { base: 1.05, field: 1.08, forest: 0.95, quarry: 1, boss: 0.92, mine: 1, ruins: 1, wasteland: 1 };
-const GROUND = 0x2a2520, TRAIL = 0x5a4a36;
+const ZONE_TONE: Record<string, number> = { base: 0x22303a, forest: 0x2c4a24, quarry: 0x5a5248, mine: 0x26201e, field: 0x5c4a26, ruins: 0x343240, wasteland: 0x4a3226, boss: 0x4a1e24 };
+const ZONE_LIGHT: Record<string, number> = { base: 1.08, field: 1.12, forest: 0.92, quarry: 1.06, boss: 0.9, mine: 0.94, ruins: 1, wasteland: 1.04 };
+const GROUND = 0x33291f, TRAIL = 0x7a6242, SHOULDER = 0x241c14;
 function laneDist(x: number, z: number) {
   let best = 1e9;
   for (const l of MAP.lanes) for (let i = 0; i < l.waypoints.length - 1; i++) {
@@ -59,7 +59,10 @@ function groundTone(x: number, z: number, y: number): [number, number, number] {
     if (w > 0) { col = mix3(col, rgb(ZONE_TONE[q.kind] ?? GROUND), w); light += ((ZONE_LIGHT[q.kind] ?? 1) - light) * w; }
   }
   const cross = Math.min(Math.abs(x), Math.abs(z)) + (Math.hypot(x, z) < 15 ? 99 : 0);
-  col = mix3(col, rgb(TRAIL), 1 - sstep(1.8, 6, Math.min(laneDist(x, z), cross) + (e - 0.5) * 3));
+  const ld = Math.min(laneDist(x, z), cross);
+  // 길 어깨: 흙길 가장자리를 어둡게 눌러 길의 윤곽이 멀리서도 읽히게 한다
+  col = mix3(col, rgb(SHOULDER), (1 - sstep(3.2, 7.5, ld + (e - 0.5) * 3)) * 0.55);
+  col = mix3(col, rgb(TRAIL), 1 - sstep(1.8, 5.2, ld + (e - 0.5) * 3));
   col = mix3(col, y > 0 ? rgb(0x3b3222) : rgb(0x14181a), Math.min(0.25, Math.abs(y) * 0.15));
   const patch = sstep(0.55, 0.75, fbm(x * 0.025 + 17, z * 0.025 - 9)) * 0.16;
   const grain = (fbm(x * 0.9, z * 0.9) - 0.5) * 0.08;
@@ -186,19 +189,33 @@ const PROPS: { kind: Kind; x: number; z: number; yaw: number; r: number }[] = [
   { kind: 'rocks', x: 50, z: -16, yaw: 0.4, r: 1.5 },
   { kind: 'cart', x: 22, z: -30, yaw: 1.4, r: 0.9 },
   { kind: 'totem', x: -14, z: -44, yaw: 0.3, r: 0.7 },
+  // 구역 랜드마크: 먼 구역마다 실루엣이 다른 조형물을 둬 길찾기와 구역 인지를 돕는다 (레인에서 비켜 배치)
+  { kind: 'totem', x: -104, z: -70, yaw: 0.5, r: 0.7 },      // 북서 숲
+  { kind: 'shrine', x: -50, z: 124, yaw: 1.2, r: 1.5 },      // 남서 숲
+  { kind: 'crane', x: 120, z: -66, yaw: -0.4, r: 1.3 },      // 채석장
+  { kind: 'well', x: -124, z: 46, yaw: 0.2, r: 1.1 },        // 약초 들판
+  { kind: 'billboard', x: 86, z: 114, yaw: -0.3, r: 0.5 },   // 폐허 도시
+  { kind: 'statue', x: -50, z: -130, yaw: 1.0, r: 0.9 },     // 북쪽 시가지
+  { kind: 'antenna', x: 164, z: -136, yaw: 0, r: 0.7 },      // 폐광
+  { kind: 'tank', x: 156, z: 70, yaw: 0.6, r: 1.6 },         // 황무지
+  { kind: 'obelisk', x: 18, z: -170, yaw: 0.4, r: 1.1 },     // 보스 둥지 입구
+  { kind: 'containers', x: 108, z: 86, yaw: 0.35, r: 2.1 },  // 폐허 도시 창고
+  { kind: 'bus', x: -104, z: 88, yaw: 0.9, r: 1.6 },         // 남서 길목
+  { kind: 'arch', x: 58, z: -96, yaw: 0.15, r: 1.7 },        // 북동 길목
 ];
 
 function scatterRocks(scene: THREE.Scene) {
   let a = 0x51ed1234;
   const rnd = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 54; i++) {
     const x = (rnd() * 2 - 1) * (HALF - 4);
     const z = (rnd() * 2 - 1) * (HALF - 4);
     if (Math.hypot(x, z) < 18) continue;
     if (Math.min(Math.abs(x), Math.abs(z)) < 4) continue;
+    if (laneDist(x, z) < 3.5) continue; // 돌이 길 한복판에 솟지 않게
     const g = new THREE.Group();
-    const s = 0.35 + rnd() * 0.7;
-    cyl(g, s * 0.6, s, s * (0.5 + rnd() * 0.6), rnd() > 0.5 ? 0x7a756c : 0x6a6358, 0, 0, 0, 5);
+    const s = 0.35 + rnd() * 0.85;
+    cyl(g, s * 0.6, s, s * (0.5 + rnd() * 0.6), rnd() > 0.6 ? 0x8a7a5c : rnd() > 0.5 ? 0x7a756c : 0x6a6358, 0, 0, 0, 5);
     g.position.set(x, terrainY(x, z), z);
     g.rotation.y = rnd() * 6;
     scene.add(g);

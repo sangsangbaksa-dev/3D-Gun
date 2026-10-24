@@ -27,28 +27,36 @@ export function buildWorldView(scene: THREE.Scene) {
   const H = MAP.half;
   // 구역 바닥색은 지형 정점색(scenery.ts groundTone)이 맡는다
 
-  // 도로: 좀비 레인을 따라 아스팔트 띠
+  // 도로: 좀비 레인을 따라 아스팔트 띠 (어두운 어깨 위에 올려 길의 띠가 또렷하게 읽힌다)
   const asphalt = canvasTex(64, 128, (g) => {
-    speckle(g, 64, 128, '#3b3d40', 900, 60, 7);
-    g.fillStyle = '#d8c46a'; g.fillRect(30, 16, 4, 40); g.fillRect(30, 80, 4, 40);
+    speckle(g, 64, 128, '#33363a', 1100, 70, 7);
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(0, 0, 3, 128); g.fillRect(61, 0, 3, 128); // 가장자리 균열 그림자
+    g.fillStyle = '#e8cc6e'; g.fillRect(30, 12, 4, 42); g.fillRect(30, 76, 4, 42); // 중앙 점선
+    g.fillStyle = 'rgba(232,204,110,0.5)'; g.fillRect(4, 0, 2, 128); g.fillRect(58, 0, 2, 128); // 바퀴 자국 옆 차선
   });
   const roadMat = new THREE.MeshLambertMaterial({ map: asphalt });
+  const shoulderMat = new THREE.MeshLambertMaterial({ color: 0x201812 });
   const roads: THREE.BufferGeometry[] = [];
+  const shoulders: THREE.BufferGeometry[] = [];
+  const strip = (a: { x: number; z: number }, b: { x: number; z: number }, w: number, yOff: number) => {
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const g = new THREE.PlaneGeometry(w, len, 1, Math.max(1, Math.round(len / 3)));
+    const uv = g.attributes.uv as THREE.BufferAttribute;
+    for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (len / 10));
+    g.rotateX(-Math.PI / 2);
+    g.rotateY(Math.atan2(b.x - a.x, b.z - a.z) + Math.PI);
+    g.translate((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
+    const pp = g.attributes.position as THREE.BufferAttribute;
+    for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + yOff);
+    return g;
+  };
   for (const lane of MAP.lanes) {
     for (let i = 1; i < lane.waypoints.length; i++) {
-      const a = lane.waypoints[i - 1], b = lane.waypoints[i];
-      const len = Math.hypot(b.x - a.x, b.z - a.z), w = 6;
-      const g = new THREE.PlaneGeometry(w, len, 1, Math.max(1, Math.round(len / 3)));
-      const uv = g.attributes.uv as THREE.BufferAttribute;
-      for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (len / 10));
-      g.rotateX(-Math.PI / 2);
-      g.rotateY(Math.atan2(b.x - a.x, b.z - a.z) + Math.PI);
-      g.translate((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
-      const pp = g.attributes.position as THREE.BufferAttribute;
-      for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + 0.06 + i * 0.001);
-      roads.push(g);
+      shoulders.push(strip(lane.waypoints[i - 1], lane.waypoints[i], 8.4, 0.04 + i * 0.001));
+      roads.push(strip(lane.waypoints[i - 1], lane.waypoints[i], 6.4, 0.07 + i * 0.001));
     }
   }
+  const shoulderMesh = new THREE.Mesh(mergeGeometries(shoulders)!, shoulderMat); shoulderMesh.receiveShadow = true; scene.add(shoulderMesh);
   const roadMesh = new THREE.Mesh(mergeGeometries(roads)!, roadMat); roadMesh.receiveShadow = true; scene.add(roadMesh);
 
   // 건물: 외벽 텍스처 3종 x (벽, 지붕) 별로 합친 메시
@@ -100,7 +108,9 @@ export function buildWorldView(scene: THREE.Scene) {
     if (!arr.length) return;
     const m = new THREE.Mesh(mergeGeometries(arr)!, mat); m.castShadow = true; m.receiveShadow = true; scene.add(m);
   };
-  add(roofGeo, new THREE.MeshLambertMaterial({ color: 0x2a2626 }));
+  // 지붕은 건물마다 톤을 나눠 폐허의 단조로움을 깬다
+  const roofTones = [0x2a2626, 0x3a2e28, 0x26303a];
+  roofTones.forEach((tone, v) => add(roofGeo.filter((_, i) => i % roofTones.length === v), new THREE.MeshLambertMaterial({ color: tone })));
   add(small, smallMat);
   add(carGeo, new THREE.MeshLambertMaterial({ color: 0x6a3e26 }));
 
@@ -111,6 +121,8 @@ export function buildWorldView(scene: THREE.Scene) {
     const a = (i / 110) * Math.PI * 2, d = H * 1.12 + r() * 25, h = 14 + r() * 22, rad = 30 + r() * 22;
     const g = new THREE.ConeGeometry(rad, h, 9); g.scale(1, 1, 0.6); g.rotateY(-a); g.translate(Math.cos(a) * d, h / 2 - 2, Math.sin(a) * d); mt.push(g);
   }
-  scene.add(new THREE.Mesh(mergeGeometries(mt)!, new THREE.MeshLambertMaterial({ color: 0x5c4a3c })));
+  const mtWarm = mt.filter((_, i) => i % 2 === 0), mtCool = mt.filter((_, i) => i % 2 === 1);
+  if (mtWarm.length) scene.add(new THREE.Mesh(mergeGeometries(mtWarm)!, new THREE.MeshLambertMaterial({ color: 0x6a5138 })));
+  if (mtCool.length) scene.add(new THREE.Mesh(mergeGeometries(mtCool)!, new THREE.MeshLambertMaterial({ color: 0x4a3a34 })));
 
 }
