@@ -60,6 +60,20 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
 #ztTitle .intro p.em{color:${ORANGE};text-shadow:0 0 22px #FF8A2A66}
 #ztTitle .intro p .cur{display:inline-block;width:.5em;border-bottom:2px solid ${TEAL};margin-left:2px;animation:ztCur .8s steps(1) infinite}
 #ztTitle .intro .skip{position:absolute;right:24px;bottom:20px;font:13px system-ui,sans-serif;color:${TEAL};opacity:.55}
+#ztTitle .intro .art{position:absolute;inset:0;overflow:hidden}
+#ztTitle .intro .art i{position:absolute;inset:-3%;background:#000 center/cover no-repeat;opacity:0;transform:scale(1);transition:opacity 1.2s ease-out;will-change:opacity,transform}
+#ztTitle .intro .art i.on{opacity:1;animation:ztKen 22s ease-out forwards}
+#ztTitle .intro .art::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 75% 70% at 50% 45%,#0000 40%,#000a 100%),linear-gradient(#0000 55%,#000d 100%)}
+#ztTitle .intro.story .art i{filter:brightness(.72) saturate(.95)}
+#ztTitle .intro.story .art::after{background:radial-gradient(ellipse 80% 70% at 50% 40%,#0000 35%,#000b 100%),linear-gradient(#0000 45%,#000e 88%)}
+#ztTitle .intro .ilogo{position:absolute;left:50%;top:9%;width:min(440px,56vw);transform:translateX(-50%);filter:drop-shadow(0 0 22px #2EE6D688) drop-shadow(0 6px 18px #000);transition:opacity .5s ease-out}
+#ztTitle .intro.story .ilogo{opacity:0}
+#ztTitle .intro p{position:relative}
+#ztTitle .intro{align-items:flex-end}
+#ztTitle .intro p{margin-bottom:11vh;text-shadow:0 2px 12px #000,0 0 18px #2EE6D633}
+#ztTitle .intro p.wait{padding:9px 22px;border:1px solid #2EE6D666;border-radius:999px;background:#07090dcc;opacity:1;color:${TEAL};animation:ztWait 2.2s ease-in-out infinite;backdrop-filter:blur(4px)}
+@keyframes ztKen{from{transform:scale(1.0) translate(0,0)}to{transform:scale(1.07) translate(-1%,-1%)}}
+@keyframes ztWait{50%{box-shadow:0 0 18px #2EE6D655;border-color:${TEAL}}}
 @keyframes ztCur{50%{opacity:0}}
 
 @media (max-width:600px){
