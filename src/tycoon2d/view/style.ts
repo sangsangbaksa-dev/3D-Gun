@@ -12,6 +12,9 @@ export const CSS = `
 #t2d .bgimg::after{content:"";position:absolute;inset:0;background:
   linear-gradient(90deg,#0a0507e6 0,#0a050799 13%,#0a050726 40%,#0a050726 62%,#0a0507a6 80%,#0a0507ee 100%),
   linear-gradient(#0a0507d9 0,#0a050733 22%,#0a050700 50%,#0a0507cc 100%)}
+#t2d[data-bg=shop] .bgimg{background-image:url(${ART}shop.webp)}
+#t2d[data-bg=lab] .bgimg{background-image:url(${ART}lab.webp)}
+#t2d[data-bg=outpost] .bgimg{background-image:url(${ART}outpost.webp)}
 @keyframes t2dPan{to{transform:scale(1.06) translate(-1%,-1%)}}
 #t2d .bgfx{position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(0deg,#0000 0 2px,#0000002e 2px 3px),
