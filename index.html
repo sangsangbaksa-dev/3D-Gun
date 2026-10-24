@@ -27,10 +27,20 @@
   #wave.pop { animation:wavePop .4s ease-out; }
   @keyframes wavePop { from { color:#FF8A2A; transform:scale(1.12); } to { color:#fff; transform:scale(1); } }
   @media (prefers-reduced-motion:reduce) { #wave.pop { animation:none; } .bar .fill, .bar .xp div, .bar .ghost { transition:none; } .bar.low .fill { animation:none; } }
-  #sub { font-size:14px; opacity:.9; white-space:nowrap; }
-  #boss { display:none; margin-top:6px; width:360px; }
-  #boss .track { height:12px; background:#0008; border:1px solid #fff4; }
-  #boss .fill { height:100%; background:#E0303A; width:100%; }
+  #sub { font-size:14px; opacity:.9; white-space:nowrap; transition:color .25s; }
+  #sub.urgent { color:#FF8A2A; font-weight:700; animation:subPulse 1s ease-in-out infinite; }
+  @keyframes subPulse { 50% { opacity:.65; } }
+  #boss { display:none; margin:8px auto 0; width:min(420px,92vw); text-align:left; }
+  #bossName { font-size:12px; font-weight:800; letter-spacing:.12em; color:#FF8A2A; margin-bottom:4px; text-shadow:0 1px 4px #000; }
+  #boss .track { position:relative; height:14px; background:#000a; border:1px solid #E0303A88; border-radius:4px; overflow:hidden; box-shadow:0 0 12px #E0303A33 inset; }
+  #boss .fill { height:100%; background:linear-gradient(90deg,#a01820,#E0303A); width:100%; transition:width .15s ease-out; }
+  #boss.rage .fill { background:linear-gradient(90deg,#ff6020,#ff1a1a); animation:bossRage .45s ease-in-out infinite; }
+  @keyframes bossRage { 50% { filter:brightness(1.25); } }
+  #banner { pointer-events:none; }
+  #banner.show { animation:waveBanner 2.1s ease-out forwards; }
+  @keyframes waveBanner { 0% { opacity:0; transform:translate(-50%,-12px) scale(.92); } 12% { opacity:1; transform:translate(-50%,0) scale(1); } 78% { opacity:1; } 100% { opacity:0; transform:translate(-50%,6px) scale(.98); } }
+  body.ztCoreLow #hud::after { content:""; position:fixed; inset:0; pointer-events:none; box-shadow:inset 0 0 120px 24px #E0303A66; animation:coreWarn 1.4s ease-in-out infinite; z-index:3; }
+  @keyframes coreWarn { 50% { opacity:.55; } }
   #res { position:absolute; top:12px; right:14px; text-align:right; font-size:14px; line-height:1.6; text-shadow:0 1px 3px #000; background:#121A20B3; border:1px solid #2EE6D6; padding:8px 12px; border-radius:8px; font-variant-numeric:tabular-nums; max-width:min(560px,40vw); }
   #ammo { position:absolute; right:20px; bottom:16px; text-align:right; text-shadow:0 2px 4px #000; }
   #ammo b { font-size:30px; }
@@ -67,7 +77,7 @@
 <div id="hud">
   <img id="logo" src="/logo.svg" alt="3D-GUN" />
   <div id="help">WASD 이동 · Shift 대시 · 클릭 사격 · R 재장전<br>B 건설 · 1 감시탑 · 5 연구소 · L 백신 · N 웨이브 · H 도움말</div>
-  <div id="top"><div id="wave"></div><div id="sub"></div><div id="boss"><div class="track"><div class="fill" id="bossFill"></div></div></div></div>
+  <div id="top"><div id="wave"></div><div id="sub"></div><div id="boss"><div id="bossName"></div><div class="track"><div class="fill" id="bossFill"></div></div></div></div>
   <div id="res"></div>
   <div id="cross"></div>
   <div id="prompt"></div><div id="prog"><div></div></div>

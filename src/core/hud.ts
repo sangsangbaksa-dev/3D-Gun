@@ -2,14 +2,22 @@
 import type { System } from './types';
 import { state } from './state';
 import { events } from './events';
-import { RES_KEYS, RES_LABEL } from '../data';
+import { zombies } from './entities';
+import {
+  RES_KEYS, RES_LABEL, CHECKPOINT_EVERY, FINAL_WAVE,
+  isBossWave, isBossType, bossTypeFor, ZOMBIE_TUNING, type ZType,
+} from '../data';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
+let bossEl: HTMLElement | null, bossName: HTMLElement | null, bossFill: HTMLElement | null, banner: HTMLElement | null;
 let acc = 0;
 let lastPct = 100;
 let lastWaveText = '';
+let bannerT = 0;
+let activeBossType: string | null = null;
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function applyHpBar(hp: number, maxHp: number) {
   const pct = maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0;
@@ -21,6 +29,70 @@ function applyHpBar(hp: number, maxHp: number) {
   if (hpText) hpText.textContent = `HP ${Math.ceil(hp)} / ${Math.ceil(maxHp)}`;
 }
 
+function waveBannerText(w: number) {
+  if (w === FINAL_WAVE) return '최종 보스 — 좀비 왕';
+  if (isBossWave(w)) return `웨이브 ${w} — ${ZOMBIE_TUNING[bossTypeFor(w)].name}`;
+  return `웨이브 ${w}`;
+}
+
+function showBanner(text: string, ms = 2100) {
+  if (!banner) return;
+  banner.textContent = text;
+  banner.classList.remove('show');
+  if (!reducedMotion()) void banner.offsetWidth;
+  banner.style.opacity = reducedMotion() ? '1' : '';
+  banner.classList.add('show');
+  clearTimeout(bannerT);
+  bannerT = window.setTimeout(() => {
+    banner!.style.opacity = '0';
+    banner!.classList.remove('show');
+  }, ms);
+}
+
+function hideBossBar() {
+  activeBossType = null;
+  if (bossEl) bossEl.style.display = 'none';
+}
+
+function refreshBossBar() {
+  if (!bossEl || !bossFill || !bossName) return;
+  let boss = activeBossType
+    ? zombies.find((z) => !z.dead && z.type === activeBossType)
+    : undefined;
+  if (!boss) boss = zombies.find((z) => !z.dead && isBossType(z.type as ZType));
+  if (!boss) {
+    if (state.phase !== 'combat') hideBossBar();
+    return;
+  }
+  const tune = ZOMBIE_TUNING[boss.type as keyof typeof ZOMBIE_TUNING];
+  const pct = boss.maxHp > 0 ? (boss.hp / boss.maxHp) * 100 : 0;
+  bossEl.style.display = 'block';
+  bossName.textContent = tune?.name ? `보스 · ${tune.name}` : '보스';
+  bossFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  bossEl.classList.toggle('rage', pct > 0 && pct < 50);
+}
+
+function refreshCoreWarn() {
+  const low = state.phase === 'combat' && state.coreMaxHp > 0 && state.coreHp / state.coreMaxHp < 0.28;
+  document.body.classList.toggle('ztCoreLow', low);
+}
+
+function prepSubText() {
+  const sec = Math.ceil(state.prepLeft);
+  const w = state.wave;
+  let hint = '';
+  if (isBossWave(w)) {
+    const name = w === FINAL_WAVE ? '좀비 왕' : ZOMBIE_TUNING[bossTypeFor(w)].name;
+    hint = ` · ⚠ 보스 ${name}`;
+  } else if (w % CHECKPOINT_EVERY === 0) {
+    hint = ' · 체크포인트 웨이브';
+  } else {
+    const next = CHECKPOINT_EVERY * Math.ceil(w / CHECKPOINT_EVERY);
+    if (next <= FINAL_WAVE) hint = ` · 다음 체크포인트 ${next}웨이브`;
+  }
+  return `준비 ${sec}초${hint} · N 으로 바로 시작`;
+}
+
 export const HudSystem: System = {
   init() {
     wave = document.getElementById('wave'); sub = document.getElementById('sub');
@@ -29,6 +101,10 @@ export const HudSystem: System = {
     hpText = document.getElementById('hpText');
     hpGhost = document.getElementById('hpGhost');
     xpFill = document.getElementById('xpFill');
+    bossEl = document.getElementById('boss');
+    bossName = document.getElementById('bossName');
+    bossFill = document.getElementById('bossFill');
+    banner = document.getElementById('banner');
     if (help) help.style.display = 'none';
     mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
     events.on('toast', ({ text }) => showToast(text));
@@ -37,6 +113,15 @@ export const HudSystem: System = {
       const hud = document.getElementById('hud');
       if (hud) hud.style.display = open ? 'none' : '';
     });
+    events.on('wave:start', ({ wave: w }) => showBanner(waveBannerText(w)));
+    events.on('wave:prep', ({ wave: w }) => {
+      hideBossBar();
+      if (isBossWave(w) && w > 1) showBanner(`다음 — ${waveBannerText(w)}`, 2400);
+    });
+    events.on('boss:spawn', ({ type }) => { activeBossType = type; refreshBossBar(); });
+    events.on('boss:dead', () => hideBossBar());
+    events.on('run:start', () => { hideBossBar(); document.body.classList.remove('ztCoreLow'); });
+    events.on('core:damaged', () => refreshCoreWarn());
   },
   update(dt) {
     updateKeyBar();
@@ -44,7 +129,7 @@ export const HudSystem: System = {
     if (acc < 0.2) return;
     acc = 0;
     if (wave) {
-      const t = state.phase === 'ended' ? (state.wave >= 50 ? '클리어!' : '런 종료') : `웨이브 ${state.wave}`;
+      const t = state.phase === 'ended' ? (state.wave >= FINAL_WAVE ? '클리어!' : '런 종료') : `웨이브 ${state.wave}`;
       if (t !== lastWaveText) {
         wave.textContent = t;
         // 웨이브가 바뀌면 주황으로 한 번 튀었다가 흰색으로 돌아온다
@@ -54,9 +139,12 @@ export const HudSystem: System = {
     }
     if (sub) {
       sub.textContent = state.phase === 'prep'
-        ? `준비 ${Math.ceil(state.prepLeft)}초 · N 으로 바로 시작`
+        ? prepSubText()
         : `남은 좀비 ${state.waveRemaining} · 핵 ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
+      sub.classList.toggle('urgent', state.phase === 'prep' && state.prepLeft > 0 && state.prepLeft <= 5);
     }
+    refreshBossBar();
+    refreshCoreWarn();
     // 런 레벨 진행도: 킬 XP 가 쌓이면 청록 막대가 찬다
     if (xpFill) xpFill.style.width = `${state.xpNext > 0 ? Math.min(100, (100 * state.xp) / state.xpNext) : 0}%`;
     if (res) {
