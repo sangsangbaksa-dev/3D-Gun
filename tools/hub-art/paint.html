@@ -117,5 +117,5 @@ for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
 tg.putImageData(td, 0, 0);
 tg.strokeStyle = 'rgba(255,255,255,.10)'; tg.lineWidth = 1;
 for (let k = 0; k < 60; k++) { const x = rnd() * T, y = rnd() * T, l = 20 + rnd() * 90, a = rnd() * Math.PI; tg.beginPath(); tg.moveTo(x, y); tg.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); tg.stroke(); }
-window.__out = { bg: c.toDataURL('image/webp', .86), grunge: tc.toDataURL('image/png') };
+window.__out = { bg: c.toDataURL('image/webp', .86), grunge: tc.toDataURL('image/webp', .9) };
 </script>

@@ -60,7 +60,7 @@ export const CSS = `
 
 /* 카드 */
 #t2d .tone-orange{--tc:#FF8A2A}#t2d .tone-teal{--tc:#2EE6D6}#t2d .tone-red{--tc:#ff5560}#t2d .tone-green{--tc:#7be08a}#t2d .tone-gold{--tc:#ffc94a}#t2d .tone-violet{--tc:#c9a6ff}
-#t2d .card{position:relative;background:url(${ART}grunge.png) 0 0/256px,linear-gradient(165deg,rgba(34,16,18,.9),rgba(12,7,9,.94));background-blend-mode:soft-light,normal;
+#t2d .card{position:relative;background:url(${ART}grunge.webp) 0 0/256px,linear-gradient(165deg,rgba(34,16,18,.9),rgba(12,7,9,.94));background-blend-mode:soft-light,normal;
   border:1px solid #ffffff12;border-radius:4px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;transition:transform .15s,box-shadow .2s,border-color .2s;animation:t2dPop .4s both;backdrop-filter:blur(6px)}
 #t2d .card::before{content:"";position:absolute;left:14px;right:14px;top:-1px;height:2px;background:linear-gradient(90deg,var(--tc),transparent);opacity:.75}
 #t2d .card .cn{position:absolute;width:12px;height:12px;border:0 solid var(--tc);opacity:.85;pointer-events:none}
@@ -68,7 +68,7 @@ export const CSS = `
 #t2d .card .cn.br{right:-1px;bottom:-1px;border-bottom-width:2px;border-right-width:2px}
 #t2d .card:hover{transform:translateY(-2px);box-shadow:0 10px 26px #000a,0 0 0 1px #ffffff1c}
 #t2d .card.can{border-color:#2EE6D640;box-shadow:0 0 16px #2EE6D61c}
-#t2d .card.maxed{--tc:#ffc94a;border-color:#ffc94a55;background:url(${ART}grunge.png) 0 0/256px,linear-gradient(165deg,rgba(52,38,12,.92),rgba(18,13,6,.95));background-blend-mode:soft-light,normal}
+#t2d .card.maxed{--tc:#ffc94a;border-color:#ffc94a55;background:url(${ART}grunge.webp) 0 0/256px,linear-gradient(165deg,rgba(52,38,12,.92),rgba(18,13,6,.95));background-blend-mode:soft-light,normal}
 #t2d .card.lock{filter:saturate(.35) brightness(.7)}
 #t2d .card.lock:hover{transform:none}
 #t2d .card.flash{animation:t2dFlash .6s}

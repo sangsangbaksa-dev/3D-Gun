@@ -14,6 +14,6 @@ const path = require('path');
   const o = await p.evaluate(() => window.__out);
   const save = (name, url) => { const buf = Buffer.from(url.split(',')[1], 'base64'); fs.writeFileSync(path.join(out, name), buf); console.log(name, (buf.length / 1024).toFixed(0) + 'KB'); };
   save('bg.webp', o.bg);
-  save('grunge.png', o.grunge);
+  save('grunge.webp', o.grunge);
   await b.close();
 })();
