@@ -23,7 +23,7 @@ const rate = (n: number) => (n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n.
 const MSG: Record<BuyResult, string> = { ok: '구매 완료!', max: '이미 최대 레벨입니다', poor: '재화가 부족합니다', locked: '아직 잠겨 있습니다', unknown: '' };
 
 // 탭별 배경 그림 (public/hub/, 캔바 생성). 없는 탭은 기본 bg.webp.
-const TAB_BG: Record<string, string> = { 'cat:weapon': 'shop', 'cat:econ': 'shop', 'cat:turret': 'lab', skills: 'lab', producers: 'outpost' };
+const TAB_BG: Record<string, string> = { 'cat:weapon': 'shop', 'cat:econ': 'shop', 'cat:base': 'base', 'cat:turret': 'turret', skills: 'lab', producers: 'outpost' };
 
 interface CardRef { el: HTMLElement; refresh(): void }
 

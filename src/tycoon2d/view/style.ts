@@ -12,9 +12,15 @@ export const CSS = `
 #t2d .bgimg::after{content:"";position:absolute;inset:0;background:
   linear-gradient(90deg,#0a0507e6 0,#0a050799 13%,#0a050726 40%,#0a050726 62%,#0a0507a6 80%,#0a0507ee 100%),
   linear-gradient(#0a0507d9 0,#0a050733 22%,#0a050700 50%,#0a0507cc 100%)}
-#t2d[data-bg=shop] .bgimg{background-image:url(${ART}shop.webp)}
+#t2d[data-bg=shop] .bgimg{background-image:url(${ART}shop.webp);filter:brightness(1.35) saturate(1.1)}
 #t2d[data-bg=lab] .bgimg{background-image:url(${ART}lab.webp)}
 #t2d[data-bg=outpost] .bgimg{background-image:url(${ART}outpost.webp)}
+#t2d[data-bg=turret] .bgimg{background-image:url(${ART}turret.webp)}
+#t2d[data-bg=base] .bgimg{background-image:url(${ART}base.webp)}
+/* 탭 그림이 있을 때는 가운데를 덜 가려 그림이 보이게 한다 (양옆 글자 쪽만 어둡게) */
+#t2d[data-bg]:not([data-bg=""]) .bgimg::after{background:
+  linear-gradient(90deg,#0a0507d9 0,#0a050766 14%,#0a050700 38%,#0a050700 64%,#0a050773 82%,#0a0507e0 100%),
+  linear-gradient(#0a0507a6 0,#0a050700 20%,#0a050700 62%,#0a050799 100%)}
 @keyframes t2dPan{to{transform:scale(1.06) translate(-1%,-1%)}}
 #t2d .bgfx{position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(0deg,#0000 0 2px,#0000002e 2px 3px),
