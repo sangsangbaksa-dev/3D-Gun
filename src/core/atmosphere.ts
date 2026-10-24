@@ -12,10 +12,11 @@ interface Look {
 }
 
 // 팔레트: bg #10141a, teal #2EE6D6, orange #FF8A2A, red #E0303A
+// 넓은 맵(±200m)의 원경 랜드마크와 능선이 자연스러운 공기 원근감으로 읽히도록 안개 거리를 넉넉히 잡는다
 const LOOKS: Record<Phase, Look> = {
-  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x8a4a2a, fogNear: 40, fogFar: 140, sun: 1.5, sunColor: 0xff8a2a, hemi: 1, hemiSky: 0x2ee6d6, hemiGround: 0x3a332c, ember: 0.4, paint: 0.7 },
-  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4f1f24, fogNear: 28, fogFar: 100, sun: 1.05, sunColor: 0xff8a2a, hemi: 0.75, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1, paint: 0.85 },
-  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 22, fogFar: 90, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15, paint: 0.1 },
+  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x8a4a2a, fogNear: 46, fogFar: 175, sun: 1.52, sunColor: 0xff8a2a, hemi: 1.02, hemiSky: 0x2ee6d6, hemiGround: 0x3a332c, ember: 0.4, paint: 0.72 },
+  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4f1f24, fogNear: 34, fogFar: 132, sun: 1.08, sunColor: 0xff8a2a, hemi: 0.78, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1, paint: 0.85 },
+  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 26, fogFar: 110, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15, paint: 0.1 },
 };
 const COLOR_KEYS = ['top', 'horizon', 'fog', 'sunColor', 'hemiSky', 'hemiGround'] as const;
 const NUM_KEYS = ['fogNear', 'fogFar', 'sun', 'hemi', 'ember', 'paint'] as const;
@@ -99,21 +100,21 @@ export class Atmosphere {
     return tex;
   }
 
-  /** 지평선의 무너진 고층 건물 두 겹. 안개를 받지 않아 붉은 하늘에 검은 실루엣으로 남는다. */
+  /** 지평선의 무너진 고층 건물 두 겹. 맵(±200m) 바깥 지평선에 둘러 원경 깊이감을 만든다 */
   private buildSkyline() {
     let s = 7;
     const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const rings: [number, number, number][] = [[150, 0x1a1418, 70], [205, 0x120e12, 90]];
+    const rings: [number, number, number][] = [[228, 0x1c1418, 76], [262, 0x120d12, 96]];
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     for (const [rad, color, n] of rings) {
       const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color, fog: false }), n);
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + r() * 0.05;
-        const h = 8 + Math.pow(r(), 2) * (rad > 160 ? 55 : 38);
-        const w = 5 + r() * 12;
-        p.set(Math.cos(a) * rad, h / 2 - 2, Math.sin(a) * rad);
-        q.setFromEuler(new THREE.Euler(0, -a + (r() - 0.5) * 0.3, (r() - 0.5) * (r() < 0.2 ? 0.25 : 0.04)));
-        sc.set(w, h, 4 + r() * 6);
+        const h = 10 + Math.pow(r(), 1.8) * (rad > 240 ? 64 : 44);
+        const w = 6 + r() * 14;
+        p.set(Math.cos(a) * rad, h / 2 - 2.5, Math.sin(a) * rad);
+        q.setFromEuler(new THREE.Euler(0, -a + (r() - 0.5) * 0.3, (r() - 0.5) * (r() < 0.22 ? 0.24 : 0.04)));
+        sc.set(w, h, 5 + r() * 7);
         inst.setMatrixAt(i, m.compose(p, q, sc));
       }
       inst.frustumCulled = false;
