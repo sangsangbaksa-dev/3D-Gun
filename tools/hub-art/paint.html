@@ -1,0 +1,121 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<script>
+// 본부(업그레이드 화면) 배경 일러스트를 절차적으로 그린다. 시드 고정이라 다시 돌려도 같은 그림이 나온다.
+// 실행: node tools/hub-art/render.cjs  → public/hub/*.webp
+const W = 2560, H = 1440, HOR = H * 0.74;
+const c = document.getElementById('c'); c.width = W; c.height = H;
+const g = c.getContext('2d');
+let seed = 20261024;
+const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+const P = new Uint8Array(512); { const p = [...Array(256).keys()]; for (let i = 255; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } for (let i = 0; i < 512; i++) P[i] = p[i & 255]; }
+const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+const lerp = (a, b, t) => a + (b - a) * t;
+function grad(h, x, y) { const v = h & 3; return (v & 1 ? -x : x) + (v & 2 ? -y : y); }
+function noise(x, y) { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y);
+  const a = P[X] + Y, b = P[X + 1] + Y; return lerp(lerp(grad(P[a], x, y), grad(P[b], x - 1, y), u), lerp(grad(P[a + 1], x, y - 1), grad(P[b + 1], x - 1, y - 1), u), v); }
+const fbm = (x, y, o = 5) => { let s = 0, a = .5, f = 1; for (let i = 0; i < o; i++) { s += a * noise(x * f, y * f); a *= .5; f *= 2.03; } return s; };
+const mix3 = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const STOPS = [[0, hex('#0a0408')], [.22, hex('#2e0a12')], [.42, hex('#7a1d22')], [.58, hex('#c2392e')], [.68, hex('#ec6a2e')], [.74, hex('#ffa04a')], [1, hex('#1a0a08')]];
+function sky(t) { for (let i = 1; i < STOPS.length; i++) if (t <= STOPS[i][0]) { const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i]; return mix3(ca, cb, (t - a) / (b - a)); } return STOPS[STOPS.length - 1][1]; }
+const SUN = [W * 0.6, HOR - H * 0.09];
+
+// 1) 하늘: 그라데이션 + 띠구름 + 해무리
+const img = g.createImageData(W, H); const d = img.data;
+for (let y = 0; y < H; y++) {
+  const t = y / H;
+  for (let x = 0; x < W; x++) {
+    let [r, gg, b] = sky(t);
+    if (y < HOR + 20) {
+      const k = Math.max(0, Math.min(1, (y / HOR)));
+      const n = fbm(x / 900, y / 150 + 3.1, 6);              // 길게 늘어난 띠구름
+      const n2 = fbm(x / 300 + 9, y / 90, 4);
+      const cl = Math.max(0, Math.min(1, (n * 1.6 + n2 * .5 + .15) * 1.8)) * (0.25 + k * .75);
+      const lit = Math.max(0, n2) * 1.4 * k;                  // 아래쪽 구름 가장자리는 해에 달아오른다
+      r = lerp(r, r * .45 + 30, cl * .75) + lit * 90; gg = lerp(gg, gg * .35 + 6, cl * .75) + lit * 30; b = lerp(b, b * .5 + 10, cl * .75) + lit * 8;
+    }
+    const dx = (x - SUN[0]) / W, dy = (y - SUN[1]) / W, dd = Math.sqrt(dx * dx + dy * dy);
+    const glow = Math.exp(-dd * 9) * .9 + Math.exp(-dd * 40) * .8 + (dd < .022 ? 1.2 : 0);
+    r += glow * 255; gg += glow * 150; b += glow * 70;
+    const i = (y * W + x) * 4; d[i] = Math.min(255, r); d[i + 1] = Math.min(255, gg); d[i + 2] = Math.min(255, b); d[i + 3] = 255;
+  }
+}
+g.putImageData(img, 0, 0);
+
+// 2) 폐허 스카이라인 3겹 (먼 곳일수록 붉은 안개에 묻힌다)
+function tower(x, w, h, base, col, tilt, lit) {
+  g.save(); g.translate(x + w / 2, base); g.rotate(tilt); g.fillStyle = col; g.beginPath();
+  g.moveTo(-w / 2, 40); g.lineTo(-w / 2, -h);
+  const steps = 2 + Math.floor(rnd() * 4);                   // 부서진 꼭대기
+  for (let s = 1; s <= steps; s++) g.lineTo(-w / 2 + (w * s) / steps, -h + (rnd() - .3) * Math.min(80, h * .25));
+  g.lineTo(w / 2, 40); g.closePath(); g.fill();
+  if (rnd() < .3) { const ah = 40 + rnd() * 70; g.fillRect(-1.5, -h - ah, 3, ah + 30); }    // 안테나
+  if (lit) {
+    for (let k = 0; k < w * h / 2600; k++) {
+      if (rnd() < .82) continue;
+      g.fillStyle = rnd() < .7 ? 'rgba(255,150,60,.85)' : 'rgba(46,230,214,.7)';
+      g.fillRect(-w / 2 + 6 + rnd() * (w - 14), -h + 20 + rnd() * (h - 30), 5, 7);
+    }
+    g.fillStyle = col;
+  }
+  g.restore();
+}
+function layer(n, minH, maxH, minW, maxW, base, col, lit, haze, keep = () => true) {
+  let x = -80;
+  while (x < W + 80) {
+    const w = minW + rnd() * (maxW - minW), h = minH + Math.pow(rnd(), 1.6) * (maxH - minH);
+    const tilt = rnd() < .18 ? (rnd() - .5) * .22 : 0;
+    if (keep(x / W)) tower(x, w, h, base, col, tilt, lit);
+    x += w * (0.6 + rnd() * .9) + (rnd() < .2 ? 40 + rnd() * 120 : 0);
+  }
+  if (haze) { const hz = g.createLinearGradient(0, base - 260, 0, base + 30); hz.addColorStop(0, 'rgba(255,110,50,0)'); hz.addColorStop(1, haze); g.fillStyle = hz; g.fillRect(0, base - 260, W, 300); }
+}
+// 해 둘레 빛줄기
+g.save(); g.globalCompositeOperation = 'lighter';
+for (let k = 0; k < 14; k++) { const a = -Math.PI / 2 + (rnd() - .5) * 2.4, l = 900 + rnd() * 700, wd = .015 + rnd() * .035;
+  const rg = g.createRadialGradient(SUN[0], SUN[1], 0, SUN[0], SUN[1], l); rg.addColorStop(0, 'rgba(255,150,70,.11)'); rg.addColorStop(1, 'rgba(255,90,40,0)');
+  g.fillStyle = rg; g.beginPath(); g.moveTo(SUN[0], SUN[1]); g.arc(SUN[0], SUN[1], l, a - wd, a + wd); g.closePath(); g.fill(); }
+g.restore();
+layer(0, 80, 260, 40, 110, HOR + 6, '#8a2c26', false, 'rgba(240,100,45,.55)');
+layer(1, 110, 380, 60, 150, HOR + 26, '#40141a', true, 'rgba(210,80,40,.4)', (u) => Math.abs(u - .6) > .07 || rnd() < .3);
+layer(2, 260, 760, 110, 230, HOR + 70, '#140608', true, null, (u) => u < .3 || u > .84);
+
+// 3) 땅 + 지평선 안개
+const gr = g.createLinearGradient(0, HOR + 40, 0, H); gr.addColorStop(0, '#2a0f0d'); gr.addColorStop(.3, '#140809'); gr.addColorStop(1, '#070304');
+g.fillStyle = gr; g.fillRect(0, HOR + 60, W, H);
+const fog = g.createLinearGradient(0, HOR - 40, 0, HOR + 180); fog.addColorStop(0, 'rgba(255,120,50,0)'); fog.addColorStop(.45, 'rgba(255,120,50,.28)'); fog.addColorStop(1, 'rgba(255,120,50,0)');
+g.fillStyle = fog; g.fillRect(0, HOR - 40, W, 220);
+// 도로 잔해·철조망 실루엣
+g.strokeStyle = '#050203'; g.lineWidth = 3;
+for (let x = 0; x < W; x += 140) { const y0 = H - 210 + Math.sin(x / 300) * 18; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y0 - 70); g.stroke(); }
+g.lineWidth = 1.6; for (let k = 0; k < 3; k++) { g.beginPath(); for (let x = 0; x <= W; x += 20) { const y = H - 236 + k * 22 + Math.sin(x / 300) * 18 + Math.sin(x * .7 + k) * 3; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+g.fillStyle = '#040203'; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 40) g.lineTo(x, H - 150 + fbm(x / 400, 7) * 120); g.lineTo(W, H); g.fill();
+
+// 4) 불씨
+for (let k = 0; k < 260; k++) {
+  const x = rnd() * W, y = rnd() * H * .95, big = rnd() < .06, r = big ? 5 + rnd() * 7 : .6 + rnd() * 2.2, a = big ? .12 + rnd() * .15 : .25 + rnd() * .7;
+  const eg = g.createRadialGradient(x, y, 0, x, y, r * 4); eg.addColorStop(0, `rgba(255,190,110,${a})`); eg.addColorStop(.3, `rgba(255,120,40,${a * .6})`); eg.addColorStop(1, 'rgba(255,80,30,0)');
+  g.fillStyle = eg; g.fillRect(x - r * 4, y - r * 4, r * 8, r * 8);
+}
+// 5) 비네트 + 필름 그레인
+const vg = g.createRadialGradient(W / 2, H * .55, H * .35, W / 2, H * .55, W * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.78)');
+g.fillStyle = vg; g.fillRect(0, 0, W, H);
+const gi = g.getImageData(0, 0, W, H), gd = gi.data;
+for (let i = 0; i < gd.length; i += 4) { const n = (rnd() - .5) * 14; gd[i] += n; gd[i + 1] += n; gd[i + 2] += n; }
+g.putImageData(gi, 0, 0);
+
+// 패널용 그런지 타일 (긁힘·얼룩, 투명 PNG로 겹쳐 쓴다)
+const T = 512, tc = document.createElement('canvas'); tc.width = tc.height = T; const tg = tc.getContext('2d');
+const td = tg.createImageData(T, T);
+for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+  const n = fbm(x / 64, y / 64, 5), sp = rnd();
+  const v = Math.max(0, n * 1.6 + .1) * 36 + (sp > .995 ? 40 : 0);
+  const i = (y * T + x) * 4;
+  td.data[i] = 255; td.data[i + 1] = 255; td.data[i + 2] = 255; td.data[i + 3] = Math.min(255, v);
+}
+tg.putImageData(td, 0, 0);
+tg.strokeStyle = 'rgba(255,255,255,.10)'; tg.lineWidth = 1;
+for (let k = 0; k < 60; k++) { const x = rnd() * T, y = rnd() * T, l = 20 + rnd() * 90, a = rnd() * Math.PI; tg.beginPath(); tg.moveTo(x, y); tg.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); tg.stroke(); }
+window.__out = { bg: c.toDataURL('image/webp', .86), grunge: tc.toDataURL('image/webp', .9) };
+</script>

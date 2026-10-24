@@ -9,6 +9,7 @@ import {
   incomePerSec, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
 } from '../logic/economy';
 import { CSS } from './style';
+import { icon, iconOr, ICON_OF, TONE_OF } from './icons';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -42,11 +43,17 @@ export class TycoonPanel {
     this.root = document.createElement('div');
     this.root.id = 't2d';
     this.root.innerHTML = `
-      <div class="bgfx"></div>
-      <header><h1>🏚️ 생존자 작전 본부<small>쓰러진 뒤에도 남는 것: 영구 업그레이드와 생산 시설 수익</small></h1><div class="report"></div></header>
+      <div class="bgimg"></div><div class="bgfx"></div><div class="embers"></div>
+      <header><div class="emblem">${icon('target', 'si big')}</div><h1><span class="kick">SURVIVOR COMMAND</span>생존자 작전 본부<small>쓰러진 뒤에도 남는 것: 영구 업그레이드와 생산 시설 수익</small></h1><div class="report"></div></header>
       <div class="wallet"></div>
       <main><nav></nav><div class="content"></div><aside></aside></main>
-      <footer><div><button class="ghost" data-act="refund">스킬 초기화(포인트 환급)</button> <button class="ghost" data-act="reset">진행 초기화</button></div><button class="launch" data-act="launch">⚔️ 출격</button></footer>`;
+      <footer><div class="fl"><button class="ghost" data-act="refund">${icon('star', 'si sm')}스킬 초기화(포인트 환급)</button><button class="ghost" data-act="reset">${icon('reset', 'si sm')}진행 초기화</button></div><button class="launch" data-act="launch"><span class="chev">›››</span>${icon('sword', 'si')}<span>출격</span><span class="chev r">‹‹‹</span></button></footer>`;
+    const em = this.root.querySelector('.embers') as HTMLElement;
+    for (let i = 0; i < 18; i++) {
+      const e = document.createElement('i');
+      e.style.left = `${(i * 53) % 100}%`; e.style.animationDuration = `${9 + (i * 7) % 9}s`; e.style.animationDelay = `${-(i * 1.7) % 12}s`;
+      em.appendChild(e);
+    }
     document.body.appendChild(this.root);
     this.reportEl = this.root.querySelector('.report') as HTMLElement;
     this.content = this.root.querySelector('.content') as HTMLElement;
@@ -56,17 +63,21 @@ export class TycoonPanel {
       const box = document.createElement('div');
       box.className = 'coin';
       box.title = WALLET_LABEL[k];
-      box.innerHTML = `<span class="ic">${WALLET_ICON[k]}</span><div><div class="v">0</div><div class="r"></div></div>`;
+      box.dataset.k = k;
+      box.innerHTML = `<span class="ic">${iconOr(k, WALLET_ICON[k])}</span><div><div class="lb">${WALLET_LABEL[k]}</div><div class="v">0</div><div class="r"></div></div>`;
       wallet.appendChild(box);
       this.walletEl.set(k, { box, v: box.querySelector('.v') as HTMLElement, r: box.querySelector('.r') as HTMLElement, shown: 0 });
     }
     const nav = this.root.querySelector('nav') as HTMLElement;
-    const tabs: Array<[Tab, string]> = [
-      ...CAT_ORDER.map((c) => [`cat:${c}`, `${CAT_ICON[c]} ${CAT_LABEL[c]}`] as [Tab, string]),
-      ['skills', '🌳 스킬 트리'], ['producers', '🏭 생산 시설'],
+    const tabs: Array<[Tab, string, string]> = [
+      ...CAT_ORDER.map((c) => [`cat:${c}`, CAT_ICON[c], CAT_LABEL[c]] as [Tab, string, string]),
+      ['skills', '🌳', '스킬 트리'], ['producers', '🏭', '생산 시설'],
     ];
-    for (const [id, label] of tabs) {
-      const b = document.createElement('button'); b.textContent = label; b.onclick = () => this.setTab(id);
+    for (const [id, emo, label] of tabs) {
+      const b = document.createElement('button');
+      b.className = 'tone-' + (TONE_OF[id.replace('cat:', '')] ?? 'teal');
+      b.innerHTML = `<span class="ni">${iconOr(id, emo)}</span><span class="nl">${label}</span>`;
+      b.onclick = () => this.setTab(id);
       nav.appendChild(b); this.navBtns.set(id, b);
     }
     this.root.addEventListener('click', (e) => {
@@ -137,7 +148,7 @@ export class TycoonPanel {
     for (const k of Object.keys(c) as WalletKey[]) {
       const s = document.createElement('span');
       s.className = 'cost' + (bal(meta, k) + 1e-9 < (c[k] ?? 0) ? ' bad' : '');
-      s.textContent = `${WALLET_ICON[k]} ${fmt(c[k] ?? 0)}`;
+      s.innerHTML = `${iconOr(k, WALLET_ICON[k], 'si xs')}${fmt(c[k] ?? 0)}`;
       s.title = WALLET_LABEL[k];
       wrap.appendChild(s);
     }
@@ -149,10 +160,10 @@ export class TycoonPanel {
     for (let i = 0; i < n; i++) { const p = document.createElement('span'); p.className = 'pip' + (i < filled ? ' f' : ''); wrap.appendChild(p); }
   }
 
-  private makeCard(i: number, icon: string, name: string, desc: string) {
+  private makeCard(i: number, ico: string, name: string, desc: string, tone: string) {
     const el = document.createElement('div');
-    el.className = 'card'; el.style.animationDelay = `${i * 0.03}s`;
-    el.innerHTML = `<div class="top"><div class="ico">${icon}</div><div><div class="nm">${name}</div><div class="lv"></div></div></div>
+    el.className = `card tone-${tone}`; el.style.animationDelay = `${i * 0.03}s`;
+    el.innerHTML = `<i class="cn tl"></i><i class="cn br"></i><div class="top"><div class="ico">${ico}</div><div><div class="nm">${name}</div><div class="lv"></div></div></div>
       <div class="ds">${desc}</div><div class="eff"></div><div class="pips"></div><div class="costs"></div><button class="buy"></button>`;
     return {
       el, lv: el.querySelector('.lv') as HTMLElement, eff: el.querySelector('.eff') as HTMLElement, pips: el.querySelector('.pips') as HTMLElement,
@@ -170,7 +181,7 @@ export class TycoonPanel {
 
   private upgradeCard(id: string, i: number): HTMLElement {
     const d = UPGRADES.find((u) => u.id === id)!;
-    const c = this.makeCard(i, d.icon, d.name, d.desc);
+    const c = this.makeCard(i, iconOr(id, d.icon), d.name, d.desc, TONE_OF[d.cat]);
     c.btn.onclick = (e) => this.afterBuy(c.el, buyUpgrade(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -196,7 +207,7 @@ export class TycoonPanel {
   private skillCard(id: string, i: number): HTMLElement {
     const s = SKILLS.find((x) => x.id === id)!;
     const icon = { 생존: '❤️', 채집: '🪓', 연구: '🧪', 사령: '🚩' }[s.branch] ?? '🌳';
-    const c = this.makeCard(i, icon, s.name, s.desc);
+    const c = this.makeCard(i, iconOr(ICON_OF[`sk:${id}`] ? `sk:${id}` : s.branch, icon), s.name, s.desc, TONE_OF.skills);
     c.btn.onclick = (e) => this.afterBuy(c.el, buySkill(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -218,7 +229,7 @@ export class TycoonPanel {
 
   private producerCard(id: string, i: number): HTMLElement {
     const p = PRODUCERS.find((x) => x.id === id)!;
-    const c = this.makeCard(i, p.icon, p.name, p.desc);
+    const c = this.makeCard(i, iconOr(id, p.icon), p.name, p.desc, TONE_OF.producers);
     c.btn.onclick = (e) => this.afterBuy(c.el, buyFacility(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -242,7 +253,7 @@ export class TycoonPanel {
   }
 
   private buildSide() {
-    this.side.innerHTML = `<div class="exchange"><h3>🏪 교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
+    this.side.innerHTML = `<div class="exchange"><h3>${icon('exchange', 'si sm')}교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
       <div class="panelbox" data-preview></div>`;
     const rows = this.side.querySelector('[data-ex-rows]') as HTMLElement;
     for (const k of RES_KEYS) {
@@ -270,12 +281,14 @@ export class TycoonPanel {
     for (const k of RES_KEYS) {
       const el = this.side.querySelector(`[data-res="${k}"] [data-ex-label]`) as HTMLElement | null;
       if (el) {
-        el.textContent = `${RES_LABEL[k]} · 판매 🪙${metaSellUnit(meta, k)} · 구매 🪙${RES_BUY_PRICE[k]}`;
+        const html = `${iconOr(k, WALLET_ICON[k], 'si sm')}<b>${RES_LABEL[k]}</b><span class="own">${fmt(bal(meta, k))}</span>`
+          + `<span class="px ps">판매 ${metaSellUnit(meta, k)}</span><span class="px pb">구매 ${RES_BUY_PRICE[k]}</span>`;
+        if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
       }
     }
     const row = (a: string, v: string) => `<div><span>${a}</span><b>${v}</b></div>`;
     const wl = Object.entries(b.weaponLv).filter(([, v]) => v > 0).map(([k, v]) => `${k} +${v}`).join(', ') || '-';
-    (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>다음 출격 미리보기</h3>`
+    (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>${icon('flag', 'si sm')}다음 출격 미리보기</h3>`
       + row('시작 웨이브', String(b.startWave)) + row('시작 골드', fmt(b.startGold)) + row('핵 체력', `+${b.coreHp}`)
       + row('최대 체력', `+${b.maxHp}`) + row('공격력', `+${Math.round(b.dmgMul * 100)}%`) + row('준비 시간', `30 +${b.prepBonus}초`)
       + row('아군 상한', `+${b.allyCap}`) + row('시작 무기', b.weapons.join(', ')) + row('총 품질', wl)
