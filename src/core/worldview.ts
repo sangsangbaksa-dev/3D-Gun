@@ -72,7 +72,7 @@ export function buildWorldView(scene: THREE.Scene) {
   const curbs: THREE.BufferGeometry[] = [];
   const strip = (a: { x: number; z: number }, b: { x: number; z: number }, w: number, yOff: number) => {
     const len = Math.hypot(b.x - a.x, b.z - a.z);
-    const g = new THREE.PlaneGeometry(w, len, 1, Math.max(1, Math.round(len / 3)));
+    const g = new THREE.PlaneGeometry(w, len, 4, Math.max(1, Math.round(len / 2.5)));
     const uv = g.attributes.uv as THREE.BufferAttribute;
     for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (len / 12));
     g.rotateX(-Math.PI / 2);
@@ -80,13 +80,28 @@ export function buildWorldView(scene: THREE.Scene) {
     g.translate((a.x + b.x) / 2, 0, (a.z + b.z) / 2);
     const pp = g.attributes.position as THREE.BufferAttribute;
     for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + yOff);
+    g.computeVertexNormals();
+    return g;
+  };
+  const disc = (cx: number, cz: number, rad: number, yOff: number) => {
+    const g = new THREE.CircleGeometry(rad, 20);
+    g.rotateX(-Math.PI / 2);
+    g.translate(cx, 0, cz);
+    const pp = g.attributes.position as THREE.BufferAttribute;
+    for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + yOff);
+    g.computeVertexNormals();
     return g;
   };
   for (const lane of MAP.lanes) {
     for (let i = 1; i < lane.waypoints.length; i++) {
       const a = lane.waypoints[i - 1], b = lane.waypoints[i];
-      shoulders.push(strip(a, b, 8.6, 0.04 + i * 0.001));
-      roads.push(strip(a, b, 6.4, 0.07 + i * 0.001));
+      // 보스 둥지(0,-180) 내부를 통과하는 북쪽 레인 첫 구간은 노란 차선 아스팔트 대신 어두운 화산석 진입로만 남긴다
+      const isBossSeg = lane.id === 'N' && i === 1;
+      shoulders.push(strip(a, b, 8.6, 0.045 + i * 0.001));
+      if (!isBossSeg) roads.push(strip(a, b, 6.4, 0.08 + i * 0.001));
+      if (i < lane.waypoints.length - 1) {
+        shoulders.push(disc(b.x, b.z, 4.3, 0.046));
+      }
       // 도로 변을 따라 간헐적으로 경계석/가드레일 흔적을 배치해 원근감과 속도감을 보강한다
       const len = Math.hypot(b.x - a.x, b.z - a.z);
       const yaw = Math.atan2(b.x - a.x, b.z - a.z);
@@ -95,7 +110,7 @@ export function buildWorldView(scene: THREE.Scene) {
       for (let s = 1; s < steps; s++) {
         const t = s / steps;
         const px = a.x + (b.x - a.x) * t, pz = a.z + (b.z - a.z) * t;
-        if (Math.hypot(px, pz) < 22) continue;
+        if (Math.hypot(px, pz) < 22 || Math.hypot(px, pz + 180) < 26) continue;
         for (const side of [-1, 1]) {
           if ((s + (side > 0 ? 1 : 0)) % 2 !== 0) continue;
           const cx = px + nx * side * 3.85, cz = pz + nz * side * 3.85;
@@ -113,6 +128,24 @@ export function buildWorldView(scene: THREE.Scene) {
     const curbMesh = new THREE.Mesh(mergeGeometries(curbs)!, curbMat);
     curbMesh.castShadow = true; curbMesh.receiveShadow = true; scene.add(curbMesh);
   }
+
+  // 1-b) 기지 방어선 콘크리트 에이프런 & 청록 전술 링 + 보스 둥지 의식 마법진 링
+  const addFlatRing = (rIn: number, rOut: number, segs: number, cx: number, cz: number, yOff: number, color: number, emissive = 0, ei = 0) => {
+    const g = new THREE.RingGeometry(rIn, rOut, segs);
+    g.rotateX(-Math.PI / 2);
+    g.translate(cx, 0, cz);
+    const pp = g.attributes.position as THREE.BufferAttribute;
+    for (let k = 0; k < pp.count; k++) pp.setY(k, terrainY(pp.getX(k), pp.getZ(k)) + yOff);
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: ei }));
+    m.receiveShadow = !(emissive > 0);
+    scene.add(m);
+  };
+  addFlatRing(13.2, 16.8, 48, 0, 0, 0.035, 0x283038);
+  addFlatRing(13.85, 14.15, 64, 0, 0, 0.055, 0x2ee6d6, 0x1a9e94, 0.65);
+  addFlatRing(4.05, 4.28, 40, 0, 0, 0.055, 0x2ee6d6, 0x1a9e94, 0.55);
+  // 보스 둥지(0,-180) 바닥의 붉은 의식 링
+  addFlatRing(6.6, 7.1, 40, 0, -180, 0.05, 0xff3a2a, 0xe0303a, 0.85);
+  addFlatRing(13.4, 14.0, 48, 0, -180, 0.05, 0xc82430, 0x9e1c26, 0.7);
 
   // 2) 건물: 외벽 텍스처 3종 x (벽, 지붕, 옥상 구조물) 별로 합친 메시
   const facades = [0, 1, 2].map((v) => canvasTex(128, 128, (g) => {
@@ -182,9 +215,9 @@ export function buildWorldView(scene: THREE.Scene) {
         uv.setXY(i, uv.getX(i) * Math.max(1, Math.round(widths[f] / 4)), uv.getY(i) * floors);
       }
       wallGeo[p.style ?? 0].push(place(g, p, p.h / 2 + gy - 0.3));
-      // 1층 기단부(플린스)와 옥상 슬래브
-      const plinth = new THREE.BoxGeometry(p.w + 0.36, 0.9, p.d + 0.36);
-      roofDetailGeo.push(place(plinth, p, 0.45 + gy - 0.2));
+      // 1층 기단부(플린스)와 옥상 슬래브 — 지면 아래로 깊게 묻어 경사면에서도 들뜨지 않게 한다
+      const plinth = new THREE.BoxGeometry(p.w + 0.36, 1.5, p.d + 0.36);
+      roofDetailGeo.push(place(plinth, p, gy + 0.05));
       const roofY = p.h + gy - 0.3;
       const roof = new THREE.BoxGeometry(p.w + 0.45, 0.5, p.d + 0.45);
       roofGeo.push(place(roof, p, roofY + 0.25));
@@ -270,20 +303,20 @@ export function buildWorldView(scene: THREE.Scene) {
   let s = 5; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
   for (let i = 0; i < 96; i++) {
     const a = (i / 96) * Math.PI * 2 + (r() - 0.5) * 0.03;
-    const d = H * 1.08 + r() * 18, h = 13 + r() * 20, rad = 26 + r() * 18;
+    const d = H * 1.08 + r() * 18, h = 15 + r() * 22, rad = 26 + r() * 18;
     const g = new THREE.ConeGeometry(rad, h, 7);
     g.scale(1, 1, 0.58);
     g.rotateY(-a + (r() - 0.5) * 0.25);
-    g.translate(Math.cos(a) * d, h / 2 - 2.2, Math.sin(a) * d);
+    g.translate(Math.cos(a) * d, h / 2 - 4.5, Math.sin(a) * d);
     mtInner.push(g);
   }
   for (let i = 0; i < 72; i++) {
     const a = (i / 72) * Math.PI * 2 + (r() - 0.5) * 0.04;
-    const d = H * 1.24 + r() * 28, h = 26 + r() * 34, rad = 38 + r() * 26;
+    const d = H * 1.24 + r() * 28, h = 28 + r() * 36, rad = 38 + r() * 26;
     const g = new THREE.ConeGeometry(rad, h, 6);
     g.scale(1.1, 1, 0.65);
     g.rotateY(-a + (r() - 0.5) * 0.3);
-    g.translate(Math.cos(a) * d, h / 2 - 3, Math.sin(a) * d);
+    g.translate(Math.cos(a) * d, h / 2 - 5.5, Math.sin(a) * d);
     mtOuter.push(g);
   }
   const mtWarm = mtInner.filter((_, i) => i % 2 === 0), mtCool = mtInner.filter((_, i) => i % 2 === 1);

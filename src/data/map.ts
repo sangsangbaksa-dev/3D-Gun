@@ -94,34 +94,36 @@ function genProps(): MapProp[] {
       }
     }
   }
-  // 엄폐물·폐차 군집: 무작위 단발 흩뿌리기 대신, 도로변·시가지 외곽에 바리케이드+폐차 소규모 군집을 배치해 시각 노이즈를 줄이고 구도를 살린다
-  const canPlace = (x: number, z: number, pad = 6.2) => {
-    if (Math.abs(x) > 184 || Math.abs(z) > 184) return false;
-    if (Math.hypot(x, z) < 27 || nearLane(x, z, pad)) return false;
-    if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && q.kind !== 'wasteland' && Math.hypot(x - q.x, z - q.z) < q.r * 0.82)) return false;
-    if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 3.2)) return false;
+  // 엄폐물·폐차 군집: 무작위 단발 흩뿌리기 대신, 도로변·시가지 외곽에 바리케이드+폐차 소규모 군집을 적당한 간격으로 배치해 시각 노이즈를 줄인다
+  const canPlace = (x: number, z: number, pad = 6.8, minClusterGap = 14) => {
+    if (Math.abs(x) > 182 || Math.abs(z) > 182) return false;
+    if (Math.hypot(x, z) < 28 || nearLane(x, z, pad)) return false;
+    // 보스 둥지 및 진입로 주변은 시야가 탁 트이게 비운다
+    if (Math.hypot(x, z + 180) < 30 || (Math.abs(x) < 22 && z < -145)) return false;
+    if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && q.kind !== 'wasteland' && Math.hypot(x - q.x, z - q.z) < q.r * 0.86)) return false;
+    if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + (p.kind === 'building' ? 5.2 : minClusterGap))) return false;
     return true;
   };
-  for (let i = 0; i < 56; i++) {
-    const cx = (rnd() * 2 - 1) * 176, cz = (rnd() * 2 - 1) * 176;
-    if (!canPlace(cx, cz, 6.5)) continue;
+  for (let i = 0; i < 48; i++) {
+    const cx = (rnd() * 2 - 1) * 174, cz = (rnd() * 2 - 1) * 174;
+    if (!canPlace(cx, cz, 7.0, 15)) continue;
     const baseYaw = rnd() * Math.PI;
     const isWallLead = rnd() < 0.52;
     if (isWallLead) {
-      out.push({ kind: 'wall', x: cx, z: cz, r: 2.2, w: 5.2 + rnd() * 2.8, d: 0.85, h: 2.3 + rnd() * 0.4, rot: baseYaw, style: i % 2 });
+      out.push({ kind: 'wall', x: cx, z: cz, r: 2.2, w: 5.2 + rnd() * 2.6, d: 0.85, h: 2.2 + rnd() * 0.4, rot: baseYaw, style: i % 2 });
     } else {
       out.push({ kind: 'car', x: cx, z: cz, r: 1.6, w: 4.2, d: 1.9, h: 1.5, rot: baseYaw, style: i % 3 });
     }
-    // 55% 확률로 근처(4.5~7m)에 짝을 이루는 보조 엄폐물(폐차 또는 꺾인 방벽)을 붙여 의미 있는 클러스터로 구성
-    if (rnd() < 0.55) {
+    // 50% 확률로 근처(4.8~6.8m)에 짝을 이루는 보조 엄폐물(폐차 또는 꺾인 방벽)을 붙여 의미 있는 클러스터로 구성
+    if (rnd() < 0.5) {
       const ang = baseYaw + (rnd() < 0.5 ? 0.45 : -0.55);
-      const dist = 4.8 + rnd() * 2.2;
+      const dist = 4.8 + rnd() * 2.0;
       const sx = cx + Math.cos(ang) * dist, sz = cz + Math.sin(ang) * dist;
-      if (canPlace(sx, sz, 6.0)) {
+      if (canPlace(sx, sz, 6.4, 3.2)) {
         if (rnd() < 0.48) {
           out.push({ kind: 'car', x: sx, z: sz, r: 1.6, w: 4.1, d: 1.85, h: 1.48, rot: baseYaw + (rnd() - 0.5) * 0.7, style: (i + 1) % 3 });
         } else {
-          out.push({ kind: 'wall', x: sx, z: sz, r: 2.0, w: 4.4 + rnd() * 2.0, d: 0.8, h: 2.1, rot: baseYaw + Math.PI * 0.38, style: (i + 1) % 2 });
+          out.push({ kind: 'wall', x: sx, z: sz, r: 2.0, w: 4.4 + rnd() * 1.8, d: 0.8, h: 2.1, rot: baseYaw + Math.PI * 0.38, style: (i + 1) % 2 });
         }
       }
     }

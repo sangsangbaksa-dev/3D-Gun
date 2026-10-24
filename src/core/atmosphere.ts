@@ -12,11 +12,11 @@ interface Look {
 }
 
 // 팔레트: bg #10141a, teal #2EE6D6, orange #FF8A2A, red #E0303A
-// 넓은 맵(±200m)의 원경 랜드마크와 능선이 자연스러운 공기 원근감으로 읽히도록 안개 거리를 넉넉히 잡는다
+// 넓은 맵(±200m)의 원경 랜드마크(보스 둥지 180m)와 바깥 산맥 능선(216~255m)이 자연스러운 대기 원근감으로 읽히도록 안개 거리를 조율한다
 const LOOKS: Record<Phase, Look> = {
-  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x8a4a2a, fogNear: 46, fogFar: 175, sun: 1.52, sunColor: 0xff8a2a, hemi: 1.02, hemiSky: 0x2ee6d6, hemiGround: 0x3a332c, ember: 0.4, paint: 0.72 },
-  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4f1f24, fogNear: 34, fogFar: 132, sun: 1.08, sunColor: 0xff8a2a, hemi: 0.78, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1, paint: 0.85 },
-  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 26, fogFar: 110, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15, paint: 0.1 },
+  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x7e4428, fogNear: 54, fogFar: 235, sun: 1.54, sunColor: 0xff9238, hemi: 1.04, hemiSky: 0x2ee6d6, hemiGround: 0x3e352c, ember: 0.4, paint: 0.72 },
+  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4c1d24, fogNear: 40, fogFar: 175, sun: 1.12, sunColor: 0xff8a2a, hemi: 0.82, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1, paint: 0.85 },
+  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 28, fogFar: 130, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15, paint: 0.1 },
 };
 const COLOR_KEYS = ['top', 'horizon', 'fog', 'sunColor', 'hemiSky', 'hemiGround'] as const;
 const NUM_KEYS = ['fogNear', 'fogFar', 'sun', 'hemi', 'ember', 'paint'] as const;
