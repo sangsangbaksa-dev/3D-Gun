@@ -1,6 +1,6 @@
 // 2D 업그레이드 타이쿤 화면 (DOM). 규칙은 logic/economy.ts 에 있고, 여기서는 그리기와 클릭 연결만 한다.
 import { meta } from '../../core/meta';
-import { RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
+import { CHECKPOINT_EVERY, FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
 import {
   UPGRADES, PRODUCERS, CAT_ORDER, CAT_LABEL, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
 } from '../../data/tycoon2d';
@@ -296,7 +296,9 @@ export class TycoonPanel {
       + row('시작 웨이브', String(b.startWave)) + row('시작 골드', fmt(b.startGold)) + row('핵 체력', `+${b.coreHp}`)
       + row('최대 체력', `+${b.maxHp}`) + row('공격력', `+${Math.round(b.dmgMul * 100)}%`) + row('준비 시간', `30 +${b.prepBonus}초`)
       + row('아군 상한', `+${b.allyCap}`) + row('시작 무기', b.weapons.join(', ')) + row('총 품질', wl)
-      + row('시작 스킬', String(Object.values(b.skillLv).reduce((a, v) => a + v, 0))) + row('기록', `웨이브 ${meta.bestWave} · ${meta.totalRuns}회`);
+      + row('시작 스킬', String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))
+      + row('체크포인트', `${CHECKPOINT_EVERY}웨이브마다 · 최종 ${FINAL_WAVE}`)
+      + row('기록', `웨이브 ${meta.bestWave} · ${meta.totalRuns}회`);
   }
 
   private refreshAll() {
