@@ -9,15 +9,17 @@ import { injectKeycapCss, keyTableHtml } from '../ui/keys';
 /** TitleSystem 이 읽는다: 타이틀이 떠 있는 동안 카메라가 핵 주위를 돈다 */
 export const titleView = { orbiting: false };
 
-const STORY: { text: string; em?: boolean }[] = [
-  { text: '2031년, 제약사 헬릭스는 불사 백신 V-0을 발표한다.' },
-  { text: '임상 47일째, 투여자 전원의 심장이 멈춘다.' },
-  { text: '그리고 다시 일어난다.' },
-  { text: '72시간 만에 도시가 함락된다.' },
-  { text: '남은 건 백신 원액을 지키는 마지막 코어뿐.' },
-  { text: '코어가 꺼지면, 치료제도 끝난다.', em: true },
-  { text: '생존자, 출격하라.' },
+// art: public/art/ 의 배경 일러스트 (피그마 AI 생성). 0 = 스플래시 키아트, 1~4 = 이야기 장면
+const STORY: { text: string; em?: boolean; art: number }[] = [
+  { text: '2031년, 제약사 헬릭스는 불사 백신 V-0을 발표한다.', art: 1 },
+  { text: '임상 47일째, 투여자 전원의 심장이 멈춘다.', art: 1 },
+  { text: '그리고 다시 일어난다.', art: 2 },
+  { text: '72시간 만에 도시가 함락된다.', art: 3 },
+  { text: '남은 건 백신 원액을 지키는 마지막 코어뿐.', art: 4 },
+  { text: '코어가 꺼지면, 치료제도 끝난다.', em: true, art: 4 },
+  { text: '생존자, 출격하라.', art: 4 },
 ];
+const ART = ['splash', 'story1', 'story2', 'story3', 'story4'].map((n) => `${import.meta.env.BASE_URL}art/${n}.webp`);
 const STORY_HOLD_S = 2.4;
 const STORY_KEY = '3dgun.storySeen.v1';
 
@@ -100,9 +102,13 @@ function mountMenu(root: HTMLElement) {
 function mountIntro(root: HTMLElement, done: () => void) {
   const el = document.createElement('div');
   el.className = 'intro';
-  el.innerHTML = '<p class="wait">클릭하거나 아무 키나 누르세요</p><div class="skip" hidden>아무 키나 눌러 건너뛰기</div>';
+  el.innerHTML = `<div class="art">${ART.map((u, i) => `<i style="background-image:url('${u}')"${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>`
+    + `<img class="ilogo" src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/>`
+    + '<p class="wait">클릭하거나 아무 키나 누르세요</p><div class="skip" hidden>아무 키나 눌러 건너뛰기</div>';
   root.appendChild(el);
   const p = el.querySelector('p')!;
+  const layers = Array.from(el.querySelectorAll<HTMLElement>('.art i'));
+  const showArt = (n: number) => layers.forEach((l, i) => l.classList.toggle('on', i === n));
   const timers: number[] = [];
   const later = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms));
   let finished = false, started = false;
@@ -122,6 +128,7 @@ function mountIntro(root: HTMLElement, done: () => void) {
     if (finished) return;
     if (i >= STORY.length) { finish(); return; }
     const s = STORY[i];
+    showArt(s.art);
     p.className = s.em ? 'em' : '';
     const chars = [...s.text], per = fast ? 0 : 55;
     if (per === 0) p.textContent = s.text;
@@ -138,6 +145,7 @@ function mountIntro(root: HTMLElement, done: () => void) {
   const advance = () => {
     if (started || storySeen()) { finish(); return; } // 이야기 중이면 건너뛰기, 이미 봤으면 바로 타이틀
     started = true;
+    el.classList.add('story');
     p.className = '';
     p.textContent = '';
     (el.querySelector('.skip') as HTMLElement).hidden = false;

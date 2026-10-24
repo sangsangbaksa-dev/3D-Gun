@@ -30,6 +30,10 @@ body.ztDeathOn #lockHint,body.ztDeathOn #pauseBanner{display:none!important}
 #ztDeath .pulse{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px ${RED};opacity:0}
 #ztDeath .pulse.beat{animation:zdBeat .7s ease-out}
 #ztDeath .shade{position:absolute;inset:0;background:${BG};opacity:0;transition:opacity .5s ease-out}
+#ztDeath .art{position:absolute;inset:-3%;background:${BG} url('${import.meta.env.BASE_URL}art/death.webp') center/cover no-repeat;opacity:0;transition:opacity .9s ease-out}
+#ztDeath .art::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 58%,#0009 0%,#0004 45%,#000b 100%)}
+#ztDeath.card .art{opacity:1;animation:zdKen 14s ease-out forwards}
+@keyframes zdKen{from{transform:scale(1.06)}to{transform:scale(1)}}
 #ztDeath.on .tint{opacity:1}#ztDeath.on .vig{opacity:1}
 #ztDeath .ttl{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;opacity:0;
   transition:top .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1)}
@@ -68,7 +72,7 @@ body.ztDeathOn #lockHint,body.ztDeathOn #pauseBanner{display:none!important}
 @keyframes zdTitle{0%{opacity:0;letter-spacing:.6em;filter:blur(8px);transform:translate(-50%,-50%) scale(1.25)}
   60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes zdBest{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-@media (prefers-reduced-motion: reduce){#ztDeath .ttl.show{animation:none;opacity:1}#ztDeath .pulse.beat{animation:none}}
+@media (prefers-reduced-motion: reduce){#ztDeath.card .art{animation:none}#ztDeath .ttl.show{animation:none;opacity:1}#ztDeath .pulse.beat{animation:none}}
 `;
 
 const fmt = (n: number) => (n >= 10000 ? `${(n / 1000).toFixed(1)}k` : `${Math.floor(n)}`);
@@ -122,7 +126,7 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
   const root = document.createElement('div');
   root.id = 'ztDeath';
   root.innerHTML = `
-    <div class="tint"></div><div class="vig"></div><div class="pulse"></div><div class="shade"></div>
+    <div class="tint"></div><div class="vig"></div><div class="pulse"></div><div class="shade"></div><div class="art"></div>
     <div class="ttl"><h1>${title}</h1><p>${sub}</p></div>
     <div class="cardBox" role="dialog" aria-label="런 결과">
       <h2>런 결과${r.newBest ? '<span class="best">🏆 최고 기록!</span>' : ''}</h2>

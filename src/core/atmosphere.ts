@@ -7,21 +7,23 @@ type Phase = 'prep' | 'combat' | 'ended';
 interface Look {
   top: number; horizon: number; fog: number; fogNear: number; fogFar: number;
   sun: number; sunColor: number; hemi: number; hemiSky: number; hemiGround: number; ember: number;
+  /** 그린 구름 하늘(public/art/sky.webp)의 원래 색을 얼마나 살릴지. 0 이면 top/horizon 색으로만 물들인다 */
+  paint: number;
 }
 
 // 팔레트: bg #10141a, teal #2EE6D6, orange #FF8A2A, red #E0303A
 const LOOKS: Record<Phase, Look> = {
-  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x8a4a2a, fogNear: 40, fogFar: 140, sun: 1.5, sunColor: 0xff8a2a, hemi: 1, hemiSky: 0x2ee6d6, hemiGround: 0x3a332c, ember: 0.4 },
-  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4f1f24, fogNear: 28, fogFar: 100, sun: 1.05, sunColor: 0xff8a2a, hemi: 0.75, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1 },
-  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 22, fogFar: 90, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15 },
+  prep: { top: 0x0b2226, horizon: 0xff8a2a, fog: 0x8a4a2a, fogNear: 40, fogFar: 140, sun: 1.5, sunColor: 0xff8a2a, hemi: 1, hemiSky: 0x2ee6d6, hemiGround: 0x3a332c, ember: 0.4, paint: 0.7 },
+  combat: { top: 0x12060c, horizon: 0xc13d45, fog: 0x4f1f24, fogNear: 28, fogFar: 100, sun: 1.05, sunColor: 0xff8a2a, hemi: 0.75, hemiSky: 0x2ee6d6, hemiGround: 0x3a2a26, ember: 1, paint: 0.85 },
+  ended: { top: 0x081416, horizon: 0x2e5f5c, fog: 0x1e3a38, fogNear: 22, fogFar: 90, sun: 0.55, sunColor: 0xb8c0cc, hemi: 0.6, hemiSky: 0x1a4a48, hemiGround: 0x1c2226, ember: 0.15, paint: 0.1 },
 };
 const COLOR_KEYS = ['top', 'horizon', 'fog', 'sunColor', 'hemiSky', 'hemiGround'] as const;
-const NUM_KEYS = ['fogNear', 'fogFar', 'sun', 'hemi', 'ember'] as const;
+const NUM_KEYS = ['fogNear', 'fogFar', 'sun', 'hemi', 'ember', 'paint'] as const;
 const BOOST = 1.08;
 const FADE = 2.5;
 
 const SKY_VS = 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }';
-const SKY_FS = `uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform vec3 sunCol; uniform float t; uniform vec3 fogC; varying vec3 vP;
+const SKY_FS = `uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform vec3 sunCol; uniform float t; uniform vec3 fogC; uniform sampler2D clouds; uniform float paint; varying vec3 vP;
 float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5); }
 float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+1.),f.x),f.y); }
 void main(){
@@ -29,9 +31,16 @@ void main(){
   vec3 c = mix(hor, top, pow(y, .55));
   float s = max(dot(vP, sunDir), 0.);
   c += sunCol * (pow(s, 600.) * 1.2 + pow(s, 12.) * .25);
-  vec2 uv = vP.xz / (vP.y + .25) * 1.6 + vec2(t * .012, t * .004);
-  float cl = smoothstep(.55, .85, n(uv) * .65 + n(uv * 2.3) * .35) * smoothstep(0., .25, vP.y);
-  c = mix(c, hor * .35, cl * .55);
+  // 그린 구름 띠: 방위각으로 두 바퀴 감고(가로 이음매 없는 텍스처), 지평선(아래)~고도 0.62 까지 펼친다
+  vec2 uv = vec2(atan(vP.z, vP.x) / 3.14159265 + t * .0015, clamp(y / .62, 0., 1.));
+  vec3 tx = texture2D(clouds, uv).rgb;
+  float l = dot(tx, vec3(.3, .55, .15));
+  vec3 tint = mix(top, hor * 1.25, smoothstep(.02, .7, l));
+  vec3 pc = mix(tint, tx, paint);
+  c = mix(c, pc, smoothstep(0., .03, y) * (1. - smoothstep(.5, .62, y)));
+  vec2 nv = vP.xz / (vP.y + .25) * 1.6 + vec2(t * .012, t * .004);
+  float cl = smoothstep(.55, .85, n(nv) * .65 + n(nv * 2.3) * .35) * smoothstep(.45, .7, vP.y);
+  c = mix(c, hor * .35, cl * .45);
   c = mix(fogC, c, smoothstep(-.02, .18, vP.y));
   gl_FragColor = vec4(c, 1.);
 }`;
@@ -61,6 +70,7 @@ export class Atmosphere {
       uniforms: {
         top: { value: c(this.cur.top) }, hor: { value: c(this.cur.horizon) }, sunDir: { value: new THREE.Vector3(0.5, 0.7, 0.4).normalize() },
         sunCol: { value: c(this.cur.sunColor) }, t: { value: 0 }, fogC: { value: c(this.cur.fog) },
+        clouds: { value: Atmosphere.cloudTexture((t) => { this.sky.material.uniforms.clouds.value = t; }) }, paint: { value: this.cur.paint },
       },
     }));
     this.sky.renderOrder = -10;
@@ -70,6 +80,23 @@ export class Atmosphere {
     this.embers = this.buildEmbers();
     scene.add(this.sky, this.skyline, this.embers);
     this.apply();
+  }
+
+  /** 피그마 AI 로 그린 붉은 구름 하늘. 불러오기 전에는 1×1 어두운 색으로 그린다 */
+  private static cloudTexture(onLoad: (t: THREE.Texture) => void) {
+    const ph = document.createElement('canvas');
+    ph.width = ph.height = 1;
+    const g = ph.getContext('2d');
+    if (g) { g.fillStyle = '#280c0e'; g.fillRect(0, 0, 1, 1); }
+    const tex = new THREE.Texture(ph);
+    tex.needsUpdate = true;
+    // 크기가 다른 이미지를 같은 텍스처에 다시 올리면 GL 저장 공간이 맞지 않아, 새 텍스처로 바꿔 끼운다
+    new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}art/sky.webp`, (t) => {
+      t.wrapS = THREE.RepeatWrapping;
+      onLoad(t);
+      tex.dispose();
+    });
+    return tex;
   }
 
   /** 지평선의 무너진 고층 건물 두 겹. 안개를 받지 않아 붉은 하늘에 검은 실루엣으로 남는다. */
@@ -143,6 +170,7 @@ export class Atmosphere {
     u.hor.value.setHex(s.horizon);
     u.sunCol.value.setHex(s.sunColor);
     u.t.value = this.t;
+    u.paint.value = s.paint;
     u.fogC.value.setHex(s.fog).multiplyScalar(BOOST);
     u.sunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     const fog = this.scene.fog;
