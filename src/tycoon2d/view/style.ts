@@ -8,9 +8,9 @@ export const CSS = `
   position:fixed;inset:0;z-index:60;display:none;flex-direction:column;color:#efe6e2;font-family:${FONT};background:#0a0507;overflow:hidden;user-select:none}
 #t2d.open{display:flex;animation:t2dIn .45s ease-out}
 @keyframes t2dIn{from{opacity:0;transform:scale(1.015)}to{opacity:1;transform:none}}
-#t2d .bgimg{position:absolute;inset:-2%;background:url(${ART}bg.webp) center 62%/cover no-repeat;animation:t2dPan 60s ease-in-out infinite alternate;pointer-events:none}
+#t2d .bgimg{position:absolute;inset:-2%;background:url(${ART}bg.webp) center 45%/cover no-repeat;animation:t2dPan 60s ease-in-out infinite alternate;pointer-events:none}
 #t2d .bgimg::after{content:"";position:absolute;inset:0;background:
-  linear-gradient(90deg,#0a0507f2 0,#0a0507a6 13%,#0a050740 40%,#0a050740 62%,#0a0507b8 80%,#0a0507f5 100%),
+  linear-gradient(90deg,#0a0507e6 0,#0a050799 13%,#0a050726 40%,#0a050726 62%,#0a0507a6 80%,#0a0507ee 100%),
   linear-gradient(#0a0507d9 0,#0a050733 22%,#0a050700 50%,#0a0507cc 100%)}
 @keyframes t2dPan{to{transform:scale(1.06) translate(-1%,-1%)}}
 #t2d .bgfx{position:absolute;inset:0;pointer-events:none;
