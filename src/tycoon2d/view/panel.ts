@@ -9,7 +9,7 @@ import {
   incomePerSec, maxSelectableStartWave, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, startWaveSkipCost, startWaveStepCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
 } from '../logic/economy';
 import { CSS } from './style';
-import { icon, iconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
+import { icon, iconOr, walletIconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -69,7 +69,7 @@ export class TycoonPanel {
       box.className = 'coin';
       box.title = WALLET_LABEL[k];
       box.dataset.k = k;
-      box.innerHTML = `<span class="ic">${iconOr(k, WALLET_ICON[k])}</span><div><div class="lb">${WALLET_LABEL[k]}</div><div class="v">0</div><div class="r"></div></div>`;
+      box.innerHTML = `<span class="ic">${walletIconOr(k, WALLET_ICON[k])}</span><div><div class="lb">${WALLET_LABEL[k]}</div><div class="v">0</div><div class="r"></div></div>`;
       wallet.appendChild(box);
       this.walletEl.set(k, { box, v: box.querySelector('.v') as HTMLElement, r: box.querySelector('.r') as HTMLElement, shown: 0 });
     }

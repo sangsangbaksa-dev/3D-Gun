@@ -119,9 +119,12 @@ export function createBase(deps: BaseDeps) {
 
   function makeBuilding(kind: BuildingId, x: number, z: number, level = 1): Building {
     const def = BUILDINGS[kind];
+    const turHp = def.turret ? 1 + state.start.turretHpMul : 1;
+    const maxHp = Math.round(def.hp * turHp);
+    const ammoCap = def.turret ? Math.max(1, Math.round(def.turret.ammo * (1 + state.start.turretAmmoMul))) : 0;
     const b: Building = {
-      id: newId(), kind, x, z, radius: def.radius, hp: def.hp, maxHp: def.hp, height: def.height, dead: false,
-      level, ammo: def.turret?.ammo ?? 0, cooldown: 0, aimYaw: rng() * Math.PI * 2, tracking: false, pulse: 0, hitFlash: 0,
+      id: newId(), kind, x, z, radius: def.radius, hp: maxHp, maxHp, height: def.height, dead: false,
+      level, ammo: ammoCap, cooldown: 0, aimYaw: rng() * Math.PI * 2, tracking: false, pulse: 0, hitFlash: 0,
       hit(dmg: number) {
         if (b.dead || dmg <= 0) return;
         b.hp = Math.max(0, b.hp - dmg);
@@ -183,7 +186,7 @@ export function createBase(deps: BaseDeps) {
       const def = BUILDINGS[s.kind];
       const lv = Math.min(def.turret?.levels.length ?? 1, Math.max(1, Math.floor(s.level) || 1));
       const b = makeBuilding(s.kind, s.x, s.z, lv);
-      b.maxHp = Math.round(def.hp * (1 + 0.25 * (lv - 1)));
+      b.maxHp = Math.round(def.hp * (1 + state.start.turretHpMul) * (1 + 0.25 * (lv - 1)));
       b.hp = Math.min(b.maxHp, Math.max(1, s.hp));
       b.ammo = Math.max(1, Math.floor(s.ammo));
       buildings.push(b);
@@ -366,7 +369,7 @@ export function createBase(deps: BaseDeps) {
           if (z.dead) continue;
           if (Math.hypot(z.x - b.x, z.z - b.z) > def.trap.radius + z.radius * 0.5) continue;
           slowNow.set(z, Math.min(slowNow.get(z) ?? 1, def.trap.slow));
-          if (pulseNow) z.hit(def.trap.dps * 0.5, true);
+          if (pulseNow) z.hit(def.trap.dps * 0.5 * (1 + state.start.trapDpsMul), true);
         }
         continue;
       }
@@ -374,7 +377,9 @@ export function createBase(deps: BaseDeps) {
       const t = def.turret;
       if (!t) continue;
       const lv = t.levels[b.level - 1];
-      const target = nearest(zombies, b.x, b.z, lv.range);
+      const range = lv.range * (1 + state.start.turretRangeMul);
+      const rateMul = Math.max(0.55, 1 - state.start.turretRateMul);
+      const target = nearest(zombies, b.x, b.z, range);
       b.tracking = !!target;
       if (!target) continue;
       const want = yawTo(target.x - b.x, target.z - b.z);
@@ -383,7 +388,7 @@ export function createBase(deps: BaseDeps) {
       const crit = rng() < 0.1;
       target.hit(lv.dmg * (1 + state.start.turretDmgMul) * (crit ? 2 : 1), true); // turretDmgMul: tycoon2d 영구 업그레이드
       b.ammo--;
-      b.cooldown = lv.rate;
+      b.cooldown = lv.rate * rateMul;
       if (b.ammo <= 0) {
         selfToast(`${def.name} 내구도를 다 써 파괴됐어요`);
         remove(b, false);

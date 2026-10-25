@@ -100,7 +100,8 @@ function prepSubText() {
   } else if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) {
     hint = ' · 다음 웨이브는 보스';
   }
-  return `준비 ${sec}초${hint} · N 으로 바로 시작`;
+  const buildPause = state.mode === 'build' ? ' · 건설 중 멈춤' : '';
+  return `준비 ${sec}초${buildPause}${hint} · N 으로 바로 시작`;
 }
 
 export const HudSystem: System = {
