@@ -51,6 +51,8 @@ export const state = {
   prepLeft: 0,
   waveRemaining: 0,
   checkpoint: 0,
+  /** `#kk960398` 치트 활성 시 인런 골드·자원 무제한 */
+  cheatUnlimited: false,
 };
 
 /** 스킬 레벨이 바뀐 뒤 호출. state.stats 를 다시 계산한다. */
@@ -62,6 +64,10 @@ export function recalcStats() {
 
 /** 자원을 지불할 수 있으면 차감하고 true. */
 export function spend(cost: Partial<Record<ResKey, number>>, gold = 0): boolean {
+  if (state.cheatUnlimited) {
+    changed();
+    return true;
+  }
   if (state.gold < gold) return false;
   for (const k of RES_KEYS) if ((cost[k] ?? 0) > state.res[k]) return false;
   for (const k of RES_KEYS) state.res[k] -= cost[k] ?? 0;
@@ -76,5 +82,11 @@ export function gain(k: ResKey, n: number) {
 }
 
 export function changed() {
+  if (state.cheatUnlimited) {
+    state.gold = 999_999;
+    for (const k of RES_KEYS) state.res[k] = 999_999;
+    state.samples = 999_999;
+    state.samplesSp = 999_999;
+  }
   events.emit('state:changed', undefined);
 }

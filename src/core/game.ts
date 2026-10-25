@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createWorld, followSun } from './world';
+import { initCheats } from './cheats';
 import { initInput, endFrame, input, requestLock, pollKeyLook } from './input';
 import { createPlayer } from '../player/player';
 import type { Ctx, System } from './types';
@@ -7,6 +8,7 @@ import type { Ctx, System } from './types';
 export function startGame(canvas: HTMLCanvasElement, systems: System[]) {
   const world = createWorld(canvas);
   initInput(canvas);
+  initCheats();
   const player = createPlayer(world.scene);
   const ctx: Ctx = { world, scene: world.scene, camera: world.camera, player, aimDir: new THREE.Vector3(0, 0, -1) };
   systems.forEach((s) => s.init?.(ctx));

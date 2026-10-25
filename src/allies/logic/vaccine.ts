@@ -12,6 +12,7 @@ export function vaccineCost(tier: number): VaccineCost {
 }
 
 export function canAfford(c: VaccineCost): boolean {
+  if (state.cheatUnlimited) return true;
   return state.res.herb >= c.herb && state.res.parts >= c.parts && state.res.iron >= c.iron
     && state.samples >= c.sample && state.samplesSp >= c.sampleSp;
 }
@@ -22,8 +23,10 @@ export function payVaccine(tier: number): boolean {
   if (!canAfford(c)) return false;
   const res: Partial<Record<ResKey, number>> = { herb: c.herb, parts: c.parts, iron: c.iron };
   if (!spend(res)) return false;
-  state.samples -= c.sample;
-  state.samplesSp -= c.sampleSp;
+  if (!state.cheatUnlimited) {
+    state.samples -= c.sample;
+    state.samplesSp -= c.sampleSp;
+  }
   changed();
   return true;
 }

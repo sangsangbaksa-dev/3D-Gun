@@ -52,7 +52,8 @@ export const costText = (c: Cost, gold = 0): string => {
   if (gold > 0) parts.push(`골드 ${gold}`);
   return parts.join(' ') || '무료';
 };
-export const canAfford = (c: Cost, gold = 0): boolean => state.gold >= gold && RES_KEYS.every((k) => (c[k] ?? 0) <= state.res[k]);
+export const canAfford = (c: Cost, gold = 0): boolean =>
+  state.cheatUnlimited || (state.gold >= gold && RES_KEYS.every((k) => (c[k] ?? 0) <= state.res[k]));
 const scaleCost = (c: Cost, f: number, min = 1): Cost => {
   const out: Cost = {};
   let any = false;

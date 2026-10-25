@@ -196,7 +196,7 @@ export class UpgradePanel {
     for (const id of GUN_ORDER) {
       const d = GUNS[id], own = state.weapons.includes(id), lv = (state.weaponLv[id] ?? 0) + (state.weaponLvBonus[id] ?? 0);
       const price = GUN_UNLOCK_GOLD[id];
-      const canBuy = !own && price != null && state.gold >= price;
+      const canBuy = !own && price != null && (state.cheatUnlimited || state.gold >= price);
       const detail = own ? fmt(id, lv) : (price != null ? `코인 ${price}에 구매` : '기본 지급');
       const button = own
         ? `<button disabled>이 판에선 강화 불가</button>`
@@ -213,8 +213,8 @@ export class UpgradePanel {
 
   private buyGun(id: GunId) {
     const price = GUN_UNLOCK_GOLD[id];
-    if (price == null || state.weapons.includes(id) || state.gold < price) return;
-    state.gold -= price;
+    if (price == null || state.weapons.includes(id) || (!state.cheatUnlimited && state.gold < price)) return;
+    if (!state.cheatUnlimited) state.gold -= price;
     events.emit('weapon:unlock', { weapon: id });
     changed();
     this.refresh();
