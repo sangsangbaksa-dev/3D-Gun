@@ -39,11 +39,16 @@ export const state = {
   start: {
     gold: 0, startWave: 1, res: {} as Partial<Record<ResKey, number>>, coreHp: 0, prepBonus: 0,
     // 아래는 tycoon2d 가 추가한 시작 보너스 (모듈이 필요할 때 읽는다)
-    samples: 0, skillPoints: 0, weapons: ['pistol'] as string[],
+    samples: 0, samplesSp: 0, skillPoints: 0, weapons: ['pistol'] as string[],
     /** 총 품질: 무기 id → 시작 강화 레벨. player 가 공격력·연사·탄창 등에 반영한다 */
     weaponLv: {} as Record<string, number>,
     /** 포탑 피해 배율에 더하는 값 (0.2 = +20%). base 가 반영한다 */
     turretDmgMul: 0,
+    turretRangeMul: 0,
+    turretRateMul: 0,
+    turretAmmoMul: 0,
+    turretHpMul: 0,
+    trapDpsMul: 0,
     /** 메타 업그레이드 교환 협상: 인런 교환소 판매가 보너스(자원당 골드) */
     exchangeSellBonus: 0,
   },

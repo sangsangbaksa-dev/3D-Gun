@@ -39,10 +39,13 @@ function applyToState() {
   const b = bonuses(meta);
   state.statMods = [(s) => {
     s.maxHp += b.maxHp; s.dmgMul += b.dmgMul; s.gatherSpeed += b.gatherSpeed; s.allyCap += b.allyCap;
+    s.allyDmg += b.allyDmgMul; s.allyHp += b.allyHpMul; s.vacBonus += b.vacBonus;
   }];
   Object.assign(state.start, {
     gold: b.startGold, startWave: b.startWave, res: { ...b.startRes }, coreHp: b.coreHp, prepBonus: b.prepBonus,
-    samples: b.startSamples, skillPoints: b.startSkillPoints, weapons: [...b.weapons], weaponLv: { ...b.weaponLv }, turretDmgMul: b.turretDmgMul,
+    samples: b.startSamples, samplesSp: b.startSamplesSp, skillPoints: b.startSkillPoints, weapons: [...b.weapons], weaponLv: { ...b.weaponLv },
+    turretDmgMul: b.turretDmgMul, turretRangeMul: b.turretRangeMul, turretRateMul: b.turretRateMul,
+    turretAmmoMul: b.turretAmmoMul, turretHpMul: b.turretHpMul, trapDpsMul: b.trapDpsMul,
     exchangeSellBonus: b.exchangeSellBonus,
   });
   // 총 품질(영구): player 가 같은 객체를 참조하므로 키만 갈아 끼운다 ('*' = 모든 총기)
@@ -55,7 +58,7 @@ function seedRun() {
   const s = state.start;
   state.gold = s.gold;
   for (const k of RES_KEYS) state.res[k] = s.res[k] ?? 0;
-  state.samples = s.samples; state.samplesSp = 0; state.skillPoints = s.skillPoints;
+  state.samples = s.samples; state.samplesSp = s.samplesSp; state.skillPoints = s.skillPoints;
   state.skillLv = { ...bonuses(meta).skillLv };
   state.weapons = [...s.weapons];
   state.coreMaxHp = BASE_CORE_HP + s.coreHp; state.coreHp = state.coreMaxHp;

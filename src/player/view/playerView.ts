@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { makeHumanoid, animateWalk, type Humanoid } from '../../core/humanoid';
 import { GUNS, GUN_ORDER, type GunId } from '../../data';
+import { state } from '../../core/state';
 import { cameraPose, type CameraView } from '../logic/camera';
 import type { Player } from '../logic/player';
 import type { WeaponState } from '../logic/weapons';
@@ -185,8 +186,9 @@ export class PlayerView {
     this.recoil = Math.max(0, this.recoil - dt * (def.kind === 'sniper' ? 4 : def.kind === 'smg' || def.kind === 'rifle' ? 11 : 7));
     this.lastShotAge += dt;
     const kickScale = def.kind === 'sniper' ? 2.85 : def.kind === 'shotgun' ? 1.4 : def.kind === 'revolver' ? 1.3 : def.kind === 'smg' ? 0.55 : 0.85;
-    const recoilBack = this.recoil * 0.1 * kickScale;
-    const recoilPitch = this.recoil * 0.2 * kickScale;
+    const rMul = state.stats.recoilMul;
+    const recoilBack = this.recoil * 0.1 * kickScale * rMul;
+    const recoilPitch = this.recoil * 0.2 * kickScale * rMul;
 
     // ── 재장전 단계 (0~1) ──
     const reloading = w.reloadLeft > 0 && w.reloadTotal > 0;

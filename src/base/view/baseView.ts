@@ -38,7 +38,7 @@ class Bar {
 }
 
 interface Rec {
-  b: Building; model: Model; root: THREE.Group; bar: Bar;
+  b: Building; model: Model; root: THREE.Group; yawNode: THREE.Group; tiltNode: THREE.Group; bar: Bar;
   level: number; born: number; kick: number; smokeT: number; flashing: boolean; yaw: number;
 }
 
@@ -67,17 +67,21 @@ export class BaseView {
   private spawn(b: Building) {
     const model = buildModel(b.kind, b.level);
     const root = new THREE.Group();
-    root.add(model.group);
+    const yawNode = new THREE.Group();
+    const tiltNode = new THREE.Group();
+    tiltNode.add(model.group);
+    yawNode.add(tiltNode);
+    root.add(yawNode);
     const yaw = yawTo(MAP.core.x - b.x, MAP.core.z - b.z);
     const pose = groundPose(b.x, b.z, yaw);
-    root.rotation.order = 'YXZ';
-    root.rotation.set(pose.tiltX, pose.yaw, pose.tiltZ);
+    tiltNode.rotation.set(pose.tiltX, 0, pose.tiltZ);
+    yawNode.rotation.set(0, pose.yaw, 0);
     root.position.set(b.x, pose.y, b.z);
     root.scale.setScalar(0.01);
     this.scene.add(root);
     const bar = new Bar(Math.max(1.3, b.radius * 1.3));
     this.scene.add(bar.group);
-    const rec: Rec = { b, model, root, bar, level: b.level, born: this.t, kick: 0, smokeT: 0, flashing: false, yaw };
+    const rec: Rec = { b, model, root, yawNode, tiltNode, bar, level: b.level, born: this.t, kick: 0, smokeT: 0, flashing: false, yaw };
     this.recs.set(b.id, rec);
     b.view = root;
   }
@@ -143,8 +147,8 @@ export class BaseView {
       root.scale.set(s, s, s);
       const pose = groundPose(b.x, b.z, rec.yaw);
       root.position.set(b.x, pose.y, b.z);
-      root.rotation.order = 'YXZ';
-      root.rotation.set(pose.tiltX, pose.yaw, pose.tiltZ);
+      rec.tiltNode.rotation.set(pose.tiltX, 0, pose.tiltZ);
+      rec.yawNode.rotation.set(0, pose.yaw, 0);
       // 포탑 조준
       if (m.head) {
         const idle = b.tracking ? 0 : Math.sin(t * 0.7 + b.id) * 0.5;

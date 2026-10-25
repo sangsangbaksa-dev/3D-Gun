@@ -271,6 +271,7 @@ export const SKILLS: SkillDef[] = [
   { id: 'ahp', branch: '사령', name: '아군 맷집', desc: '아군 체력 +25%', max: 4 },
   { id: 'run', branch: '생존', name: '빠른 걸음', desc: '이동 속도 +8%', max: 4 },
   { id: 'steady', branch: '생존', name: '안정된 조준', desc: '탄 퍼짐 -8%', max: 4 },
+  { id: 'recoil', branch: '생존', name: '반동 줄이기', desc: '총기 반동 -10%', max: 5 },
   { id: 'hs', branch: '생존', name: '급소 사격', desc: '헤드샷 피해 +12%', max: 4 },
   { id: 'loot', branch: '채집', name: '전리품', desc: '처치 코인 +15%', max: 4 },
   { id: 'aspeed', branch: '사령', name: '행군', desc: '아군 이동 속도 +10%', max: 3 },
@@ -280,7 +281,7 @@ export interface Stats {
   maxHp: number; dmgMul: number; dashCd: number; reloadMul: number; magMul: number;
   gatherSpeed: number; gatherExtra: number; vacBonus: number; vacCostMul: number; stunBonus: number;
   allyCap: number; allyDmg: number; allyHp: number;
-  speedMul: number; goldMul: number; headMul: number; spreadMul: number;
+  speedMul: number; goldMul: number; headMul: number; spreadMul: number; recoilMul: number;
 }
 export function calcStats(l: Record<string, number>): Stats {
   const v = (id: string) => l[id] || 0;
@@ -302,6 +303,7 @@ export function calcStats(l: Record<string, number>): Stats {
     goldMul: 1 + 0.15 * v('loot'),
     headMul: 1 + 0.12 * v('hs'),
     spreadMul: Math.max(0.55, 1 - 0.08 * v('steady')),
+    recoilMul: Math.max(0.5, 1 - 0.1 * v('recoil')),
   };
 }
 

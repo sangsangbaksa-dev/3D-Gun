@@ -59,13 +59,14 @@ export const ICON_OF: Record<string, IconName> = {
   // 업그레이드
   w_pistol: 'pistol', w_shotgun_q: 'shotgun', w_smg_q: 'smg', w_all: 'wrench', w_mul: 'target', w_shotgun: 'shotgun', w_smg: 'smg',
   b_core: 'shield', b_hp: 'heart', b_wood: 'wood', b_stone: 'stone', e_prep: 'timer', e_wave: 'flag',
-  t_dmg: 'turret', t_iron: 'iron', t_parts: 'gear',
+  t_dmg: 'turret', t_iron: 'iron', t_parts: 'gear', t_range: 'target', t_rate: 'bolt', t_ammo: 'mag', t_armor: 'shield', t_trap: 'crate',
+  a_adm: 'sword', a_ahp: 'syringe', a_vac: 'flask', a_sp: 'bio',
   a_cap: 'house', a_sample: 'flask', a_herb: 'herb',
   e_gold: 'coin', e_click: 'exchange', e_income: 'chart', e_keep: 'backpack', e_gather: 'pickaxe', e_sp: 'book',
   // 생산 시설
   p_gold: 'scout', p_wood: 'wood', p_stone: 'pickaxe', p_herb: 'herb', p_iron: 'iron', p_parts: 'gear', p_lab: 'flask', p_lab2: 'bio',
   // 스킬 (id 가 다른 표와 겹치므로 sk: 접두사)
-  'sk:hp': 'heart', 'sk:dash': 'bolt', 'sk:dmg': 'target', 'sk:reload': 'mag', 'sk:run': 'boot', 'sk:steady': 'target', 'sk:hs': 'skull',
+  'sk:hp': 'heart', 'sk:dash': 'bolt', 'sk:dmg': 'target', 'sk:reload': 'mag', 'sk:run': 'boot', 'sk:steady': 'target', 'sk:recoil': 'mag', 'sk:hs': 'skull',
   'sk:gspeed': 'pickaxe', 'sk:gextra': 'herb', 'sk:mag': 'mag', 'sk:loot': 'crate',
   'sk:vrate': 'syringe', 'sk:vcost': 'flask', 'sk:stun': 'bolt',
   'sk:cap': 'flag', 'sk:adm': 'sword', 'sk:ahp': 'shield', 'sk:aspeed': 'boot',
@@ -80,8 +81,6 @@ export const TONE_OF: Record<string, string> = {
 
 /** 사용자 제공 카툰 팩 (public/hub/cartoon-sprites.png, 10×6 그리드) */
 const SPRITE_URL = `${import.meta.env.BASE_URL}hub/cartoon-sprites.png`;
-const SPRITE_W = 1145;
-const SPRITE_H = 752;
 const SPRITE_COLS = 10;
 const SPRITE_ROWS = 6;
 
@@ -94,24 +93,33 @@ const SPRITE_OF: Record<string, [number, number]> = {
   wood: [4, 0],
   herb: [5, 0],
   stone: [3, 5],
-  parts: [6, 1],
+  parts: [5, 1],
   skillPoints: [0, 5],
   waveUp: [5, 5],
 };
 
-export function spriteIcon(id: string, cls = 'spr sm'): string | null {
+export function spriteIcon(id: string, cls = 'spr'): string | null {
   const cell = SPRITE_OF[id];
   if (!cell) return null;
-  const cw = SPRITE_W / SPRITE_COLS;
-  const ch = SPRITE_H / SPRITE_ROWS;
-  const x = -cell[0] * cw;
-  const y = -cell[1] * ch;
-  return `<span class="${cls}" role="img" aria-hidden="true" style="background-image:url('${SPRITE_URL}');background-position:${x}px ${y}px"></span>`;
+  const [col, row] = cell;
+  const xPct = SPRITE_COLS <= 1 ? 0 : (col / (SPRITE_COLS - 1)) * 100;
+  const yPct = SPRITE_ROWS <= 1 ? 0 : (row / (SPRITE_ROWS - 1)) * 100;
+  const bgSize = `${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}%`;
+  return `<span class="${cls}" role="img" aria-hidden="true" style="background-image:url('${SPRITE_URL}');background-size:${bgSize};background-position:${xPct}% ${yPct}%"></span>`;
 }
 
-/** id 로 아이콘을 찾고, 없으면 이모지를 그대로 보여 준다 */
+/** 지갑 상단·웨이브 패널 — 카툰 스프라이트 우선 */
+export function walletIconOr(id: string, emoji: string): string {
+  return spriteIcon(id, 'spr lg') ?? icon(ICON_OF[id]) ?? `<span class="emo">${emoji}</span>`;
+}
+
+/** id 로 아이콘을 찾고, 없으면 이모지를 그대로 보여 준다 (비용 칩 등은 SVG) */
 export function iconOr(id: string, emoji: string, cls?: string): string {
-  const spr = spriteIcon(id, cls?.includes('sm') ? 'spr sm' : cls?.includes('big') ? 'spr lg' : 'spr');
-  if (spr) return spr;
+  const wantSvg = !!cls?.includes('si');
+  if (!wantSvg) {
+    const sprCls = cls?.includes('sm') ? 'spr sm' : cls?.includes('big') ? 'spr lg' : 'spr';
+    const spr = spriteIcon(id, sprCls);
+    if (spr) return spr;
+  }
   return icon(ICON_OF[id], cls) ?? `<span class="emo">${emoji}</span>`;
 }

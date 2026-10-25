@@ -9,8 +9,10 @@ import {
 export type Gains = Partial<Record<WalletKey, number>>;
 
 export interface Bonuses {
-  startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSkillPoints: number;
-  coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number; turretDmgMul: number;
+  startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSamplesSp: number; startSkillPoints: number;
+  coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number;
+  turretDmgMul: number; turretRangeMul: number; turretRateMul: number; turretAmmoMul: number; turretHpMul: number; trapDpsMul: number;
+  allyDmgMul: number; allyHpMul: number; vacBonus: number;
   weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number; /** 출격 웨이브 구매 비용 할인 (0~0.8) */
   waveSkipDiscount: number;
   clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; xpMul: number; skillLv: Record<string, number>;
@@ -92,7 +94,9 @@ export function refundSkills(m: Meta): number {
 export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
     startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: BASE_START.parts },
-    startSamples: 2, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
+    startSamples: 2, startSamplesSp: 0, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0,
+    turretDmgMul: 0, turretRangeMul: 0, turretRateMul: 0, turretAmmoMul: 0, turretHpMul: 0, trapDpsMul: 0,
+    allyDmgMul: 0, allyHpMul: 0, vacBonus: 0,
     weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, waveSkipDiscount: 0, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE, xpMul: 1,
     skillLv: { ...m.skills },
   };
@@ -104,13 +108,22 @@ export function bonuses(m: Meta): Bonuses {
       case 'startGold': b.startGold += e.per * lv; break;
       case 'startRes': b.startRes[e.res] += e.per * lv; break;
       case 'startSamples': b.startSamples += e.per * lv; break;
+      case 'startSamplesSp': b.startSamplesSp += e.per * lv; break;
       case 'startSkillPoints': b.startSkillPoints += e.per * lv; break;
       case 'coreHp': b.coreHp += e.per * lv; break;
       case 'maxHp': b.maxHp += e.per * lv; break;
       case 'dmgMul': b.dmgMul += e.per * lv; break;
       case 'gatherSpeed': b.gatherSpeed += e.per * lv; break;
       case 'turretDmgMul': b.turretDmgMul += e.per * lv; break;
+      case 'turretRangeMul': b.turretRangeMul += e.per * lv; break;
+      case 'turretRateMul': b.turretRateMul += e.per * lv; break;
+      case 'turretAmmoMul': b.turretAmmoMul += e.per * lv; break;
+      case 'turretHpMul': b.turretHpMul += e.per * lv; break;
+      case 'trapDpsMul': b.trapDpsMul += e.per * lv; break;
       case 'allyCap': b.allyCap += e.per * lv; break;
+      case 'allyDmgMul': b.allyDmgMul += e.per * lv; break;
+      case 'allyHpMul': b.allyHpMul += e.per * lv; break;
+      case 'vacBonus': b.vacBonus += e.per * lv; break;
       case 'weaponLv': b.weaponLv[e.weapon] = (b.weaponLv[e.weapon] ?? 0) + e.per * lv; break;
       case 'weapon': if (!b.weapons.includes(e.id)) b.weapons.push(e.id); break;
       case 'prepBonus': b.prepBonus += e.per * lv; break;
@@ -169,7 +182,7 @@ export function costAffordText(m: Meta, c: Cost): string {
 
 /** 초당 수입 (통화별) */
 export function incomePerSec(m: Meta): Gains {
-  const mul = bonuses(m).incomeMul;
+  const mul = bonuses(m).incomeMul * IDLE.producerIncomeMul;
   const out: Gains = {};
   for (const p of PRODUCERS) {
     const lv = facilityLv(m, p.id);
@@ -177,7 +190,7 @@ export function incomePerSec(m: Meta): Gains {
   }
   return out;
 }
-export const facilityIncome = (m: Meta, p: ProducerDef) => p.perSec * facilityLv(m, p.id) * bonuses(m).incomeMul;
+export const facilityIncome = (m: Meta, p: ProducerDef) => p.perSec * facilityLv(m, p.id) * bonuses(m).incomeMul * IDLE.producerIncomeMul;
 
 /** dt 초만큼 방치 수입을 지갑에 더한다. 더한 양을 돌려준다 */
 export function tick(m: Meta, dt: number, ratio = 1): Gains {

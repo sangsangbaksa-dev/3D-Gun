@@ -156,9 +156,11 @@ export const CSS = `
 @keyframes t2dChev{50%{opacity:1}}
 #t2d button:focus-visible{outline:2px solid var(--te);outline-offset:2px}
 
-#t2d .spr{flex:none;display:inline-block;width:24px;height:24px;background-size:1145px 752px;background-repeat:no-repeat;image-rendering:auto;filter:drop-shadow(0 1px 2px #0008)}
+#t2d .spr{flex:none;display:inline-block;width:24px;height:24px;background-repeat:no-repeat;image-rendering:auto;filter:drop-shadow(0 1px 2px #0008)}
 #t2d .spr.sm{width:20px;height:20px}
-#t2d .spr.lg{width:30px;height:30px}
+#t2d .spr.lg{width:28px;height:28px}
+#t2d .coin .ic .spr.lg{width:26px;height:26px}
+#t2d .coin .ic{overflow:visible}
 #t2d .si{width:22px;height:22px;flex:none;display:block}
 #t2d .si.big{width:28px;height:28px}
 #t2d .si.sm{width:16px;height:16px}

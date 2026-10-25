@@ -25,6 +25,7 @@ export type UpgradeEffect =
   | { kind: 'startGold'; per: number }
   | { kind: 'startRes'; res: ResKey; per: number }
   | { kind: 'startSamples'; per: number }
+  | { kind: 'startSamplesSp'; per: number }
   | { kind: 'startSkillPoints'; per: number }       // (레거시) 미사용 — 시작 포인트는 정산에서 빠지므로 xpMul 로 대체
   | { kind: 'xpMul'; per: number }                  // 런 경험치 배율 (+per)
   | { kind: 'coreHp'; per: number }
@@ -32,7 +33,15 @@ export type UpgradeEffect =
   | { kind: 'dmgMul'; per: number }
   | { kind: 'gatherSpeed'; per: number }
   | { kind: 'turretDmgMul'; per: number }
+  | { kind: 'turretRangeMul'; per: number }
+  | { kind: 'turretRateMul'; per: number }   // 연사 간격 감소 (레벨당 -per, 합산)
+  | { kind: 'turretAmmoMul'; per: number }   // 포탑 내구도(탄) +per
+  | { kind: 'turretHpMul'; per: number }     // 포탑 건물 체력 +per
+  | { kind: 'trapDpsMul'; per: number }
   | { kind: 'allyCap'; per: number }
+  | { kind: 'allyDmgMul'; per: number }
+  | { kind: 'allyHpMul'; per: number }
+  | { kind: 'vacBonus'; per: number }
   | { kind: 'weaponLv'; weapon: string; per: number }  // 총 품질: state.start.weaponLv[weapon]
   | { kind: 'weapon'; id: string }
   | { kind: 'prepBonus'; per: number }                 // 준비 시간 +초
@@ -74,11 +83,19 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 't_dmg', cat: 'turret', name: '포탑 탄두 강화', desc: '포탑 피해 +20%', icon: '🗼', max: 10, cost: { gold: 100, iron: 4 }, costGrowth: 1.5, effect: { kind: 'turretDmgMul', per: 0.2 } },
   { id: 't_iron', cat: 'turret', name: '철 보급', desc: '런 시작 철 +3', icon: '⛓️', max: 6, cost: { gold: 70, iron: 5 }, costGrowth: 1.45, effect: { kind: 'startRes', res: 'iron', per: 3 }, requires: { id: 't_dmg', lv: 1 } },
   { id: 't_parts', cat: 'turret', name: '부품 재활용', desc: '런 시작 부품 +2', icon: '⚙️', max: 5, cost: { gold: 160, parts: 3 }, costGrowth: 1.6, effect: { kind: 'startRes', res: 'parts', per: 2 }, requires: { id: 't_dmg', lv: 2 } },
+  { id: 't_range', cat: 'turret', name: '장거리 조준경', desc: '포탑 사거리 +6%', icon: '🎯', max: 8, cost: { gold: 120, stone: 10 }, costGrowth: 1.48, effect: { kind: 'turretRangeMul', per: 0.06 }, requires: { id: 't_dmg', lv: 1 } },
+  { id: 't_rate', cat: 'turret', name: '자동 장전기', desc: '포탑 연사 간격 -5%', icon: '⚡', max: 6, cost: { gold: 140, iron: 6, parts: 2 }, costGrowth: 1.55, effect: { kind: 'turretRateMul', per: 0.05 }, requires: { id: 't_range', lv: 2 } },
+  { id: 't_ammo', cat: 'turret', name: '대용량 탄통', desc: '포탑 내구도(탄) +10%', icon: '📦', max: 6, cost: { gold: 110, iron: 5 }, costGrowth: 1.5, effect: { kind: 'turretAmmoMul', per: 0.1 }, requires: { id: 't_iron', lv: 2 } },
+  { id: 't_armor', cat: 'turret', name: '포탑 방호판', desc: '포탑 건물 체력 +18%', icon: '🛡️', max: 5, cost: { gold: 130, stone: 12, iron: 4 }, costGrowth: 1.52, effect: { kind: 'turretHpMul', per: 0.18 }, requires: { id: 't_dmg', lv: 3 } },
+  { id: 't_trap', cat: 'turret', name: '트랩 강화', desc: '슬로우 트랩 피해 +15%', icon: '🕸️', max: 6, cost: { gold: 85, wood: 15, iron: 2 }, costGrowth: 1.45, effect: { kind: 'trapDpsMul', per: 0.15 } },
   // 아군
   { id: 'a_cap', cat: 'ally', name: '숙소 확장', desc: '아군 상한 +1', icon: '🏠', max: 6, cost: { gold: 150, wood: 20, samples: 2 }, costGrowth: 1.7, effect: { kind: 'allyCap', per: 1 } },
   { id: 'a_sample', cat: 'ally', name: '샘플 냉동고', desc: '런 시작 샘플 +2', icon: '🧪', max: 6, cost: { gold: 90, herb: 8 }, costGrowth: 1.45, effect: { kind: 'startSamples', per: 2 } },
   { id: 'a_herb', cat: 'ally', name: '약초 상비', desc: '런 시작 약초 +4', icon: '🌿', max: 6, cost: { gold: 50, herb: 8 }, costGrowth: 1.4, effect: { kind: 'startRes', res: 'herb', per: 4 } },
-  // 경제
+  { id: 'a_adm', cat: 'ally', name: '전투 훈련', desc: '아군 공격력 +8%', icon: '⚔️', max: 6, cost: { gold: 120, samples: 3 }, costGrowth: 1.55, effect: { kind: 'allyDmgMul', per: 0.08 }, requires: { id: 'a_cap', lv: 1 } },
+  { id: 'a_ahp', cat: 'ally', name: '강화 주사', desc: '아군 체력 +12%', icon: '💉', max: 5, cost: { gold: 100, herb: 10, samples: 2 }, costGrowth: 1.5, effect: { kind: 'allyHpMul', per: 0.12 }, requires: { id: 'a_sample', lv: 2 } },
+  { id: 'a_vac', cat: 'ally', name: '백신 연구', desc: '아군화 성공률 +5%', icon: '🧪', max: 6, cost: { gold: 140, herb: 12, samples: 4 }, costGrowth: 1.58, effect: { kind: 'vacBonus', per: 0.05 }, requires: { id: 'a_sample', lv: 1 } },
+  { id: 'a_sp', cat: 'ally', name: '특수 샘플 보관', desc: '런 시작 특수 샘플 +1', icon: '☣️', max: 4, cost: { gold: 400, samplesSp: 2, parts: 6 }, costGrowth: 1.85, effect: { kind: 'startSamplesSp', per: 1 }, requires: { id: 'a_vac', lv: 2 } },
   { id: 'e_gold', cat: 'econ', name: '출격 지원금', desc: '런 시작 골드 +25', icon: '🪙', max: 10, cost: { gold: 60 }, costGrowth: 1.5, effect: { kind: 'startGold', per: 25 } },
   { id: 'e_click', cat: 'econ', name: '교환 협상', desc: '교환소 판매가 +1 골드 (자원당, 구매가 미만)', icon: '💱', max: 10, cost: { gold: 30 }, costGrowth: 1.35, effect: { kind: 'clickGold', per: 1 } },
   { id: 'e_income', cat: 'econ', name: '운영 효율', desc: '모든 생산 건물 수입 +10%', icon: '📈', max: 10, cost: { gold: 200, parts: 2 }, costGrowth: 1.6, effect: { kind: 'incomeMul', per: 0.1 } },
@@ -104,20 +121,23 @@ export interface ProducerDef {
   unlockEarned?: { key: WalletKey; amount: number };
 }
 export const PRODUCERS: ProducerDef[] = [
-  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.6, max: 40, cost: { gold: 35 }, costGrowth: 1.16 },
-  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.35, max: 30, cost: { gold: 45 }, costGrowth: 1.17 },
-  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.28, max: 30, cost: { gold: 70, wood: 20 }, costGrowth: 1.17 },
-  { id: 'p_herb', name: '약초밭', icon: '🌿', desc: '약초를 키운다', produces: 'herb', perSec: 0.18, max: 30, cost: { gold: 90, wood: 30 }, costGrowth: 1.18 },
-  { id: 'p_iron', name: '철광 갱도', icon: '⛓️', desc: '철을 캔다', produces: 'iron', perSec: 0.1, max: 25, cost: { gold: 220, stone: 40 }, costGrowth: 1.2 },
-  { id: 'p_parts', name: '폐차 해체장', icon: '⚙️', desc: '부품을 뜯어 낸다', produces: 'parts', perSec: 0.05, max: 25, cost: { gold: 420, iron: 20 }, costGrowth: 1.22 },
-  { id: 'p_lab', name: '샘플 배양실', icon: '🧪', desc: '좀비 샘플을 배양한다', produces: 'samples', perSec: 0.04, max: 25, cost: { gold: 600, herb: 40, parts: 5 }, costGrowth: 1.24 },
-  { id: 'p_lab2', name: '특수 샘플 연구소', icon: '☣️', desc: '희귀한 특수 샘플을 얻는다', produces: 'samplesSp', perSec: 0.01, max: 20, cost: { gold: 2500, samples: 40, parts: 20 }, costGrowth: 1.3, unlockEarned: { key: 'samples', amount: 20 } },
+  // 방치 수입: 접속 중 tick만. 2차 패치 — 웨이브 정산 대비 스노볼 대폭 축소 (perSec·max·비용·producerIncomeMul)
+  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.1, max: 16, cost: { gold: 58 }, costGrowth: 1.24 },
+  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.055, max: 14, cost: { gold: 72, wood: 12 }, costGrowth: 1.25 },
+  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.044, max: 14, cost: { gold: 105, wood: 30 }, costGrowth: 1.25 },
+  { id: 'p_herb', name: '약초밭', icon: '🌿', desc: '약초를 키운다', produces: 'herb', perSec: 0.03, max: 14, cost: { gold: 135, wood: 42 }, costGrowth: 1.26 },
+  { id: 'p_iron', name: '철광 갱도', icon: '⛓️', desc: '철을 캔다', produces: 'iron', perSec: 0.016, max: 12, cost: { gold: 340, stone: 55 }, costGrowth: 1.28 },
+  { id: 'p_parts', name: '폐차 해체장', icon: '⚙️', desc: '부품을 뜯어 낸다', produces: 'parts', perSec: 0.008, max: 12, cost: { gold: 620, iron: 32 }, costGrowth: 1.3 },
+  { id: 'p_lab', name: '샘플 배양실', icon: '🧪', desc: '좀비 샘플을 배양한다', produces: 'samples', perSec: 0.006, max: 12, cost: { gold: 880, herb: 55, parts: 8 }, costGrowth: 1.32 },
+  { id: 'p_lab2', name: '특수 샘플 연구소', icon: '☣️', desc: '희귀한 특수 샘플을 얻는다', produces: 'samplesSp', perSec: 0.0015, max: 8, cost: { gold: 4000, samples: 55, parts: 28 }, costGrowth: 1.4, unlockEarned: { key: 'samples', amount: 20 } },
 ];
 
 /** 방치 수입 규칙 (생산 시설은 접속 중에만 돈다, 오프라인 정산 없음) */
 export const IDLE = {
   baseClickGold: 3,
   skillCostBase: 1,        // 스킬 노드 구매 비용 = base + 현재 레벨 (스킬 포인트)
+  /** 생산 시설 tick 배율 (1 = 데이터 perSec 그대로) */
+  producerIncomeMul: 0.58,
 };
 
 /** 런 경험치: 처치 XP(ZOMBIE_REWARD.xp)로 레벨이 오르고, 레벨마다 스킬 포인트를 준다 (런 끝에 전부 저축).
