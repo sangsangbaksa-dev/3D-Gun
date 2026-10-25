@@ -182,7 +182,7 @@ export function costAffordText(m: Meta, c: Cost): string {
 
 /** 초당 수입 (통화별) */
 export function incomePerSec(m: Meta): Gains {
-  const mul = bonuses(m).incomeMul;
+  const mul = bonuses(m).incomeMul * IDLE.producerIncomeMul;
   const out: Gains = {};
   for (const p of PRODUCERS) {
     const lv = facilityLv(m, p.id);
@@ -190,7 +190,7 @@ export function incomePerSec(m: Meta): Gains {
   }
   return out;
 }
-export const facilityIncome = (m: Meta, p: ProducerDef) => p.perSec * facilityLv(m, p.id) * bonuses(m).incomeMul;
+export const facilityIncome = (m: Meta, p: ProducerDef) => p.perSec * facilityLv(m, p.id) * bonuses(m).incomeMul * IDLE.producerIncomeMul;
 
 /** dt 초만큼 방치 수입을 지갑에 더한다. 더한 양을 돌려준다 */
 export function tick(m: Meta, dt: number, ratio = 1): Gains {
