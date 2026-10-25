@@ -55,7 +55,6 @@ export class EnemyView {
   private projs: ProjFx[] = [];
   private flashes: Flash[] = [];
   private floatLayer: HTMLDivElement;
-  private portals: { group: THREE.Group; ring: THREE.Mesh; beam: THREE.Mesh; mat: THREE.MeshBasicMaterial; beamMat: THREE.MeshBasicMaterial }[] = [];
   private fakeCore?: THREE.Group;
   private time = 0;
   private tmp = new THREE.Vector3();
@@ -64,30 +63,10 @@ export class EnemyView {
     this.floatLayer = document.createElement('div');
     Object.assign(this.floatLayer.style, { position: 'fixed', inset: '0', pointerEvents: 'none', zIndex: '3', overflow: 'hidden' });
     document.body.appendChild(this.floatLayer);
-    this.buildPortals();
     this.buildFakeCore();
   }
 
   // ── 구성 요소 ────────────────────────────────────────
-  private buildPortals() {
-    for (const lane of MAP.lanes) {
-      const p = lane.waypoints[0];
-      const group = new THREE.Group();
-      group.position.set(p.x, groundY(p.x, p.z) + 0.06, p.z);
-      const mat = new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false });
-      const ring = new THREE.Mesh(ringGeo, mat);
-      ring.rotation.x = -Math.PI / 2; ring.scale.setScalar(4);
-      const disc = new THREE.Mesh(diskGeo, new THREE.MeshBasicMaterial({ color: 0x2a0606, transparent: true, opacity: 0.55, depthWrite: false }));
-      disc.rotation.x = -Math.PI / 2; disc.scale.setScalar(3.6);
-      const beamMat = new THREE.MeshBasicMaterial({ color: 0xff5a3a, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
-      const beam = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.8, 26, 20, 1, true), beamMat);
-      beam.position.y = 13;
-      group.add(disc, ring, beam);
-      this.scene.add(group);
-      this.portals.push({ group, ring, beam, mat, beamMat });
-    }
-  }
-
   private buildFakeCore() {
     const g = new THREE.Group();
     g.position.set(MAP.core.x, groundY(MAP.core.x, MAP.core.z), MAP.core.z);
@@ -146,7 +125,6 @@ export class EnemyView {
     this.updateProjs(dt);
     this.updateFlashes(dt);
     this.updateFloats(dt);
-    this.updatePortals();
     this.updateFakeCore();
   }
 
@@ -507,17 +485,6 @@ export class EnemyView {
       const s = f.t < 0.12 ? 1 + (0.12 - f.t) * 6 : 1;
       f.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(${s})`;
       f.el.style.opacity = String(Math.min(1, (0.9 - f.t) / 0.3));
-    }
-  }
-
-  private updatePortals() {
-    const combat = state.phase === 'combat';
-    const k = combat ? 1 : 0.35;
-    const pulse = 0.5 + 0.5 * Math.sin(this.time * (combat ? 4 : 1.5));
-    for (const p of this.portals) {
-      p.mat.opacity = (0.25 + pulse * 0.4) * k;
-      p.beamMat.opacity = (combat ? 0.12 + pulse * 0.1 : 0.04);
-      p.ring.scale.setScalar(4 + pulse * 0.4);
     }
   }
 

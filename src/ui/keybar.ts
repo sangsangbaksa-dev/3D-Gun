@@ -49,7 +49,7 @@ function barHtml(): string {
   if (state.phase === 'prep') {
     return item(['B'], '건설') + item(['N'], '웨이브 시작') + item(['V'], '상점') + item(['L'], '백신') + HELP_ITEM;
   }
-  return item(['R'], '재장전') + item(['1–6'], '무기') + item(['Shift'], '구르기') + item(['T'], '시점') + item(['우클릭'], '조준') + HELP_ITEM;
+  return item(['R'], '재장전') + item(['1–6'], '무기') + item(['Shift'], '구르기') + item(['Space'], '점프') + item(['T'], '시점') + item(['우클릭'], '조준') + HELP_ITEM;
 }
 
 /** 'E 나무 베기' → [E] 나무 베기. E 로 시작하지 않는 안내(예: 백신 없음)는 글자만 */

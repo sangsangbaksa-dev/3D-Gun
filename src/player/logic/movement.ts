@@ -1,4 +1,4 @@
-// 이동·시선·구르기(Shift). 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
+// 이동·시선·구르기(Shift)·점프(Space). 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
 import { PLAYER } from '../../data';
 import { state } from '../../core/state';
 import { clamp, forwardOf, rightOf } from './math';
@@ -9,11 +9,16 @@ export interface MoveIntent {
   forward: number; strafe: number;
   lookDx: number; lookDy: number;
   dash: boolean;
+  jump: boolean;
   aim: boolean;
 }
 
 /** collide 는 장애물·맵 경계 처리(위치를 직접 보정). */
-export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown: number, collide: (p: { x: number; z: number }, radius: number) => void) {
+export function stepMovement(
+  p: Player, dt: number, it: MoveIntent, dashCooldown: number,
+  collide: (p: { x: number; z: number }, radius: number) => void,
+  groundY: (x: number, z: number) => number,
+) {
   p.iframes = Math.max(0, p.iframes - dt);
   p.dashCd = Math.max(0, p.dashCd - dt);
   // 연사로 쌓인 수직 반동. 쏘는 동안은 천천히만 돌아오고, 멈추면 더 빨리 내려온다
@@ -47,5 +52,21 @@ export function stepMovement(p: Player, dt: number, it: MoveIntent, dashCooldown
   p.x += mx * speed * dt;
   p.z += mz * speed * dt;
   collide(p, PLAYER.radius);
+
+  const floor = groundY(p.x, p.z);
+  if (p.grounded) p.y = floor;
+  if (it.jump && p.grounded && p.dashT <= 0) {
+    p.grounded = false;
+    p.jumpVelocity = PLAYER.jumpSpeed;
+  }
+  if (!p.grounded) {
+    p.jumpVelocity -= PLAYER.gravity * dt;
+    p.y += p.jumpVelocity * dt;
+    if (p.y <= floor) {
+      p.y = floor;
+      p.jumpVelocity = 0;
+      p.grounded = true;
+    }
+  }
   p.speed = speed;
 }

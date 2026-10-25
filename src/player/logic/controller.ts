@@ -105,8 +105,7 @@ export class PlayerController {
 
     if (!env.combat) {
       this.pendingHits.length = 0;
-      stepMovement(p, dt, it, stats.dashCd, env.collide);
-      p.y = env.groundY(p.x, p.z);
+      stepMovement(p, dt, it, stats.dashCd, env.collide, env.groundY);
       out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
       return out;
     }
@@ -137,9 +136,8 @@ export class PlayerController {
 
     const wasDashing = p.dashT > 0;
     const dashReady = p.dashCd <= 0;
-    stepMovement(p, dt, it, stats.dashCd, env.collide);
+    stepMovement(p, dt, it, stats.dashCd, env.collide, env.groundY);
     if (!wasDashing && p.dashT > 0 && dashReady) out.dashed = true;
-    p.y = env.groundY(p.x, p.z);
 
     out.pose = cameraPose(p, GUNS[w.current].adsFov, env.view);
 
@@ -204,6 +202,7 @@ export class PlayerController {
     w.current = 'pistol'; w.reloadLeft = 0; w.cooldown = 0.3; w.bloom = 0;
     for (const id of GUN_ORDER) w.ammo[id] = magSize(w, state.stats, id);
     p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0;
+    p.jumpVelocity = 0; p.grounded = true;
     p.x = MAP.playerStart.x; p.z = MAP.playerStart.z; p.yaw = Math.PI; p.pitch = 0.2;
     this.pendingHits.length = 0;
     out.respawned = true;
@@ -222,6 +221,7 @@ export class PlayerController {
   private revive(out: FrameOut) {
     const p = this.player;
     p.dead = false; p.deadT = 0; p.hp = Math.max(1, p.hp); p.iframes = 2; p.dashT = 0; p.kick = 0;
+    p.jumpVelocity = 0; p.grounded = true;
     out.respawned = true;
     events.emit('player:respawn', { x: p.x, z: p.z });
   }

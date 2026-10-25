@@ -323,4 +323,22 @@ export function buildWorldView(scene: THREE.Scene) {
   if (mtWarm.length) scene.add(new THREE.Mesh(mergeGeometries(mtWarm)!, new THREE.MeshLambertMaterial({ color: 0x6a5038 })));
   if (mtCool.length) scene.add(new THREE.Mesh(mergeGeometries(mtCool)!, new THREE.MeshLambertMaterial({ color: 0x4c3b35 })));
   if (mtOuter.length) scene.add(new THREE.Mesh(mergeGeometries(mtOuter)!, new THREE.MeshLambertMaterial({ color: 0x352628 })));
+
+  // 맵 경계 장벽: 플레이 영역 가장자리를 눈에 보이게 막는다 (충돌은 world.resolveObstacles)
+  const span = H * 2;
+  const wallH = 3.2;
+  const wallT = 2.4;
+  const edge = H - 1.1;
+  const wallMat = new THREE.MeshLambertMaterial({ color: 0x4a4440 });
+  const walls: THREE.BufferGeometry[] = [];
+  const addWall = (w: number, d: number, x: number, z: number) => {
+    const g = new THREE.BoxGeometry(w, wallH, d);
+    g.translate(x, wallH / 2 + terrainY(x, z) - 0.2, z);
+    walls.push(g);
+  };
+  addWall(span, wallT, 0, edge);
+  addWall(span, wallT, 0, -edge);
+  addWall(wallT, span, edge, 0);
+  addWall(wallT, span, -edge, 0);
+  scene.add(new THREE.Mesh(mergeGeometries(walls)!, wallMat));
 }

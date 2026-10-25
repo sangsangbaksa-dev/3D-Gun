@@ -84,6 +84,7 @@ export const PlayerSystem: System = {
       lookDx: state.mode === 'play' ? input.dx : 0,
       lookDy: state.mode === 'play' ? input.dy : 0,
       dash: playing && (input.pressed.has('ShiftLeft') || input.pressed.has('ShiftRight')),
+      jump: playing && input.pressed.has('Space'),
       aim: playing && input.mouseRightDown,
       fire: playing && input.mouseDown,
       firePressed: playing && input.mouseDown && !prevFire,

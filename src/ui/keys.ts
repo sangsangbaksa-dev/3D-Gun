@@ -17,6 +17,7 @@ const buildRange = `1–${BUILD_SLOTS.length}`;
 export const KEYBINDS: KeyBind[] = [
   { keys: ['W', 'A', 'S', 'D'], action: '이동', group: '이동' },
   { keys: ['Shift'], action: '구르기 (잠깐 무적, 재사용 대기 있음)', group: '이동' },
+  { keys: ['Space'], action: '점프', group: '이동' },
   { keys: ['T'], action: '1인칭 / 3인칭 시점 전환', group: '이동' },
   { keys: ['마우스'], action: '시점 회전', group: '이동', note: '마우스 고정이 안 되면 방향키 또는 우클릭 드래그' },
   { keys: ['방향키'], action: '시점 회전 (대체)', group: '이동' },
