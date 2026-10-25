@@ -8,7 +8,7 @@ import { meta, loadMeta, saveMeta, resetMeta } from '../core/meta';
 import { state, recalcStats, changed } from '../core/state';
 import { RES_KEYS } from '../data';
 import { RUN_XP } from '../data/tycoon2d';
-import { addXp, bankRun, bonuses, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
+import { addXp, bankRun, bonuses, buyStartWaveSkip, tick, xpToNext, type RunGrant, type RunReport, type RunSnapshot } from './logic/economy';
 import { TycoonPanel } from './view/panel';
 import { mountAttract } from './view/attract';
 import { playDeath, deathActive } from '../ui/deathScreen';
@@ -90,7 +90,12 @@ function handleOver(snap: RunSnapshot, reason: 'player' | 'core' = 'player') {
 
 function launch() {
   applyToState();
-  const startWave = state.start.startWave;
+  const b = bonuses(meta);
+  const startWave = panel.getLaunchStartWave();
+  const skip = buyStartWaveSkip(meta, b.startWave, startWave);
+  if (skip === 'poor') { panel.toast('건너뛰기 재화가 부족합니다'); return; }
+  if (skip === 'locked') { panel.toast('아직 도달하지 않은 웨이브입니다'); return; }
+  state.start.startWave = startWave;
   attract.hide();
   panel.close();
   state.mode = 'play';

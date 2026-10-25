@@ -3,7 +3,7 @@
 import { events } from '../../core/events';
 import { state, changed } from '../../core/state';
 import { MAP } from '../../data/map';
-import { ENEMY_RULES, CHECKPOINT_EVERY, MAX_ALIVE, ZOMBIE_TUNING, bossTypeFor, eliteChance, isBossWave, prepTime, waveCount, waveRoster, FINAL_WAVE, type ZType } from '../../data';
+import { ENEMY_RULES, MAX_ALIVE, ZOMBIE_TUNING, bossTypeFor, eliteChance, isBossWave, prepTime, waveCount, waveRoster, FINAL_WAVE, type ZType } from '../../data';
 import type { EnemySim } from './sim';
 
 interface Pending { type: ZType; lane: number; elite?: boolean }
@@ -31,7 +31,6 @@ export class WaveDirector {
 
   start() {
     state.wave = Math.max(1, state.start.startWave);
-    state.checkpoint = 0;
     this.enterPrep();
   }
 
@@ -138,10 +137,6 @@ export class WaveDirector {
     const w = state.wave;
     events.emit('wave:clear', { wave: w });
     state.gold += ENEMY_RULES.waveClearGold + w * 2;
-    if (w % CHECKPOINT_EVERY === 0) {
-      state.checkpoint = w;
-      events.emit('toast', { text: `체크포인트 도달! (${w}웨이브)` });
-    }
     state.wave = w + 1;
     this.enterPrep();
   }
@@ -158,7 +153,7 @@ export class WaveDirector {
     this.lastReason = reason;
     this.restartT = ENEMY_RULES.fallbackRestart;
     changed();
-    events.emit('run:over', { wave: state.wave, checkpoint: state.checkpoint, kills: this.kills, gold: state.gold, reason });
+    events.emit('run:over', { wave: state.wave, checkpoint: 0, kills: this.kills, gold: state.gold, reason });
   }
 
   /** 새 런: startWave(기본 1, 영구 업그레이드로 올라감)의 준비 단계부터. 런 상태 초기화는 각 모듈이 같은 이벤트로 한다 */
@@ -172,7 +167,6 @@ export class WaveDirector {
     const p = this.sim.deps.player;
     if (p.hp <= 0) { p.hp = p.maxHp; p.x = MAP.playerStart.x; p.z = MAP.playerStart.z; p.iframes = 2; events.emit('player:respawn', { x: p.x, z: p.z }); }
     state.wave = Math.max(1, startWave);
-    state.checkpoint = 0;
     this.enterPrep();
   }
 

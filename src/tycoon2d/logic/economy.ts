@@ -1,8 +1,8 @@
 // 2D 업그레이드 타이쿤 규칙. 순수 TS: three/DOM/localStorage 를 쓰지 않는다.
 import type { Meta } from '../../core/meta';
-import { RES_BUY_PRICE, RES_PRICE, SKILLS, exchangeSellUnit, type ResKey } from '../../data';
+import { FINAL_WAVE, RES_BUY_PRICE, RES_PRICE, SKILLS, exchangeSellUnit, type ResKey } from '../../data';
 import {
-  UPGRADES, PRODUCERS, WALLET_KEYS, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START, RUN_XP,
+  UPGRADES, PRODUCERS, WALLET_KEYS, WALLET_LABEL, IDLE, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD, BASE_START, RUN_XP,
   type Cost, type WalletKey, type UpgradeDef, type ProducerDef,
 } from '../../data/tycoon2d';
 
@@ -121,8 +121,45 @@ export function bonuses(m: Meta): Bonuses {
       case 'keepRatio': b.keepRatio = Math.min(1, b.keepRatio + e.per * lv); break;
     }
   }
-  b.startWave = 1 + Math.min(waveLv, Math.max(0, m.bestCheckpoint));
+  b.startWave = 1 + Math.min(waveLv, FINAL_WAVE - 1);
   return b;
+}
+
+/** 이번 출격에서 고를 수 있는 최대 시작 웨이브 */
+export function maxSelectableStartWave(m: Meta): number {
+  const b = bonuses(m);
+  return Math.min(FINAL_WAVE, Math.max(1, m.bestWave, b.startWave));
+}
+
+/** 출격 직전: 영구 시작 웨이브보다 높은 웨이브로 건너뛰기 비용을 지불한다 */
+export function buyStartWaveSkip(m: Meta, freeThrough: number, targetWave: number): BuyResult {
+  const free = Math.max(1, Math.floor(freeThrough));
+  const target = Math.max(free, Math.floor(targetWave));
+  if (target <= free) return 'ok';
+  if (target > maxSelectableStartWave(m)) return 'locked';
+  const c = startWaveSkipCost(free, target);
+  if (!canAfford(m, c)) return 'poor';
+  pay(m, c);
+  return 'ok';
+}
+
+/** 영구 보너스(`freeThrough`) 다음부터 `targetWave`까지 건너뛰는 비용 (지갑 재화) */
+export function startWaveSkipCost(freeThrough: number, targetWave: number): Cost {
+  const out: Cost = {};
+  const from = Math.max(1, Math.floor(freeThrough));
+  const to = Math.max(from, Math.floor(targetWave));
+  for (let w = from + 1; w <= to; w++) {
+    out.gold = (out.gold ?? 0) + Math.floor(60 + w * 45 * Math.pow(1.12, w - 2));
+    if (w >= 3) out.iron = (out.iron ?? 0) + Math.floor(1 + w / 4);
+    if (w >= 5) out.parts = (out.parts ?? 0) + Math.floor(1 + w / 6);
+    if (w >= 8 && w % 4 === 0) out.samples = (out.samples ?? 0) + 1;
+  }
+  return out;
+}
+
+export function costAffordText(m: Meta, c: Cost): string {
+  const lack = (Object.keys(c) as WalletKey[]).filter((k) => (c[k] ?? 0) > 0 && bal(m, k) + 1e-9 < (c[k] ?? 0));
+  return lack.map((k) => `${WALLET_LABEL[k]} ${c[k]}`).join(', ');
 }
 
 /** 초당 수입 (통화별) */
@@ -212,7 +249,6 @@ export function bankRun(m: Meta, r: RunSnapshot): RunReport {
   m.currency += total.gold ?? 0;
   const newBest = r.wave > m.bestWave;
   m.bestWave = Math.max(m.bestWave, r.wave);
-  m.bestCheckpoint = Math.max(m.bestCheckpoint, r.checkpoint);
   m.totalRuns += 1;
   m.totalKills += r.kills;
   return { wave: r.wave, kills: r.kills, kept, waveBonus, keepRatio, newBest, total };

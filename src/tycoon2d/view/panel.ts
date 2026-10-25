@@ -1,12 +1,12 @@
 // 2D 업그레이드 타이쿤 화면 (DOM). 규칙은 logic/economy.ts 에 있고, 여기서는 그리기와 클릭 연결만 한다.
 import { meta } from '../../core/meta';
-import { CHECKPOINT_EVERY, FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
+import { FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
 import {
   UPGRADES, PRODUCERS, CAT_ORDER, CAT_LABEL, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
 } from '../../data/tycoon2d';
 import {
-  bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
-  incomePerSec, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
+  bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, costAffordText, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
+  incomePerSec, maxSelectableStartWave, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, startWaveSkipCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
 } from '../logic/economy';
 import { CSS } from './style';
 import { icon, iconOr, ICON_OF, TONE_OF } from './icons';
@@ -37,6 +37,8 @@ export class TycoonPanel {
   private tab: Tab = 'cat:weapon';
   private navBtns = new Map<Tab, HTMLElement>();
   private acc = 0;
+  /** 출격 시 시작 웨이브 (영구 보너스 이상, 재화로 추가 구매) */
+  private launchStartWave = 1;
   isOpen = false;
 
   constructor(private host: PanelHost) {
@@ -109,6 +111,7 @@ export class TycoonPanel {
       if (extras.length) chip(extras.map((k) => `${WALLET_ICON[k]}${fmt(report.total[k] ?? 0)}`).join(' '), '', i++);
       chip(`회수율 ${Math.round(report.keepRatio * 100)}%`, '', i++);
     } else chip('업그레이드를 고르고 출격하세요');
+    this.resetLaunchWave();
     for (const [k, w] of this.walletEl) w.shown = bal(meta, k);
     this.setTab(this.tab);
     this.refreshWallet(0);
@@ -256,9 +259,40 @@ export class TycoonPanel {
     return c.el;
   }
 
+  getLaunchStartWave() { return this.launchStartWave; }
+
+  private resetLaunchWave() {
+    const b = bonuses(meta);
+    this.launchStartWave = Math.min(maxSelectableStartWave(meta), Math.max(1, b.startWave));
+  }
+
+  private bumpLaunchWave(delta: number) {
+    const b = bonuses(meta);
+    const min = Math.max(1, b.startWave);
+    const max = maxSelectableStartWave(meta);
+    this.launchStartWave = Math.min(max, Math.max(min, this.launchStartWave + delta));
+    this.refreshSide();
+  }
+
+  private formatCost(c: Cost): string {
+    const parts = (Object.keys(c) as WalletKey[]).filter((k) => (c[k] ?? 0) > 0).map((k) => `${WALLET_ICON[k]}${fmt(c[k] ?? 0)}`);
+    return parts.length ? parts.join(' ') : '무료';
+  }
+
   private buildSide() {
-    this.side.innerHTML = `<div class="exchange"><h3>${icon('exchange', 'si sm')}교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
+    this.side.innerHTML = `<div class="wave-skip"><h3>${icon('flag', 'si sm')}시작 웨이브</h3>
+      <p class="ex-sub">영구 보너스 다음 웨이브부터는 지갑 재화로 건너뛸 수 있습니다 (최고 기록 ${FINAL_WAVE}웨이브까지).</p>
+      <div class="ws-row"><button type="button" class="ws-btn" data-ws="-5">−5</button><button type="button" class="ws-btn" data-ws="-1">−</button>
+        <div class="ws-val" data-ws-val>1</div><button type="button" class="ws-btn" data-ws="1">+</button><button type="button" class="ws-btn" data-ws="5">+5</button></div>
+      <div class="ws-cost" data-ws-cost></div><div class="ws-hint" data-ws-hint></div></div>
+      <div class="exchange"><h3>${icon('exchange', 'si sm')}교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
       <div class="panelbox" data-preview></div>`;
+    this.side.querySelectorAll('[data-ws]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const d = Number((el as HTMLElement).dataset.ws);
+        if (Number.isFinite(d)) this.bumpLaunchWave(d);
+      });
+    });
     const rows = this.side.querySelector('[data-ex-rows]') as HTMLElement;
     for (const k of RES_KEYS) {
       const row = document.createElement('div');
@@ -282,6 +316,27 @@ export class TycoonPanel {
 
   private refreshSide() {
     const b = bonuses(meta);
+    const min = Math.max(1, b.startWave);
+    const max = maxSelectableStartWave(meta);
+    if (this.launchStartWave < min) this.launchStartWave = min;
+    if (this.launchStartWave > max) this.launchStartWave = max;
+    const skipCost = startWaveSkipCost(b.startWave, this.launchStartWave);
+    const valEl = this.side.querySelector('[data-ws-val]') as HTMLElement | null;
+    const costEl = this.side.querySelector('[data-ws-cost]') as HTMLElement | null;
+    const hintEl = this.side.querySelector('[data-ws-hint]') as HTMLElement | null;
+    if (valEl) valEl.textContent = `웨이브 ${this.launchStartWave}`;
+    if (costEl) {
+      const afford = canAfford(meta, skipCost);
+      costEl.innerHTML = this.launchStartWave <= b.startWave
+        ? `<span class="ok">영구 보너스 · 추가 비용 없음</span>`
+        : `<span class="${afford ? 'ok' : 'no'}">건너뛰기 비용 ${this.formatCost(skipCost)}</span>`;
+    }
+    if (hintEl) {
+      hintEl.textContent = max < FINAL_WAVE
+        ? `최대 웨이브 ${max} (도달 기록 · 영구 보너스)`
+        : `최대 웨이브 ${max}`;
+      if (this.launchStartWave > b.startWave && !canAfford(meta, skipCost)) hintEl.textContent += ` · 부족: ${costAffordText(meta, skipCost)}`;
+    }
     for (const k of RES_KEYS) {
       const el = this.side.querySelector(`[data-res="${k}"] [data-ex-label]`) as HTMLElement | null;
       if (el) {
@@ -293,12 +348,11 @@ export class TycoonPanel {
     const row = (a: string, v: string) => `<div><span>${a}</span><b>${v}</b></div>`;
     const wl = Object.entries(b.weaponLv).filter(([, v]) => v > 0).map(([k, v]) => `${k} +${v}`).join(', ') || '-';
     (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>${icon('flag', 'si sm')}다음 출격 미리보기</h3>`
-      + row('시작 웨이브', String(b.startWave)) + row('시작 골드', fmt(b.startGold)) + row('핵 체력', `+${b.coreHp}`)
+      + row('시작 웨이브', String(this.launchStartWave)) + row('영구 보너스', `웨이브 ${b.startWave}`) + row('시작 골드', fmt(b.startGold)) + row('핵 체력', `+${b.coreHp}`)
       + row('최대 체력', `+${b.maxHp}`) + row('공격력', `+${Math.round(b.dmgMul * 100)}%`) + row('준비 시간', `30 +${b.prepBonus}초`)
       + row('아군 상한', `+${b.allyCap}`) + row('시작 무기', b.weapons.join(', ')) + row('총 품질', wl)
       + row('시작 스킬', String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))
-      + row('체크포인트', `${CHECKPOINT_EVERY}웨이브마다 · 최고 ${meta.bestCheckpoint} · 목표 ${FINAL_WAVE}`)
-      + row('기록', `웨이브 ${meta.bestWave} · ${meta.totalRuns}회`);
+      + row('기록', `최고 웨이브 ${meta.bestWave} · ${meta.totalRuns}회 출격`);
   }
 
   private refreshAll() {

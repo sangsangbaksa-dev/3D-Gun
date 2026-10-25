@@ -124,6 +124,16 @@ export const CSS = `
 #t2d .ex-btn:hover{background:#2EE6D62a}
 #t2d .ex-btn:nth-child(3),#t2d .ex-btn:nth-child(4){background:#FF8A2A0f;color:var(--or);border-color:#FF8A2A55}
 #t2d .ex-btn:nth-child(3):hover,#t2d .ex-btn:nth-child(4):hover{background:#FF8A2A2a}
+#t2d .wave-skip{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #ffffff12}
+#t2d .wave-skip h3{margin:0 0 4px;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--or)}
+#t2d .ws-row{display:flex;align-items:center;gap:6px;margin:10px 0 6px}
+#t2d .ws-btn{flex:0 0 auto;min-width:36px;background:#2EE6D612;color:var(--te);border:1px solid #2EE6D655;border-radius:6px;padding:6px 8px;font:inherit;font-weight:800;cursor:pointer}
+#t2d .ws-btn:hover{background:#2EE6D628}
+#t2d .ws-val{flex:1;text-align:center;font-size:20px;font-weight:900;color:#fff;padding:6px 4px;background:#0005;border-radius:6px;border:1px solid #ffffff18}
+#t2d .ws-cost{font-size:12px;font-weight:700;min-height:18px}
+#t2d .ws-cost .ok{color:var(--te)}
+#t2d .ws-cost .no{color:#ff8e8e}
+#t2d .ws-hint{font-size:11px;color:#a8928a;margin-top:4px;line-height:1.4}
 #t2d .panelbox{font-size:12.5px;line-height:1.75}
 #t2d .panelbox div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #ffffff0c}
 #t2d .panelbox div span{color:#bba7a0}

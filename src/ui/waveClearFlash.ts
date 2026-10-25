@@ -1,6 +1,6 @@
 // 웨이브 클리어 짧은 연출: 골드·회복 안내. 전투 HUD 와 겹치지 않게 상단에 띄운다.
 import { events } from '../core/events';
-import { CHECKPOINT_EVERY, ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
+import { ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
 
 const CSS = `
 #ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:none;pointer-events:none;
@@ -27,8 +27,7 @@ function show(w: number) {
   const gold = waveClearGold(w);
   const heal = `핵 +${Math.round(ENEMY_RULES.waveClearCorePct * 100)}% · 시설 +${Math.round(ENEMY_RULES.waveClearStructPct * 100)}%`;
   let extra = '';
-  if (w % CHECKPOINT_EVERY === 0) extra = ' · <em>체크포인트 저장</em>';
-  else if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = ' · 다음 웨이브는 보스';
+  if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = ' · 다음 웨이브는 보스';
   el.innerHTML = `<div class="box"><b>웨이브 ${w} 클리어!</b><div class="sub">🪙 골드 +${gold} · ${heal}${extra}</div></div>`;
   el.classList.remove('on');
   void el.offsetWidth;

@@ -4,7 +4,7 @@ import { state } from './state';
 import { events } from './events';
 import { zombies } from './entities';
 import {
-  RES_KEYS, RES_LABEL, CHECKPOINT_EVERY, FINAL_WAVE,
+  RES_KEYS, RES_LABEL, FINAL_WAVE,
   isBossWave, isBossType, bossTypeFor, ZOMBIE_TUNING, type ZType,
 } from '../data';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
@@ -97,11 +97,8 @@ function prepSubText() {
   if (isBossWave(w)) {
     const name = w === FINAL_WAVE ? '좀비 왕' : ZOMBIE_TUNING[bossTypeFor(w)].name;
     hint = ` · ⚠ 보스 ${name}`;
-  } else if (w % CHECKPOINT_EVERY === 0) {
-    hint = ' · 체크포인트 웨이브';
-  } else {
-    const next = CHECKPOINT_EVERY * Math.ceil(w / CHECKPOINT_EVERY);
-    if (next <= FINAL_WAVE) hint = ` · 다음 체크포인트 ${next}웨이브`;
+  } else if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) {
+    hint = ' · 다음 웨이브는 보스';
   }
   return `준비 ${sec}초${hint} · N 으로 바로 시작`;
 }

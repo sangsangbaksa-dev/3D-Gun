@@ -36,7 +36,7 @@ export type UpgradeEffect =
   | { kind: 'weaponLv'; weapon: string; per: number }  // 총 품질: state.start.weaponLv[weapon]
   | { kind: 'weapon'; id: string }
   | { kind: 'prepBonus'; per: number }                 // 준비 시간 +초
-  | { kind: 'startWave'; per: number }                 // 시작 웨이브 +N (bestCheckpoint 까지)
+  | { kind: 'startWave'; per: number }                 // 시작 웨이브 +N (영구)
   | { kind: 'clickGold'; per: number }     // (레거시) 미사용 — 교환소로 대체됨
   | { kind: 'incomeMul'; per: number }     // 모든 생산 건물 수입 배율
   | { kind: 'keepRatio'; per: number };    // 사망 시 남은 자원을 지갑으로 옮기는 비율 보너스
@@ -85,7 +85,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'e_keep', cat: 'econ', name: '철수 보급', desc: '사망 시 남은 자원 회수율 +6%', icon: '🎒', max: 8, cost: { gold: 120, wood: 20 }, costGrowth: 1.5, effect: { kind: 'keepRatio', per: 0.06 } },
   { id: 'e_gather', cat: 'econ', name: '채집 효율', desc: '채집 속도 +10%', icon: '⛏️', max: 8, cost: { gold: 80, wood: 15 }, costGrowth: 1.45, effect: { kind: 'gatherSpeed', per: 0.1 } },
   { id: 'e_prep', cat: 'base', name: '준비 시간 연장', desc: '웨이브 준비 시간 +3초', icon: '⏱️', max: 8, cost: { gold: 90, wood: 10 }, costGrowth: 1.5, effect: { kind: 'prepBonus', per: 3 } },
-  { id: 'e_wave', cat: 'base', name: '전진 기지', desc: '시작 웨이브 +1 (달성한 체크포인트까지)', icon: '🚩', max: 10, cost: { gold: 250, iron: 5 }, costGrowth: 1.7, effect: { kind: 'startWave', per: 1 } },
+  { id: 'e_wave', cat: 'base', name: '전진 기지', desc: '시작 웨이브 +1 (영구, 출격 시 추가 구매 가능)', icon: '🚩', max: 10, cost: { gold: 250, iron: 5 }, costGrowth: 1.7, effect: { kind: 'startWave', per: 1 } },
   { id: 'e_sp', cat: 'econ', name: '교범 학습', desc: '런 경험치 +20% (레벨업마다 스킬 포인트)', icon: '📘', max: 5, cost: { gold: 300, samples: 4 }, costGrowth: 1.9, effect: { kind: 'xpMul', per: 0.2 } },
 ];
 
