@@ -9,7 +9,7 @@ import type { Ctx } from '../../core/types';
 import { rayToGround, snap, yawTo, type PlaceCheck } from '../logic/grid';
 import type { Building, BaseModel } from '../logic/base';
 import { buildModel, type Model } from './models';
-import { groundY } from './ground';
+import { groundPose, groundY } from './ground';
 import { BasePanels, hoverText } from './panels';
 import type { BuildOverlay } from './overlay';
 
@@ -112,9 +112,12 @@ export class BuildController {
     if (showGhost) {
       this.setGhost(kind);
       if (this.lastTint !== check.ok || this.lastTintKind !== kind) { this.tintGhost(check.ok); this.lastTint = check.ok; this.lastTintKind = kind; }
-      const y = groundY(sx, sz);
-      this.ghostRoot.position.set(sx, y, sz);
-      this.ghostRoot.rotation.y = yawTo(MAP.core.x - sx, MAP.core.z - sz);
+      const gy = yawTo(MAP.core.x - sx, MAP.core.z - sz);
+      const pose = groundPose(sx, sz, gy);
+      this.ghostRoot.position.set(sx, pose.y, sz);
+      this.ghostRoot.rotation.order = 'YXZ';
+      this.ghostRoot.rotation.set(pose.tiltX, pose.yaw, pose.tiltZ);
+      const y = pose.y;
       const rr = def.turret ? def.turret.levels[0].range : def.trap ? def.trap.radius : 0;
       this.range.position.set(sx, y + 0.1, sz);
       this.range.scale.set(rr || 1, 1, rr || 1);

@@ -6,7 +6,7 @@ import { yawTo } from '../logic/grid';
 import type { Building, BaseModel, Fx as FxEvent } from '../logic/base';
 import { buildCoreModel, buildModel, type Model } from './models';
 import { Fx } from './fx';
-import { groundY } from './ground';
+import { groundPose, groundY } from './ground';
 
 const easeOutBack = (t: number) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 const lerpColor = (a: number, b: number, t: number) => new THREE.Color(a).lerp(new THREE.Color(b), t);
@@ -69,8 +69,10 @@ export class BaseView {
     const root = new THREE.Group();
     root.add(model.group);
     const yaw = yawTo(MAP.core.x - b.x, MAP.core.z - b.z);
-    root.rotation.y = yaw;
-    root.position.set(b.x, groundY(b.x, b.z), b.z);
+    const pose = groundPose(b.x, b.z, yaw);
+    root.rotation.order = 'YXZ';
+    root.rotation.set(pose.tiltX, pose.yaw, pose.tiltZ);
+    root.position.set(b.x, pose.y, b.z);
     root.scale.setScalar(0.01);
     this.scene.add(root);
     const bar = new Bar(Math.max(1.3, b.radius * 1.3));
@@ -91,17 +93,14 @@ export class BaseView {
       if (e.t === 'shot') {
         const mg = e.kind === 'mgtower';
         const gy = groundY(e.fx, e.fz);
-        this.fx.tracer(e.fx, gy + e.fy, e.fz, e.tx, groundY(e.tx, e.tz) + e.ty, e.tz, e.crit ? 0xff5a3a : mg ? 0xffa850 : 0xffd890, mg ? 0.05 : 0.07);
-        this.fx.flash(e.fx, gy + e.fy, e.fz, 0xffc070, mg ? 0.22 : 0.32);
-        this.fx.flash(e.tx, groundY(e.tx, e.tz) + e.ty, e.tz, e.crit ? 0xff6a30 : 0xffd9a0, e.crit ? 0.5 : 0.28, 0.1);
         const rec = this.recs.get(e.id);
-        if (rec) { rec.kick = 1; rec.model.fire?.(); }
+        if (rec) { rec.kick = 0.55; rec.model.fire?.(); }
       } else if (e.t === 'pulse') {
         this.fx.ring(e.x, e.z, e.r, 0xffb347, 0.5, 0.4);
       } else if (e.t === 'placed') {
         const y = groundY(e.x, e.z);
-        this.fx.ring(e.x, e.z, e.r * 2.2, 0x2ee6d6, 0.6, 0.3);
-        this.fx.burst(e.x, y + 0.3, e.z, 8, 0x9a8f7a, 2.2, false);
+        this.fx.ring(e.x, e.z, e.r * 1.6, 0x8a9a8e, 0.45, 0.35);
+        this.fx.puff(e.x, y + 0.15, e.z, 0x6a6560, 0.35, 0.5, 0.4);
       } else if (e.t === 'boom') {
         const y = groundY(e.x, e.z);
         this.fx.burst(e.x, y + 0.8, e.z, 16, 0x7a6a55, 6);
@@ -142,6 +141,10 @@ export class BaseView {
       const age = t - rec.born;
       const s = age < 0.38 ? Math.max(0.01, easeOutBack(age / 0.38)) : 1;
       root.scale.set(s, s, s);
+      const pose = groundPose(b.x, b.z, rec.yaw);
+      root.position.set(b.x, pose.y, b.z);
+      root.rotation.order = 'YXZ';
+      root.rotation.set(pose.tiltX, pose.yaw, pose.tiltZ);
       // 포탑 조준
       if (m.head) {
         const idle = b.tracking ? 0 : Math.sin(t * 0.7 + b.id) * 0.5;

@@ -43,10 +43,6 @@ const prism = (w: number, h: number, len: number) => g(`p${w},${h},${len}`, () =
   e.translate(0, 0, -len / 2);
   return e;
 });
-/** 총구 섬광: 십자 판 두 장 + 앞쪽 원뿔 (모두 같은 지오메트리) */
-const flashPlane = () => g('flashPlane', () => new THREE.PlaneGeometry(0.7, 0.7));
-const flashCone = () => g('flashCone', () => { const c = new THREE.ConeGeometry(0.16, 0.7, 6, 1, true); c.rotateX(Math.PI / 2); c.translate(0, 0, -0.3); return c; });
-
 export const C = {
   // 구조재
   gunmetal: 0x3d444c, dark: 0x22262b, steel: 0x8a939c, rust: 0x7a3d24, concrete: 0x6d6862, darkConcrete: 0x44413d,
@@ -95,28 +91,14 @@ class Builder {
   }
 }
 
-const additive = (color: number, opacity: number) =>
-  new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
-
-/** 총구 섬광 + 반동 + (선택) 총열 회전. head 기준 muzzle 위치에 붙인다 */
-function gunFx(b: Builder, muzzle: THREE.Object3D, barrel: THREE.Object3D, kick: number, size: number, spin?: THREE.Object3D) {
-  const flash = new THREE.Group();
-  flash.userData.fx = true;
-  const mat = additive(0xffc070, 1);
-  for (let i = 0; i < 2; i++) b.fx(flashPlane(), mat, 0, 0, -0.15, flash, [0, Math.PI / 2, i * Math.PI / 2 + Math.PI / 4]);
-  b.fx(flashPlane(), mat, 0, 0, 0, flash, [0, 0, 0]);
-  b.fx(flashCone(), mat, 0, 0, 0, flash);
-  flash.visible = false;
-  muzzle.add(flash);
+/** 포탑 반동만 (빛줄기·섬광 없음) */
+function gunFx(_b: Builder, _muzzle: THREE.Object3D, barrel: THREE.Object3D, kick: number, _size: number, spin?: THREE.Object3D) {
   const rest = barrel.position.z;
-  let f = 0, r = 0, spinV = 0;
+  let r = 0, spinV = 0;
   return {
-    fire: () => { f = 1; r = 1; spinV = 26; flash.rotation.z = Math.random() * Math.PI; flash.scale.setScalar(size * (0.8 + Math.random() * 0.45)); },
+    fire: () => { r = 1; spinV = 22; },
     tick: (dt: number) => {
-      f = Math.max(0, f - dt * 16);
       r = Math.max(0, r - dt * 9);
-      flash.visible = f > 0;
-      mat.opacity = f;
       barrel.position.z = rest + r * kick;
       if (spin) { spin.rotation.z += spinV * dt; spinV = Math.max(0, spinV - dt * 30); }
     },
@@ -139,21 +121,21 @@ function hazardStripe(b: Builder, w: number, h: number, x: number, y: number, z:
   for (let i = 0; i < n; i++) b.add(box(sw, h, 0.03), i % 2 ? k : o, -w / 2 + sw * (i + 0.5), 0, 0, holder, [0, 0, 0], false);
 }
 
-/** 서치라이트: 받침 + 청록 렌즈 + 안개 속 빛줄기 */
-function searchlight(b: Builder, x: number, y: number, z: number, aimDown = 0.45) {
-  const dark = b.mk(C.dark);
-  const sl = new THREE.Group(); sl.position.set(x, y, z); b.group.add(sl);
-  b.add(box(0.08, 0.2, 0.08), dark, 0, -0.1, 0, sl);
-  const lamp = new THREE.Group(); lamp.rotation.x = -aimDown; sl.add(lamp);
-  b.add(cyl(0.13, 0.11, 0.26, 10), dark, 0, 0, 0, lamp, [Math.PI / 2, 0, 0]);
-  b.add(cyl(0.11, 0.11, 0.02, 10), b.glow(C.teal, 1.6, 0.25, 2), 0, 0, -0.135, lamp, [Math.PI / 2, 0, 0], false);
-  const beamGeo = g('beam', () => { const c = new THREE.ConeGeometry(0.9, 4.2, 12, 1, true); c.translate(0, -2.1, 0); c.rotateX(Math.PI / 2); return c; });
-  b.fx(beamGeo, additive(C.teal, 0.07), 0, 0, -0.14, lamp);
-  return sl;
+/** 바닥 자갈·흙 받침 (지형에 붙어 보이게) */
+function groundPad(b: Builder, r = 1.05) {
+  const dirt = b.mk(0x4a433c);
+  const grit = b.mk(0x5a534c);
+  b.add(cyl(r, r * 1.06, 0.07, 14), dirt, 0, 0.035, 0);
+  b.add(cyl(r * 0.82, r * 0.9, 0.05, 12), grit, 0, 0.08, 0);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.2;
+    b.add(box(0.22, 0.035, 0.16), grit, Math.cos(a) * r * 0.7, 0.1, Math.sin(a) * r * 0.7, b.group, [0, -a, (i % 2) * 0.06]);
+  }
 }
 
 function tower(level: number): Model {
   const b = new Builder();
+  groundPad(b, 1.2);
   const metal = b.mk(C.gunmetal), dark = b.mk(C.dark), steel = b.mk(C.steel), rust = b.mk(C.rust), conc = b.mk(C.concrete);
   const paint = b.mk(level >= 3 ? C.hazard : level === 2 ? C.tealPaint : C.redPaint);
   const plate = b.mk(0x4a5058), bag = b.mk(C.sandbag), wood = b.mk(C.darkWood);
@@ -196,7 +178,7 @@ function tower(level: number): Model {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.add(box(0.08, 1.0, 0.08), metal, sx * 0.98, 4.6, sz * 0.98);
   b.add(box(2.35, 0.06, 2.35), paint, 0, 5.15, 0, b.group, [0.1, 0, 0]);
   for (let i = 0; i < 7; i++) b.add(box(0.06, 0.05, 2.35), i % 3 === 1 ? rust : dark, -1.05 + i * 0.35, 5.2, 0, b.group, [0.1, 0, 0]);
-  searchlight(b, 0.85, 5.35, -0.85, 0.5);
+  b.add(box(0.14, 0.12, 0.1), dark, 0.85, 5.32, -0.85);
   if (level >= 2) {
     b.add(cyl(0.02, 0.02, 1.0, 6), steel, -0.9, 5.7, 0.9);
     b.add(sph(0.08, 8, 6), b.glow(C.red, 1.6, 1.2, 5), -0.9, 6.25, 0.9, b.group, [0, 0, 0], false);
@@ -228,6 +210,7 @@ function tower(level: number): Model {
 
 function mgtower(level: number): Model {
   const b = new Builder();
+  groundPad(b, 1.05);
   const metal = b.mk(C.gunmetal), dark = b.mk(C.dark), steel = b.mk(C.steel), conc = b.mk(C.darkConcrete), paint = b.mk(C.redPaint), rust = b.mk(C.rust);
   sandbags(b, 9, 1.0, 0.16);
   sandbags(b, 9, 0.9, 0.45);
@@ -270,6 +253,7 @@ function mgtower(level: number): Model {
 
 function barricade(): Model {
   const b = new Builder();
+  groundPad(b, 1.15);
   const wood = b.mk(C.wood), dark = b.mk(C.darkWood), metal = b.mk(C.gunmetal), steel = b.mk(C.steel), rust = b.mk(C.rust), paint = b.mk(C.redPaint);
   // 강철 기둥 (콘크리트 블록에 박힘)
   const conc = b.mk(C.darkConcrete);
@@ -300,8 +284,9 @@ function barricade(): Model {
 
 function trap(): Model {
   const b = new Builder();
+  groundPad(b, 1.0);
   const dark = b.mk(0x262a2f), steel = b.mk(C.steel), metal = b.mk(C.gunmetal);
-  const ring = b.glow(C.orange, 1.0, 0.55, 3);
+  const ring = b.glow(C.orange, 0.35, 0.15, 2);
   b.add(cyl(0.95, 1.0, 0.12, 16), dark, 0, 0.06, 0);
   // 테두리 경고 줄무늬 (주황/검정 번갈아)
   const o = b.mk(C.hazard);
@@ -328,6 +313,7 @@ function trap(): Model {
 
 function lab(): Model {
   const b = new Builder();
+  groundPad(b, 1.85);
   const wall = b.mk(C.white), panel = b.mk(0x8f9698), teal = b.mk(C.tealPaint), dark = b.mk(C.dark), metal = b.mk(C.gunmetal), steel = b.mk(C.steel), conc = b.mk(C.darkConcrete), rust = b.mk(C.rust);
   const glass = b.mk(0x6fd8cc, 0x2ee6d6, 0.35, { opacity: 0.38 });
   const liquid = b.glow(C.green, 1.1, 0.35, 2.4);
@@ -389,6 +375,7 @@ function lab(): Model {
 /** 숙소: 나무 바닥 위 군용 A형 텐트 두 동 + 모래주머니 + 랜턴 + 깃발 */
 function barracks(): Model {
   const b = new Builder();
+  groundPad(b, 1.9);
   const deck = b.mk(C.wood), dark = b.mk(C.darkWood), canvas = b.mk(C.canvas), canvasDk = b.mk(C.canvasDk), metal = b.mk(C.gunmetal), steel = b.mk(C.steel);
   const bag = b.mk(C.sandbag), inside = b.mk(0x15120e), cot = b.mk(0x4d5a3a), cloth = b.mk(C.red);
   b.add(box(3.5, 0.2, 3.1), dark, 0, 0.1, 0);
@@ -428,6 +415,7 @@ function barracks(): Model {
 /** 교환소: 골함석 차양 노점 + 쌓인 상자 + 빛나는 교환 간판 */
 function shop(): Model {
   const b = new Builder();
+  groundPad(b, 1.85);
   const wood = b.mk(C.wood), dark = b.mk(C.darkWood), conc = b.mk(C.darkConcrete), metal = b.mk(C.gunmetal), steel = b.mk(C.steel), red = b.mk(C.redPaint), cream = b.mk(C.cream), rust = b.mk(C.rust);
   const crate = b.mk(0x6b5a3a), crateG = b.mk(0x4f5a3a), hz = b.mk(C.hazard);
   b.add(box(3.5, 0.22, 3.1), conc, 0, 0.11, 0);

@@ -97,7 +97,8 @@ export class WaveDirector {
 
   update(dt: number) {
     if (state.phase === 'prep') {
-      state.prepLeft = Math.max(0, state.prepLeft - dt);
+      // 건설 모드(B)에서는 준비 타이머를 멈춘다
+      if (state.mode !== 'build') state.prepLeft = Math.max(0, state.prepLeft - dt);
       if (state.prepLeft <= 0) this.startCombat();
       return;
     }
