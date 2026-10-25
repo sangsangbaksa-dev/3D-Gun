@@ -1,6 +1,6 @@
 // 기지 규칙: 핵, 건물 배치/철거/수리/강화, 포탑 AI, 함정, 숙소 보너스.
 // three/DOM 을 쓰지 않는 순수 로직이다. 장애물 목록·난수·지형 높이는 밖에서 주입받는다 (Unity 이식).
-import { BUILDINGS, CORE, CORE_REBUILD_PCT, CORE_REPAIR, CORE_UPGRADES, BARRACKS_CAP, DEMOLISH_REFUND, RES_KEYS, RES_LABEL, type BuildingId, type ResKey } from '../../data';
+import { BUILDINGS, CORE, CORE_REBUILD_PCT, CORE_REPAIR, CORE_UPGRADES, BARRACKS_CAP, DEMOLISH_REFUND, ENEMY_RULES, RES_KEYS, RES_LABEL, type BuildingId, type ResKey } from '../../data';
 import { MAP } from '../../data/map';
 import { events } from '../../core/events';
 import { state, spend, changed } from '../../core/state';
@@ -156,6 +156,23 @@ export function createBase(deps: BaseDeps) {
   }
   function flushTurrets() { if (saveDirty) persistTurrets(true); }
   events.on('run:over', flushTurrets);
+
+  function healAfterWaveClear() {
+    if (core.dead || state.phase === 'ended') return;
+    const coreHeal = state.coreMaxHp * ENEMY_RULES.waveClearCorePct;
+    if (coreHeal > 0 && state.coreHp < state.coreMaxHp) {
+      state.coreHp = Math.min(state.coreMaxHp, state.coreHp + coreHeal);
+      core.hp = state.coreHp;
+    }
+    const structHeal = ENEMY_RULES.waveClearStructPct;
+    for (const b of buildings) {
+      if (b.dead || b.hp >= b.maxHp - 0.5) continue;
+      b.hp = Math.min(b.maxHp, b.hp + b.maxHp * structHeal);
+    }
+    events.emit('core:damaged', { hp: state.coreHp, maxHp: state.coreMaxHp });
+    changed();
+  }
+  events.on('wave:clear', healAfterWaveClear);
 
   function restoreTurrets() {
     for (const s of meta.turrets) {

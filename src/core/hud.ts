@@ -8,10 +8,12 @@ import {
   isBossWave, isBossType, bossTypeFor, ZOMBIE_TUNING, type ZType,
 } from '../data';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
+import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
 let bossEl: HTMLElement | null, bossName: HTMLElement | null, bossFill: HTMLElement | null, banner: HTMLElement | null;
+let coreBar: HTMLElement | null, coreFill: HTMLElement | null, coreText: HTMLElement | null;
 let acc = 0;
 let lastPct = 100;
 let lastWaveText = '';
@@ -77,6 +79,17 @@ function refreshCoreWarn() {
   document.body.classList.toggle('ztCoreLow', low);
 }
 
+function refreshCoreBar() {
+  if (!coreBar || !coreFill || !coreText) return;
+  const show = state.phase !== 'ended' && state.coreMaxHp > 0;
+  coreBar.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const pct = Math.max(0, Math.min(100, (state.coreHp / state.coreMaxHp) * 100));
+  coreFill.style.width = `${pct}%`;
+  coreText.textContent = `${Math.ceil(state.coreHp)} / ${Math.ceil(state.coreMaxHp)}`;
+  coreBar.classList.toggle('low', pct > 0 && pct < 28);
+}
+
 function prepSubText() {
   const sec = Math.ceil(state.prepLeft);
   const w = state.wave;
@@ -105,8 +118,12 @@ export const HudSystem: System = {
     bossName = document.getElementById('bossName');
     bossFill = document.getElementById('bossFill');
     banner = document.getElementById('banner');
+    coreBar = document.getElementById('coreBar');
+    coreFill = document.getElementById('coreFill');
+    coreText = document.getElementById('coreText');
     if (help) help.style.display = 'none';
     mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
+    mountWaveClearFlash();
     events.on('toast', ({ text }) => showToast(text));
     events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
     events.on('ui:modal', ({ open }) => {
@@ -121,10 +138,12 @@ export const HudSystem: System = {
     events.on('boss:spawn', ({ type }) => { activeBossType = type; refreshBossBar(); });
     events.on('boss:dead', () => hideBossBar());
     events.on('run:start', () => { hideBossBar(); document.body.classList.remove('ztCoreLow'); });
-    events.on('core:damaged', () => refreshCoreWarn());
+    events.on('core:damaged', () => { refreshCoreWarn(); refreshCoreBar(); });
+    events.on('run:start', () => refreshCoreBar());
   },
   update(dt) {
     updateKeyBar();
+    updateWaveClearFlash(dt);
     acc += dt;
     if (acc < 0.2) return;
     acc = 0;
@@ -145,6 +164,7 @@ export const HudSystem: System = {
     }
     refreshBossBar();
     refreshCoreWarn();
+    refreshCoreBar();
     // 런 레벨 진행도: 킬 XP 가 쌓이면 청록 막대가 찬다
     if (xpFill) xpFill.style.width = `${state.xpNext > 0 ? Math.min(100, (100 * state.xp) / state.xpNext) : 0}%`;
     if (res) {

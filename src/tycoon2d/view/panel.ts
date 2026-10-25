@@ -297,7 +297,7 @@ export class TycoonPanel {
       + row('최대 체력', `+${b.maxHp}`) + row('공격력', `+${Math.round(b.dmgMul * 100)}%`) + row('준비 시간', `30 +${b.prepBonus}초`)
       + row('아군 상한', `+${b.allyCap}`) + row('시작 무기', b.weapons.join(', ')) + row('총 품질', wl)
       + row('시작 스킬', String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))
-      + row('체크포인트', `${CHECKPOINT_EVERY}웨이브마다 · 최종 ${FINAL_WAVE}`)
+      + row('체크포인트', `${CHECKPOINT_EVERY}웨이브마다 · 최고 ${meta.bestCheckpoint} · 목표 ${FINAL_WAVE}`)
       + row('기록', `웨이브 ${meta.bestWave} · ${meta.totalRuns}회`);
   }
 
