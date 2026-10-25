@@ -25,6 +25,9 @@ const ADS_DIST = 0.5;
 /** 기준 시야각 55° 에서 조준할 때 배율 */
 const ADS_SCALE = 0.5;
 const ADS_REF_TAN = Math.tan((55 * Math.PI) / 360);
+/** 1인칭 총 배치용 기준 시야각(카메라 FOV 보간과 분리해 ADS 중 위치가 튀지 않게) */
+const FP_FOV = 70;
+const FP_TAN = Math.tan((FP_FOV * Math.PI) / 360);
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => { v = clamp01(v); return v * v * (3 - 2 * v); };
 /** a~b 구간에서 0→1 */
@@ -55,6 +58,8 @@ export class PlayerView {
   private sightH = {} as Record<GunId, number>;
   private fpPos = new THREE.Vector3();
   private adsPos = new THREE.Vector3();
+  /** 스코프 총: 조준경 오버레이와 월드 총 모델 전환 (하드 컷오프 방지) */
+  private scopeBlend = 0;
 
   constructor(scene: THREE.Scene) {
     this.model = makeHumanoid(0xe0b48c, 0x3a6ea5);
@@ -226,22 +231,7 @@ export class PlayerView {
     const hammer = gun.parts.hammer;
     if (hammer) hammer.obj.rotation.x = -0.6 * Math.max(0, 1 - age / 0.18) + 0.2 * smooth(age / 0.5 - 0.2);
 
-    // ── 조준: 우클릭이면 총구가 화면 중앙(시선)으로 들어온다 ──
-    const ads = p.aimT;
-    const a = -(p.pitch - p.kick) + 0.08 * (1 - ads);
-    const swayDamp = 1 - ads * 0.92;
-    this.pivot.rotation.set(
-      a + recoilPitch * (1 - ads * 0.35) - dip + this.swayY * 0.8 * swayDamp,
-      this.swayX * 1.2 * swayDamp,
-      (roll + this.swayX * 0.5) * swayDamp,
-    );
-    const hipX = 0.18, hipY = 1.34, hipZ = -0.48;
-    const adsX = 0, adsY = 1.56, adsZ = -0.36;
-    this.pivot.position.set(
-      hipX + (adsX - hipX) * ads + bobX * swayDamp + this.swayX * 0.4 * swayDamp,
-      hipY + (adsY - hipY) * ads - dip * 0.14 + bobY * swayDamp + breath - this.swayY * 0.3 * swayDamp,
-      hipZ + (adsZ - hipZ) * ads + recoilBack * (1 - ads * 0.5) + handShift,
-    );
+    // 1인칭 총 자세는 placeFirstPerson 이 담당한다 (3인칭 몸 연출만 여기서)
 
     // 조준·흔들림·반동은 피벗이 이미 적용한다. 손은 그 축에 붙어 총을 쥔 자세만 유지한다
     const [left, right] = this.model.arms;
@@ -250,9 +240,12 @@ export class PlayerView {
 
     // ── 1인칭: 총을 눈앞 오른쪽 아래에 작게 둔다 (화면을 덜 가리게) ──
     const fp = viewMode === 'first' && !p.dead;
+    const scopeTarget = gun.scoped ? smooth(p.aimT) : 0;
+    this.scopeBlend += (scopeTarget - this.scopeBlend) * Math.min(1, dt * 14);
+    const hideForScope = gun.scoped && this.scopeBlend > 0.88;
     for (const arm of this.model.arms) arm.visible = !fp;
-    this.hand.visible = fp && !(gun.scoped && p.aimT > 0.6);
-    this.pivot.visible = !(fp && gun.scoped && p.aimT > 0.6);
+    this.hand.visible = fp && !hideForScope;
+    this.pivot.visible = fp && !hideForScope;
     if (fp) this.placeFirstPerson(p, w.current, { bobX, bobY, breath, dip, roll, handShift, kickScale });
     else this.pivot.scale.setScalar(1);
 
@@ -281,12 +274,11 @@ export class PlayerView {
     const ex = ox * cy - oz * sy, ey = oy, ez = ox * sy + oz * cy;
     const pitch = p.pitch - p.kick;
     const sp = Math.sin(pitch), cp = Math.cos(pitch);
-    // 앞 = (0, -sp, -cp), 위 = (0, cp, -sp)
-    const tanHalf = Math.tan((pose.fov * Math.PI) / 360);
+    const tanAds = Math.tan((def.adsFov * Math.PI) / 360);
     const aspect = innerWidth / Math.max(1, innerHeight);
     const halfW = innerWidth / 2;
-    const right = Math.min(FP_RIGHT, Math.max(0, (halfW - FP_HUD_PX) / halfW)) * FP_DIST * tanHalf * aspect;
-    const down = FP_DOWN * FP_DIST * tanHalf;
+    const right = Math.min(FP_RIGHT, Math.max(0, (halfW - FP_HUD_PX) / halfW)) * FP_DIST * FP_TAN * aspect;
+    const down = FP_DOWN * FP_DIST * FP_TAN;
     const recoilBack = this.recoil * 0.06 * m.kickScale;
     const recoilPitch = this.recoil * 0.0524 * m.kickScale;
     this.fpPos.set(
@@ -294,28 +286,23 @@ export class PlayerView {
       ey - sp * FP_DIST - cp * down + m.bobY + m.breath - m.dip * 0.08,
       ez - cp * FP_DIST + sp * down + recoilBack * 0.6 + m.handShift,
     );
-    this.pivot.position.copy(this.fpPos);
-    this.pivot.rotation.set(
-      -pitch + 0.1 - 0.2 * p.aimT + recoilPitch - m.dip + this.swayY * 0.8,
-      this.swayX * 1.2,
-      m.roll + this.swayX * 0.5,
+    const u = smooth(p.aimT);
+    const adsScale = (ADS_SCALE * tanAds) / ADS_REF_TAN;
+    const drop = this.sightH[id] * adsScale;
+    this.adsPos.set(
+      ex + this.swayX * 0.05,
+      ey - sp * ADS_DIST - cp * drop + m.bobY * 0.15 + m.breath * 0.5,
+      ez - cp * ADS_DIST + sp * drop + recoilBack * 0.4,
     );
-    let scale = FP_SCALE;
-    if (p.aimT > 0) {
-      const u = smooth(p.aimT);
-      const adsScale = (ADS_SCALE * tanHalf) / ADS_REF_TAN;
-      const drop = this.sightH[id] * adsScale;
-      this.adsPos.set(
-        ex + this.swayX * 0.05,
-        ey - sp * ADS_DIST - cp * drop + m.bobY * 0.15 + m.breath * 0.5,
-        ez - cp * ADS_DIST + sp * drop + recoilBack * 0.4,
-      );
-      this.pivot.position.lerp(this.adsPos, u);
-      this.pivot.rotation.x += (-pitch + recoilPitch * 0.5 - this.pivot.rotation.x) * u;
-      this.pivot.rotation.y *= 1 - u;
-      this.pivot.rotation.z *= 1 - u;
-      scale += (adsScale - scale) * u;
-    }
+    this.pivot.position.lerpVectors(this.fpPos, this.adsPos, u);
+    const hipRx = -pitch + 0.1 + recoilPitch - m.dip + this.swayY * 0.8;
+    const adsRx = -pitch + recoilPitch * 0.5;
+    this.pivot.rotation.set(
+      hipRx + (adsRx - hipRx) * u,
+      this.swayX * 1.2 * (1 - u),
+      (m.roll + this.swayX * 0.5) * (1 - u),
+    );
+    let scale = FP_SCALE + (adsScale - FP_SCALE) * u;
     this.pivot.scale.setScalar(scale);
   }
 

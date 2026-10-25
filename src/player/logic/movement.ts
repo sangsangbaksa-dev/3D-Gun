@@ -29,8 +29,9 @@ export function stepMovement(
 
   p.yaw -= it.lookDx * PLAYER.sens * (p.aiming ? 0.7 : 1);
   p.pitch = clamp(p.pitch + it.lookDy * PLAYER.sens * (p.aiming ? 0.7 : 1), -0.6, 0.9);
-  p.aiming = it.aim;
-  p.aimT = clamp(p.aimT + (it.aim ? dt * 8 : -dt * 8), 0, 1);
+  // 우클릭 입력이 한 프레임 끊겨도 조준 자세가 깜빡이지 않도록 aimT 로 aiming 을 판정한다
+  p.aimT = clamp(p.aimT + (it.aim ? dt * 9 : -dt * 7), 0, 1);
+  p.aiming = it.aim || p.aimT > 0.04;
 
   const f = forwardOf(p.yaw), r = rightOf(p.yaw);
   let mx = f.x * it.forward + r.x * it.strafe;

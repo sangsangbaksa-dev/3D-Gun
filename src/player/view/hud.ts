@@ -7,6 +7,11 @@ import { gunStats } from '../logic/weapons';
 
 export const SHOW_AMMO_PANEL = true;
 
+const smoothScope = (v: number) => {
+  const t = Math.max(0, Math.min(1, v));
+  return t * t * (3 - 2 * t);
+};
+
 const CSS = `
 .pv-scope{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,transparent 0,transparent 31vmin,#000 31.4vmin);transition:opacity .08s}
 .pv-scope::before,.pv-scope::after{content:'';position:absolute;background:#2ee6d6;opacity:.9}
@@ -134,8 +139,9 @@ export class CombatHud {
   setLowHp(on: boolean) { this.low.style.opacity = on ? '1' : '0'; }
 
   setScope(amount: number, on: boolean) {
-    this.scope.style.opacity = on ? String(Math.max(0, (amount - 0.55) / 0.45)) : '0';
-    this.cross.style.display = on && amount > 0.7 ? 'none' : '';
+    const t = on ? smoothScope(amount) : 0;
+    this.scope.style.opacity = String(t);
+    this.cross.style.display = on && t > 0.65 ? 'none' : '';
   }
 
   setWeapon(id: GunId, ammo: number, mag: number, owned: readonly string[]) {
