@@ -121,15 +121,15 @@ export interface ProducerDef {
   unlockEarned?: { key: WalletKey; amount: number };
 }
 export const PRODUCERS: ProducerDef[] = [
-  // perSec·max·costGrowth 는 2026-10 밸런스 패치: 방치 수입 스노볼 완화 (접속 중에만 tick)
-  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.26, max: 28, cost: { gold: 42 }, costGrowth: 1.19 },
-  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.15, max: 22, cost: { gold: 55, wood: 8 }, costGrowth: 1.2 },
-  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.12, max: 22, cost: { gold: 85, wood: 24 }, costGrowth: 1.2 },
-  { id: 'p_herb', name: '약초밭', icon: '🌿', desc: '약초를 키운다', produces: 'herb', perSec: 0.08, max: 22, cost: { gold: 110, wood: 35 }, costGrowth: 1.21 },
-  { id: 'p_iron', name: '철광 갱도', icon: '⛓️', desc: '철을 캔다', produces: 'iron', perSec: 0.042, max: 18, cost: { gold: 280, stone: 48 }, costGrowth: 1.23 },
-  { id: 'p_parts', name: '폐차 해체장', icon: '⚙️', desc: '부품을 뜯어 낸다', produces: 'parts', perSec: 0.02, max: 18, cost: { gold: 520, iron: 26 }, costGrowth: 1.25 },
-  { id: 'p_lab', name: '샘플 배양실', icon: '🧪', desc: '좀비 샘플을 배양한다', produces: 'samples', perSec: 0.016, max: 18, cost: { gold: 720, herb: 48, parts: 6 }, costGrowth: 1.27 },
-  { id: 'p_lab2', name: '특수 샘플 연구소', icon: '☣️', desc: '희귀한 특수 샘플을 얻는다', produces: 'samplesSp', perSec: 0.004, max: 12, cost: { gold: 3200, samples: 48, parts: 24 }, costGrowth: 1.34, unlockEarned: { key: 'samples', amount: 20 } },
+  // 방치 수입: 접속 중 tick만. 2차 패치 — 웨이브 정산 대비 스노볼 대폭 축소 (perSec·max·비용·producerIncomeMul)
+  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.1, max: 16, cost: { gold: 58 }, costGrowth: 1.24 },
+  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.055, max: 14, cost: { gold: 72, wood: 12 }, costGrowth: 1.25 },
+  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.044, max: 14, cost: { gold: 105, wood: 30 }, costGrowth: 1.25 },
+  { id: 'p_herb', name: '약초밭', icon: '🌿', desc: '약초를 키운다', produces: 'herb', perSec: 0.03, max: 14, cost: { gold: 135, wood: 42 }, costGrowth: 1.26 },
+  { id: 'p_iron', name: '철광 갱도', icon: '⛓️', desc: '철을 캔다', produces: 'iron', perSec: 0.016, max: 12, cost: { gold: 340, stone: 55 }, costGrowth: 1.28 },
+  { id: 'p_parts', name: '폐차 해체장', icon: '⚙️', desc: '부품을 뜯어 낸다', produces: 'parts', perSec: 0.008, max: 12, cost: { gold: 620, iron: 32 }, costGrowth: 1.3 },
+  { id: 'p_lab', name: '샘플 배양실', icon: '🧪', desc: '좀비 샘플을 배양한다', produces: 'samples', perSec: 0.006, max: 12, cost: { gold: 880, herb: 55, parts: 8 }, costGrowth: 1.32 },
+  { id: 'p_lab2', name: '특수 샘플 연구소', icon: '☣️', desc: '희귀한 특수 샘플을 얻는다', produces: 'samplesSp', perSec: 0.0015, max: 8, cost: { gold: 4000, samples: 55, parts: 28 }, costGrowth: 1.4, unlockEarned: { key: 'samples', amount: 20 } },
 ];
 
 /** 방치 수입 규칙 (생산 시설은 접속 중에만 돈다, 오프라인 정산 없음) */
@@ -137,7 +137,7 @@ export const IDLE = {
   baseClickGold: 3,
   skillCostBase: 1,        // 스킬 노드 구매 비용 = base + 현재 레벨 (스킬 포인트)
   /** 생산 시설 tick 배율 (1 = 데이터 perSec 그대로) */
-  producerIncomeMul: 0.92,
+  producerIncomeMul: 0.58,
 };
 
 /** 런 경험치: 처치 XP(ZOMBIE_REWARD.xp)로 레벨이 오르고, 레벨마다 스킬 포인트를 준다 (런 끝에 전부 저축).
