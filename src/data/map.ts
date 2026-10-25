@@ -72,7 +72,7 @@ function distSeg(px: number, pz: number, a: Pt, b: Pt) {
 }
 const nearLane = (x: number, z: number, m: number) => lanes.some((l) => l.waypoints.some((_, i) => i > 0 && distSeg(x, z, l.waypoints[i - 1], l.waypoints[i]) < m));
 
-/** 폐허 도시: 구역 안에 격자 도로를 두고 블록마다 건물을 세운다. 레인과 핵 주변은 비운다 */
+/** 폐허 도시: 구역 안에 격자 도로를 두고 블록마다 건물을 세운다. 중심부는 고층, 외곽은 중저층으로 스카이라인 위계를 만든다 */
 function genProps(): MapProp[] {
   const rnd = mulberry(20250101);
   const out: MapProp[] = [];
@@ -80,21 +80,53 @@ function genProps(): MapProp[] {
     const step = 17;
     for (let gx = -z.r; gx <= z.r; gx += step) {
       for (let gz = -z.r; gz <= z.r; gz += step) {
-        const x = z.x + gx + (rnd() - 0.5) * 3, zz = z.z + gz + (rnd() - 0.5) * 3;
-        if (Math.hypot(x - z.x, zz - z.z) > z.r || nearLane(x, zz, 7) || rnd() < 0.18) continue;
-        const w = 8 + rnd() * 6, d = 8 + rnd() * 6;
-        const tall = rnd() < 0.3;
-        out.push({ kind: 'building', x, z: zz, r: Math.max(w, d) * 0.55, w, d, h: tall ? 22 + rnd() * 20 : 9 + rnd() * 9, rot: rnd() < 0.5 ? 0 : Math.PI / 2, style: Math.floor(rnd() * 3) });
+        const x = z.x + gx + (rnd() - 0.5) * 2.6, zz = z.z + gz + (rnd() - 0.5) * 2.6;
+        const dist = Math.hypot(x - z.x, zz - z.z);
+        if (dist > z.r || nearLane(x, zz, 7.5) || rnd() < 0.16) continue;
+        const coreRatio = Math.max(0, 1 - dist / z.r); // 중심부일수록 1에 가까움
+        const w = 7.8 + rnd() * 5.8, d = 7.8 + rnd() * 5.8;
+        const tall = rnd() < 0.18 + coreRatio * 0.42;
+        const h = tall ? 20 + coreRatio * 14 + rnd() * 12 : 8.5 + coreRatio * 5 + rnd() * 7.5;
+        out.push({
+          kind: 'building', x, z: zz, r: Math.max(w, d) * 0.55, w, d, h,
+          rot: rnd() < 0.5 ? 0 : Math.PI / 2, style: Math.floor(rnd() * 3),
+        });
       }
     }
   }
-  // 곳곳의 폐차와 콘크리트 벽
-  for (let i = 0; i < 70; i++) {
-    const x = (rnd() * 2 - 1) * 180, z = (rnd() * 2 - 1) * 180;
-    if (Math.hypot(x, z) < 26 || nearLane(x, z, 6)) continue;
-    if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && Math.hypot(x - q.x, z - q.z) < q.r * 0.8)) continue;
-    if (rnd() < 0.5) out.push({ kind: 'wall', x, z, r: 2.2, w: 5 + rnd() * 3, d: 0.8, h: 2.4, rot: rnd() * Math.PI });
-    else out.push({ kind: 'car', x, z, r: 1.6, w: 4.2, d: 1.9, h: 1.5, rot: rnd() * Math.PI });
+  // 엄폐물·폐차 군집: 무작위 단발 흩뿌리기 대신, 도로변·시가지 외곽에 바리케이드+폐차 소규모 군집을 적당한 간격으로 배치해 시각 노이즈를 줄인다
+  const canPlace = (x: number, z: number, pad = 6.8, minClusterGap = 14) => {
+    if (Math.abs(x) > 180 || Math.abs(z) > 180) return false;
+    if (Math.hypot(x, z) < 28 || nearLane(x, z, pad)) return false;
+    // 보스 둥지 및 진입로 주변은 시야가 탁 트이게 비운다
+    if (Math.hypot(x, z + 180) < 30 || (Math.abs(x) < 22 && z < -145)) return false;
+    if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && q.kind !== 'wasteland' && Math.hypot(x - q.x, z - q.z) < q.r * 0.86)) return false;
+    if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + (p.kind === 'building' ? 5.2 : minClusterGap))) return false;
+    return true;
+  };
+  for (let i = 0; i < 48; i++) {
+    const cx = (rnd() * 2 - 1) * 172, cz = (rnd() * 2 - 1) * 172;
+    if (!canPlace(cx, cz, 7.0, 15)) continue;
+    const baseYaw = rnd() * Math.PI;
+    const isWallLead = rnd() < 0.52;
+    if (isWallLead) {
+      out.push({ kind: 'wall', x: cx, z: cz, r: 2.2, w: 5.2 + rnd() * 2.6, d: 0.85, h: 2.2 + rnd() * 0.4, rot: baseYaw, style: i % 2 });
+    } else {
+      out.push({ kind: 'car', x: cx, z: cz, r: 1.6, w: 4.2, d: 1.9, h: 1.5, rot: baseYaw, style: i % 3 });
+    }
+    // 50% 확률로 근처(4.8~6.8m)에 짝을 이루는 보조 엄폐물(폐차 또는 꺾인 방벽)을 붙여 의미 있는 클러스터로 구성
+    if (rnd() < 0.5) {
+      const ang = baseYaw + (rnd() < 0.5 ? 0.45 : -0.55);
+      const dist = 4.8 + rnd() * 2.0;
+      const sx = cx + Math.cos(ang) * dist, sz = cz + Math.sin(ang) * dist;
+      if (canPlace(sx, sz, 6.4, 3.2)) {
+        if (rnd() < 0.48) {
+          out.push({ kind: 'car', x: sx, z: sz, r: 1.6, w: 4.1, d: 1.85, h: 1.48, rot: baseYaw + (rnd() - 0.5) * 0.7, style: (i + 1) % 3 });
+        } else {
+          out.push({ kind: 'wall', x: sx, z: sz, r: 2.0, w: 4.4 + rnd() * 1.8, d: 0.8, h: 2.1, rot: baseYaw + Math.PI * 0.38, style: (i + 1) % 2 });
+        }
+      }
+    }
   }
   return out;
 }
