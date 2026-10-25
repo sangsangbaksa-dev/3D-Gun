@@ -671,7 +671,7 @@ export class EnemySim implements DamageSink {
       if (have >= want) continue;
       const a = this.deps.rng() * TAU, r = Math.sqrt(this.deps.rng()) * zone.r;
       const x = zone.x + Math.cos(a) * r, zz = zone.z + Math.sin(a) * r;
-      if (Math.hypot(x - p.x, zz - p.z) < 35) continue; // 눈앞에서 튀어나오지 않게
+      if (Math.hypot(x - p.x, zz - p.z) < 48) continue; // 눈앞에서 튀어나오지 않게 (기존 35m → 48m)
       const rr = this.deps.rng();
       const type: ZType = zone.danger >= 4 && rr < 0.3 ? 'tank' : zone.danger >= 4 && rr < 0.5 ? 'fatty' : zone.danger >= 3 && rr < 0.35 ? 'leaper' : zone.danger >= 3 && rr < 0.6 ? 'runner' : rr < 0.8 ? 'crawler' : 'normal';
       this.spawn(type, Math.max(1, state.wave) + zone.danger, x, zz, 0, { x: zone.x, z: zone.z, r: zone.r * 0.8, zone: zone.id });
