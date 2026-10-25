@@ -1,5 +1,5 @@
 // 조작키 한 곳 정의. 타이틀 "조작키" 창, H 도움말 창, 화면 아래 키 막대가 모두 이 목록을 쓴다.
-// 실제 입력 코드와 맞춰 둘 것: core/input.ts(P/Esc), player/player.ts(WASD·ShiftLeft·R·1~6·V·클릭),
+// 실제 입력 코드와 맞춰 둘 것: core/input.ts(P/Esc), player/player.ts(WASD·Shift·R·1~6·T·V·클릭),
 // base/view/build.ts(B·1~7·클릭·우클릭/X·F·U), enemies/index.ts(N), allies/index.ts(L·C·Q), core/interact.ts(E),
 // ui/keybar.ts(H·F1).
 import { BUILDINGS, BUILDING_ORDER } from '../data';
@@ -16,7 +16,8 @@ const buildRange = `1–${BUILD_SLOTS.length}`;
 
 export const KEYBINDS: KeyBind[] = [
   { keys: ['W', 'A', 'S', 'D'], action: '이동', group: '이동' },
-  { keys: ['왼쪽 Shift'], action: '대시 (짧게 돌진, 재사용 대기 있음)', group: '이동' },
+  { keys: ['Shift'], action: '구르기 (잠깐 무적, 재사용 대기 있음)', group: '이동' },
+  { keys: ['T'], action: '1인칭 / 3인칭 시점 전환', group: '이동' },
   { keys: ['마우스'], action: '시점 회전', group: '이동', note: '마우스 고정이 안 되면 방향키 또는 우클릭 드래그' },
   { keys: ['방향키'], action: '시점 회전 (대체)', group: '이동' },
 
