@@ -74,8 +74,8 @@ function buildTree(n: GatherNode): NodeModel {
   root.add(always, ready);
   const v = n.variant;
   const bark = mat(tint(0x6b4a2b, v));
-  // 그루터기 (항상 남음)
-  add(always, geo('stump', () => new THREE.CylinderGeometry(0.26, 0.34, 0.42, 8)), bark, 0, 0.21, 0);
+  // 그루터기 (항상 남음) — 경사면에서도 밑동이 뜨지 않도록 지하(-0.26m)까지 내린다
+  add(always, geo('stump', () => new THREE.CylinderGeometry(0.26, 0.38, 0.68, 8)), bark, 0, 0.08, 0);
   add(always, geo('stumpTop', () => new THREE.CylinderGeometry(0.22, 0.22, 0.04, 8)), mat(0xd2ac72), 0, 0.43, 0);
 
   const pine = v < 0.62;
@@ -102,14 +102,14 @@ function buildRock(n: GatherNode): NodeModel {
   root.add(always, ready);
   const v = n.variant, seed = Math.floor(v * 1000);
   const stone = tint(0x8d9096, v, 0.08);
-  // 잔해: 작은 돌 3개
+  // 잔해: 작은 돌 3개 (경사면 밀착을 위해 살짝 낮게 배치)
   for (let i = 0; i < 3; i++) {
     const a = i * 2.1 + v * 6, r = 0.45 + (i % 2) * 0.15;
-    add(always, lumpyRock(0.28 + i * 0.05, seed + i, 0.3, 0.7), mat(tint(0x777a80, v + i * 0.1)), Math.cos(a) * r, 0.12, Math.sin(a) * r);
+    add(always, lumpyRock(0.28 + i * 0.05, seed + i, 0.3, 0.7), mat(tint(0x777a80, v + i * 0.1)), Math.cos(a) * r, 0.04, Math.sin(a) * r);
   }
-  add(ready, lumpyRock(1.1, seed), mat(stone), 0, 0.62, 0);
-  add(ready, lumpyRock(0.65, seed + 7), mat(tint(stone, v + 0.2, 0.08)), 0.85, 0.3, 0.35);
-  if (v > 0.45) add(ready, geo('moss', () => new THREE.SphereGeometry(0.5, 8, 5)), mat(0x5c7d3a), -0.15, 1.08, 0.1).scale.set(1, 0.28, 0.9);
+  add(ready, lumpyRock(1.1, seed), mat(stone), 0, 0.48, 0);
+  add(ready, lumpyRock(0.65, seed + 7), mat(tint(stone, v + 0.2, 0.08)), 0.85, 0.22, 0.35);
+  if (v > 0.45) add(ready, geo('moss', () => new THREE.SphereGeometry(0.5, 8, 5)), mat(0x5c7d3a), -0.15, 0.94, 0.1).scale.set(1, 0.28, 0.9);
   return { root, ready, always, top: 2.3, chips: [0x9a9da3, 0x7d8087, 0xb9bcc2] };
 }
 
@@ -119,9 +119,9 @@ function buildIron(n: GatherNode): NodeModel {
   const v = n.variant, seed = Math.floor(v * 1000) + 33;
   for (let i = 0; i < 3; i++) {
     const a = i * 2.3 + v * 5;
-    add(always, lumpyRock(0.26 + i * 0.04, seed + i, 0.3, 0.7), mat(0x45484f), Math.cos(a) * 0.5, 0.11, Math.sin(a) * 0.5);
+    add(always, lumpyRock(0.26 + i * 0.04, seed + i, 0.3, 0.7), mat(0x45484f), Math.cos(a) * 0.5, 0.04, Math.sin(a) * 0.5);
   }
-  add(ready, lumpyRock(1.05, seed), mat(tint(0x4b4e57, v, 0.05)), 0, 0.58, 0);
+  add(ready, lumpyRock(1.05, seed), mat(tint(0x4b4e57, v, 0.05)), 0, 0.46, 0);
   // 녹슨 줄무늬
   for (let i = 0; i < 3; i++) {
     const a = i * 2.1 + v * 3;
@@ -165,19 +165,20 @@ function buildWreck(n: GatherNode): NodeModel {
   const body = mat(tint([0x8a4a36, 0x5f6f7a, 0x7a6a3a, 0x6b4a5a][Math.floor(v * 4) % 4], v, 0.06));
   const dark = mat(0x23262b);
   const rust = mat(0x6a4a2a);
-  always.rotation.z = 0.05; // 약간 기울어진 폐차
-  add(always, geo('chassis', () => new THREE.BoxGeometry(3.1, 0.62, 1.45)), body, 0, 0.62, 0);
-  add(always, geo('cabin', () => new THREE.BoxGeometry(1.6, 0.62, 1.3)), body, -0.2, 1.22, 0);
-  add(always, geo('glass', () => new THREE.BoxGeometry(1.5, 0.4, 1.34)), dark, -0.2, 1.24, 0);
-  add(always, geo('roof', () => new THREE.BoxGeometry(1.45, 0.08, 1.2)), body, -0.2, 1.57, 0);
-  add(always, geo('rustPatch', () => new THREE.BoxGeometry(0.9, 0.05, 0.6)), rust, 0.8, 0.96, 0.2);
-  add(always, geo('axle', () => new THREE.BoxGeometry(2.2, 0.12, 0.2)), dark, 0, 0.3, 0);
+  always.rotation.z = 0.04; // 약간 기울어진 폐차 (하부 섀시 받침을 지하까지 내려 경사면 들뜸 방지)
+  add(always, geo('wreckBase', () => new THREE.BoxGeometry(2.65, 0.52, 1.28)), dark, 0, 0.02, 0);
+  add(always, geo('chassis', () => new THREE.BoxGeometry(3.1, 0.62, 1.45)), body, 0, 0.56, 0);
+  add(always, geo('cabin', () => new THREE.BoxGeometry(1.6, 0.62, 1.3)), body, -0.2, 1.16, 0);
+  add(always, geo('glass', () => new THREE.BoxGeometry(1.5, 0.4, 1.34)), dark, -0.2, 1.18, 0);
+  add(always, geo('roof', () => new THREE.BoxGeometry(1.45, 0.08, 1.2)), body, -0.2, 1.51, 0);
+  add(always, geo('rustPatch', () => new THREE.BoxGeometry(0.9, 0.05, 0.6)), rust, 0.8, 0.9, 0.2);
+  add(always, geo('axle', () => new THREE.BoxGeometry(2.2, 0.18, 0.24)), dark, 0, 0.24, 0);
   // 남아 있는 바퀴 하나 (항상)
   const wheel = geo('wheel', () => new THREE.CylinderGeometry(0.38, 0.38, 0.28, 10));
   const wm = mat(0x1a1b1e);
-  add(always, wheel, wm, -1.0, 0.38, 0.78).rotation.x = Math.PI / 2;
+  add(always, wheel, wm, -1.0, 0.32, 0.78).rotation.x = Math.PI / 2;
   // 뜯어갈 수 있는 부품들 (재생성 때 다시 붙는다)
-  for (const [x, z] of [[1.0, 0.78], [1.0, -0.78], [-1.0, -0.78]] as const) add(ready, wheel, wm, x, 0.38, z).rotation.x = Math.PI / 2;
+  for (const [x, z] of [[1.0, 0.78], [1.0, -0.78], [-1.0, -0.78]] as const) add(ready, wheel, wm, x, 0.32, z).rotation.x = Math.PI / 2;
   const hood = add(ready, geo('hood', () => new THREE.BoxGeometry(1.1, 0.07, 1.3)), mat(tint(0x7a7f85, v, 0.05)), 1.0, 1.1, 0);
   hood.rotation.z = -0.5; hood.position.x = 1.25;
   add(ready, geo('door', () => new THREE.BoxGeometry(0.9, 0.55, 0.07)), body, -0.2, 0.9, 0.8).rotation.x = -0.4;

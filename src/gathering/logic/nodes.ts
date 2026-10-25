@@ -1,7 +1,7 @@
 // 채집 노드 데이터 모델과 배치(layout). three/DOM 을 쓰지 않는 순수 TS.
 // 위치는 하드코딩하지 않는다: MAP.resourceNodes 가 있으면 그대로, 비었으면 MAP.zones 로 절차 생성.
 import { GATHER_LAYOUT, GATHER_NODES, GATHER_OPEN_DENSITY, GATHER_ZONE_DENSITY, NODE_KINDS, type NodeKind, type ResKey } from '../../data';
-import type { MapDef, Pt } from '../../data/map';
+import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, type MapDef, type Pt } from '../../data/map';
 import { randRange, type Rng } from './rng';
 
 export interface GatherNode {
@@ -30,7 +30,9 @@ export interface GatherNode {
 }
 
 /** 맵에서 배치에 필요한 부분만 (MapDef 의 부분집합) */
-export type LayoutMap = Pick<MapDef, 'half' | 'core' | 'buildRadius' | 'playerStart' | 'zones' | 'lanes' | 'resourceNodes'>;
+export type LayoutMap = Pick<MapDef, 'half' | 'core' | 'buildRadius' | 'playerStart' | 'zones' | 'lanes' | 'resourceNodes'> & {
+  props?: MapDef['props'];
+};
 
 function distToSegment(p: Pt, a: Pt, b: Pt): number {
   const vx = b.x - a.x, vz = b.z - a.z;
@@ -55,6 +57,18 @@ export function generateLayout(rng: Rng, map: LayoutMap): GatherNode[] {
       for (let i = 0; i + 1 < lane.waypoints.length; i++) {
         if (distToSegment({ x, z }, lane.waypoints[i], lane.waypoints[i + 1]) < L.laneHalfWidth + r) return false;
       }
+    }
+    if (map.props) {
+      for (const p of map.props) {
+        const pad = p.kind === 'building' ? 1.15 : 0.75;
+        if (distToPropOBB(x, z, p, pad) < r) return false;
+      }
+    }
+    for (const lm of LANDMARKS) {
+      if (Math.hypot(x - lm.x, z - lm.z) < lm.r + r + 1.1) return false;
+    }
+    for (const sr of SCATTER_ROCKS) {
+      if (Math.hypot(x - sr.x, z - sr.z) < sr.r + r + 0.9) return false;
     }
     for (const n of nodes) if (Math.hypot(x - n.x, z - n.z) < n.r + r + L.gap) return false;
     return true;
@@ -94,8 +108,9 @@ export function generateLayout(rng: Rng, map: LayoutMap): GatherNode[] {
     const area100 = (Math.PI * zone.r * zone.r) / 100;
     for (const kind of NODE_KINDS) {
       const want = Math.round((dens[kind] ?? 0) * area100);
+      const tries = zone.kind === 'ruins' ? Math.max(L.tries, 32) : L.tries;
       for (let i = 0; i < want; i++) {
-        for (let t = 0; t < L.tries; t++) {
+        for (let t = 0; t < tries; t++) {
           const a = rng() * Math.PI * 2;
           // 가운데 쪽에 조금 더 몰리게
           const d = zone.r * Math.pow(rng(), 0.5 + L.zoneBias);

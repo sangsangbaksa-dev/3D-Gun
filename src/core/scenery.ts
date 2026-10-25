@@ -1,7 +1,7 @@
-// 맵을 채우는 지형 메시와 조형물. 규칙은 없고, 큰 조형물만 원형 장애물이 된다.
+// 맵을 채우는 지형 메시와 조형물. 규칙은 없고, 큰 조형물만 장애물이 된다.
 import * as THREE from 'three';
-import type { Obstacle } from './world';
-import { MAP } from '../data/map';
+import type { BoxObstacle, Obstacle } from './world';
+import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, type LandmarkKind, type LandmarkProp, MAP } from '../data/map';
 import { terrainY } from './terrain';
 
 const HALF = MAP.half;
@@ -26,14 +26,6 @@ const box = (parent: THREE.Object3D, w: number, h: number, d: number, color: num
 const cyl = (parent: THREE.Object3D, rt: number, rb: number, h: number, color: number, x: number, y: number, z: number, seg = 10, emissive = 0, ei = 0) => {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color, emissive, ei));
   m.position.set(x, y + h / 2, z);
-  m.castShadow = m.receiveShadow = !(emissive > 0);
-  parent.add(m);
-  return m;
-};
-const oct = (parent: THREE.Object3D, r: number, sx: number, sy: number, sz: number, color: number, x: number, y: number, z: number, emissive = 0, ei = 0) => {
-  const m = new THREE.Mesh(new THREE.OctahedronGeometry(r, 0), mat(color, emissive, ei));
-  m.scale.set(sx, sy, sz);
-  m.position.set(x, y, z);
   m.castShadow = m.receiveShadow = !(emissive > 0);
   parent.add(m);
   return m;
@@ -166,42 +158,36 @@ function addTerrain(scene: THREE.Scene) {
   scene.add(mesh);
 }
 
-type Kind =
-  | 'obelisk' | 'arch' | 'statue' | 'tank' | 'crane' | 'bus' | 'containers'
-  | 'billboard' | 'shrine' | 'well' | 'antenna' | 'wall' | 'rocks' | 'cart' | 'totem'
-  | 'minehead' | 'windturbine' | 'bossaltar' | 'bossgate' | 'watchpost' | 'portalarch';
-
-function buildProp(kind: Kind, g: THREE.Group) {
-  // 경사진 지형에서도 밑동이 들뜨지 않도록 지하 기초석(y = -0.65 ~ 0)을 깔아 준다
-  cyl(g, 1.15, 1.35, 0.65, 0x3a3530, 0, -0.65, 0, 8);
+function buildProp(kind: LandmarkKind, g: THREE.Group) {
+  // 경사진 지형에서도 밑동이 들뜨지 않도록 지하 기초석(y = -1.4 ~ 0)을 깊게 깔아 준다
+  cyl(g, 1.12, 1.38, 1.4, 0x3a3530, 0, -1.4, 0, 8);
   if (kind === 'obelisk') {
-    box(g, 1.8, 0.4, 1.8, 0x6e665e, 0, 0, 0);
+    box(g, 1.8, 1.6, 1.8, 0x6e665e, 0, -1.2, 0);
     box(g, 1.3, 0.35, 1.3, 0x8a8176, 0, 0.4, 0);
     cyl(g, 0.26, 0.48, 4.6, 0xc8bfb0, 0, 0.75, 0, 6);
-    cyl(g, 0.01, 0.26, 0.65, 0xdcd4c6, 0, 5.35, 0, 6);
-    // 붉은/주황 룬 띠 + 떠 있는 모놀리스 수정
-    box(g, 0.62, 0.14, 0.62, 0xff6a3a, 0, 2.6, 0, 0xe0303a, 0.9);
-    box(g, 0.52, 0.12, 0.52, 0xff8a2a, 0, 3.9, 0, 0xff6a2a, 0.8);
-    oct(g, 0.22, 1, 1.4, 1, 0xff5a3a, 0, 6.25, 0, 0xe0303a, 1.1);
+    cyl(g, 0.02, 0.26, 0.65, 0xdcd4c6, 0, 5.35, 0, 6);
+    // 풍화된 청동·암석 띠 장식 (보스 구역과 혼동되던 붉은 공중 부유 수정 제거)
+    box(g, 0.6, 0.14, 0.6, 0x544a40, 0, 2.6, 0);
+    box(g, 0.5, 0.12, 0.5, 0x685c4e, 0, 3.9, 0);
   } else if (kind === 'arch') {
-    box(g, 4.4, 0.65, 1.3, 0x423d38, 0, -0.65, 0);
+    box(g, 4.4, 1.45, 1.3, 0x423d38, 0, -1.45, 0);
     box(g, 0.75, 3.6, 0.85, 0x7d7468, -1.65, 0, 0);
     box(g, 0.75, 3.0, 0.85, 0x7d7468, 1.65, 0, 0);
     box(g, 4.2, 0.55, 0.95, 0x9c9182, 0, 3.1, 0);
     box(g, 3.6, 0.35, 0.75, 0x6e665c, 0, 3.65, 0);
     box(g, 0.85, 0.55, 0.85, 0x6a6258, 1.85, 0, 0.45);
-    // 아치 상단 주황 신호 등불
-    box(g, 0.36, 0.24, 0.36, 0xff8a2a, 0, 2.86, 0, 0xff8a2a, 0.9);
+    // 아치 중앙 쐐기돌(키스톤)
+    box(g, 0.48, 0.68, 1.04, 0x82786c, 0, 3.04, 0);
   } else if (kind === 'statue') {
-    cyl(g, 0.95, 1.1, 0.45, 0x5c564e, 0, 0, 0, 8);
+    cyl(g, 0.95, 1.12, 1.65, 0x5c564e, 0, -1.2, 0, 8);
     cyl(g, 0.7, 0.82, 0.5, 0x746d62, 0, 0.45, 0, 8);
     cyl(g, 0.24, 0.32, 1.65, 0xd7d0c4, 0, 0.95, 0, 8);
     cyl(g, 0.24, 0.24, 0.32, 0xe6dfd2, 0, 2.6, 0, 8);
     box(g, 0.85, 0.16, 0.22, 0xb7aa96, 0, 2.15, 0);
-    // 받침대 청록 명판 + 머리 위 헤일로 링
-    box(g, 0.55, 0.22, 0.08, 0x2ee6d6, 0, 0.62, 0.78, 0x2ee6d6, 0.75);
-    oct(g, 0.16, 1, 1.3, 1, 0x2ee6d6, 0, 3.15, 0, 0x2ee6d6, 0.9);
+    // 받침대 석판 명패
+    box(g, 0.55, 0.22, 0.08, 0x8e8476, 0, 0.62, 0.78);
   } else if (kind === 'tank') {
+    box(g, 1.95, 1.3, 1.95, 0x383532, 0, -1.3, 0);
     for (const [sx, sz] of [[-0.75, -0.75], [0.75, -0.75], [-0.75, 0.75], [0.75, 0.75]]) {
       cyl(g, 0.1, 0.14, 3.1, 0x4c545c, sx, -0.5, sz, 6);
     }
@@ -212,88 +198,87 @@ function buildProp(kind: Kind, g: THREE.Group) {
     cyl(g, 1.25, 1.25, 1.8, 0x8a5838, 0, 2.5, 0, 14);
     cyl(g, 1.28, 1.28, 0.14, 0x5a3824, 0, 3.1, 0, 14);
     cyl(g, 0.4, 0.4, 0.55, 0x6a6e72, 0, 4.3, 0, 8);
-    box(g, 0.24, 0.24, 0.24, 0xff8a2a, 0, 4.85, 0, 0xff8a2a, 0.85);
   } else if (kind === 'crane') {
-    box(g, 1.9, 0.85, 1.9, 0x4a423a, 0, -0.45, 0);
+    box(g, 1.9, 1.7, 1.9, 0x4a423a, 0, -1.3, 0);
     box(g, 0.38, 6.8, 0.38, 0xc8a242, 0, 0.4, 0);
     for (let y = 1.2; y < 5.6; y += 1.1) {
       box(g, 0.46, 0.08, 0.46, 0x6a5828, 0, y, 0);
     }
     box(g, 0.95, 0.78, 0.95, 0x3a3e42, 0, 5.8, 0); // 운전석
-    box(g, 0.55, 0.36, 0.06, 0x2ee6d6, 0.2, 6.0, 0.46, 0x2ee6d6, 0.55); // 운전석 유리창
+    box(g, 0.55, 0.36, 0.06, 0x1e262c, 0.2, 6.0, 0.46); // 운전석 유리창
     box(g, 4.8, 0.24, 0.24, 0xd8b452, 1.4, 7.0, 0);
     box(g, 0.95, 0.52, 0.65, 0x5a5248, -0.85, 6.85, 0); // 평형추
     box(g, 0.07, 2.2, 0.07, 0x22262a, 3.3, 4.8, 0);
     box(g, 0.38, 0.38, 0.38, 0xd9761f, 3.3, 4.5, 0);
-    box(g, 0.26, 0.26, 0.26, 0xff4a3a, 0, 7.3, 0, 0xe0303a, 1.0);
   } else if (kind === 'bus') {
-    box(g, 4.0, 0.55, 1.55, 0x36322e, 0, -0.5, 0);
+    box(g, 4.0, 1.35, 1.55, 0x36322e, 0, -1.3, 0);
     box(g, 3.8, 1.2, 1.35, 0xb23a32, 0, 0.35, 0);
     box(g, 3.84, 0.16, 1.38, 0xd8c49a, 0, 0.85, 0);
     box(g, 1.2, 0.46, 1.38, 0x26323a, 0.95, 1.12, 0);
     box(g, 1.1, 0.42, 1.38, 0x202a30, -0.55, 1.12, 0);
-    // 전면 헤드라이트 잔광
-    box(g, 0.06, 0.16, 0.22, 0xffb347, 1.9, 0.6, 0.42, 0xff8a2a, 0.7);
-    box(g, 0.06, 0.16, 0.22, 0xffb347, 1.9, 0.6, -0.42, 0xff8a2a, 0.7);
+    box(g, 0.06, 0.16, 0.22, 0xc8b898, 1.9, 0.6, 0.42);
+    box(g, 0.06, 0.16, 0.22, 0xc8b898, 1.9, 0.6, -0.42);
     for (const sx of [-1.25, 1.2]) {
       for (const sz of [-0.62, 0.62]) {
         cyl(g, 0.3, 0.3, 0.22, 0x1e2022, sx, 0.15, sz, 8).rotation.z = Math.PI / 2;
       }
     }
   } else if (kind === 'containers') {
-    box(g, 3.8, 0.65, 2.4, 0x383430, 0.5, -0.65, 0.4);
+    box(g, 3.8, 1.4, 2.4, 0x383430, 0.5, -1.4, 0.4);
     box(g, 2.6, 1.2, 1.15, 0x2b6882, -0.3, 0, 0);
     box(g, 2.64, 0.08, 1.18, 0x1e4c60, -0.3, 1.14, 0);
     box(g, 2.4, 1.15, 1.1, 0xc45a2a, 0.45, 1.2, 0.12);
     box(g, 2.44, 0.08, 1.13, 0x8e3e1c, 0.45, 2.28, 0.12);
     box(g, 1.6, 1.0, 1.0, 0x3d6b45, 1.55, 0, 1.15);
-    box(g, 0.26, 0.2, 0.26, 0x2ee6d6, 0.45, 2.35, 0.12, 0x2ee6d6, 0.8);
   } else if (kind === 'billboard') {
+    box(g, 2.4, 1.35, 0.9, 0x3a3530, 0, -1.35, 0);
     cyl(g, 0.1, 0.14, 4.3, 0x52565c, -0.95, -0.5, 0, 6);
     cyl(g, 0.1, 0.14, 4.3, 0x52565c, 0.95, -0.5, 0, 6);
     box(g, 2.1, 0.12, 0.45, 0x3a3e44, 0, 3.35, 0.18); // 점검 캣워크
     box(g, 3.1, 1.55, 0.12, 0x2c3036, 0, 3.6, 0);
-    box(g, 2.8, 1.25, 0.04, 0xc84638, 0, 3.75, 0.06);
-    box(g, 1.9, 0.22, 0.05, 0xffb347, -0.2, 4.3, 0.07, 0xff8a2a, 0.8);
-    box(g, 0.65, 0.18, 0.05, 0x2ee6d6, 0.85, 3.95, 0.07, 0x2ee6d6, 0.75);
+    box(g, 2.8, 1.25, 0.04, 0xb84638, 0, 3.75, 0.06);
+    box(g, 1.9, 0.22, 0.05, 0xd8b888, -0.2, 4.3, 0.07);
+    box(g, 0.65, 0.18, 0.05, 0x7a8a92, 0.85, 3.95, 0.07);
     box(g, 2.9, 0.1, 0.35, 0x3a3e44, 0, 5.18, 0.12);
   } else if (kind === 'shrine') {
-    cyl(g, 1.45, 1.65, 0.78, 0x6a6358, 0, -0.5, 0, 8);
+    cyl(g, 1.45, 1.68, 1.58, 0x6a6358, 0, -1.3, 0, 8);
     box(g, 0.24, 2.5, 0.24, 0x943830, -0.8, 0.28, 0);
     box(g, 0.24, 2.5, 0.24, 0x943830, 0.8, 0.28, 0);
     box(g, 2.1, 0.16, 0.22, 0x943830, 0, 2.25, 0);
     box(g, 2.55, 0.22, 0.38, 0x262428, 0, 2.75, 0);
     box(g, 2.75, 0.1, 0.44, 0x1a181c, 0, 2.96, 0);
     cyl(g, 0.2, 0.24, 0.75, 0xd9d3c6, 0, 0.28, 0, 6);
-    // 양옆 따뜻한 석등
+    // 양옆 석등
     for (const sx of [-1.15, 1.15]) {
       box(g, 0.28, 0.65, 0.28, 0x7a7368, sx, 0.28, 0.55);
-      box(g, 0.22, 0.22, 0.22, 0xffb347, sx, 0.93, 0.55, 0xff8a2a, 0.95);
-      box(g, 0.38, 0.12, 0.38, 0x4a4540, sx, 1.15, 0.55);
+      box(g, 0.2, 0.2, 0.2, 0xe8b868, sx, 0.93, 0.55, 0xc87a28, 0.45);
+      box(g, 0.38, 0.12, 0.38, 0x4a4540, sx, 1.13, 0.55);
     }
   } else if (kind === 'well') {
-    cyl(g, 0.8, 0.95, 1.35, 0x8a8174, 0, -0.4, 0, 10);
-    cyl(g, 0.52, 0.52, 0.22, 0x2ee6d6, 0, 0.78, 0, 8, 0x1a8a82, 0.65);
+    cyl(g, 0.8, 0.98, 2.15, 0x8a8174, 0, -1.2, 0, 10);
+    cyl(g, 0.52, 0.52, 0.22, 0x1c363e, 0, 0.78, 0, 8);
     box(g, 0.12, 1.65, 0.12, 0x6b5340, -0.62, 0.95, 0);
     box(g, 0.12, 1.65, 0.12, 0x6b5340, 0.62, 0.95, 0);
     box(g, 1.6, 0.22, 0.55, 0x543e2e, 0, 2.55, 0);
     box(g, 1.3, 0.16, 0.38, 0x3e2d20, 0, 2.77, 0);
   } else if (kind === 'antenna') {
-    cyl(g, 0.55, 0.7, 0.8, 0x4a4e54, 0, -0.4, 0, 6);
+    cyl(g, 0.55, 0.74, 1.6, 0x4a4e54, 0, -1.2, 0, 6);
     cyl(g, 0.08, 0.18, 7.6, 0xc5c8cc, 0, 0.4, 0, 6);
     box(g, 1.8, 0.08, 0.08, 0xd8dce0, 0, 4.8, 0);
     box(g, 0.08, 0.08, 1.8, 0xd8dce0, 0, 4.8, 0);
     box(g, 1.2, 0.07, 0.07, 0xd8dce0, 0, 6.1, 0);
-    box(g, 0.28, 0.28, 0.28, 0xff3a2a, 0, 8.0, 0, 0xe0303a, 1.15);
+    box(g, 0.14, 0.14, 0.14, 0xff4a3a, 0, 8.0, 0, 0xc82830, 0.55);
   } else if (kind === 'wall') {
+    box(g, 3.5, 1.3, 0.85, 0x423d38, 0, -1.3, 0);
     box(g, 3.4, 2.15, 0.45, 0x8a8176, 0, -0.5, 0);
     box(g, 0.85, 0.75, 0.5, 0x6e675e, 1.45, 0, 0.32);
     box(g, 0.4, 0.95, 0.4, 0x7a736a, -1.25, 1.65, 0);
   } else if (kind === 'rocks') {
-    cyl(g, 1.0, 1.3, 1.7, 0x7d7870, -0.3, -0.4, 0.1, 6);
-    cyl(g, 0.6, 0.8, 1.35, 0x918b82, 0.85, -0.4, -0.3, 5);
-    cyl(g, 0.45, 0.6, 1.05, 0x6a6560, -0.75, -0.4, -0.75, 5);
+    cyl(g, 1.0, 1.35, 2.5, 0x7d7870, -0.3, -1.2, 0.1, 6);
+    cyl(g, 0.6, 0.85, 2.15, 0x918b82, 0.85, -1.2, -0.3, 5);
+    cyl(g, 0.45, 0.65, 1.85, 0x6a6560, -0.75, -1.2, -0.75, 5);
   } else if (kind === 'cart') {
+    box(g, 1.75, 1.25, 1.1, 0x3a342e, 0, -1.15, 0);
     box(g, 1.6, 0.48, 0.95, 0x6b4a2e, 0, 0.35, 0);
     cyl(g, 0.3, 0.3, 0.14, 0x2c2c2c, -0.48, 0.1, 0.45, 8).rotation.z = Math.PI / 2;
     cyl(g, 0.3, 0.3, 0.14, 0x2c2c2c, 0.48, 0.1, -0.45, 8).rotation.z = Math.PI / 2;
@@ -301,168 +286,172 @@ function buildProp(kind: Kind, g: THREE.Group) {
     box(g, 0.32, 0.32, 0.32, 0x8a8f86, 0.28, 0.83, 0.1);
   } else if (kind === 'minehead') {
     // 폐광 갱도 권양기 타워와 광차 레일 구조물
-    box(g, 2.8, 0.95, 2.8, 0x3a3532, 0, -0.5, 0);
+    box(g, 2.8, 1.75, 2.8, 0x3a3532, 0, -1.3, 0);
     for (const sx of [-0.9, 0.9]) for (const sz of [-0.9, 0.9]) {
       box(g, 0.24, 5.2, 0.24, 0x5c4632, sx, 0.45, sz);
     }
     box(g, 2.1, 0.22, 2.1, 0x4a3828, 0, 2.8, 0);
     box(g, 2.2, 0.3, 2.2, 0x3a3e44, 0, 5.5, 0);
     cyl(g, 0.65, 0.65, 0.28, 0x8a929a, 0, 5.8, 0, 10).rotation.z = Math.PI / 2;
-    box(g, 0.34, 0.3, 0.34, 0xff8a2a, 0, 6.55, 0, 0xff8a2a, 0.95);
   } else if (kind === 'windturbine') {
     // 황무지/들판 풍력 발전기 잔해
-    cyl(g, 0.7, 0.95, 0.95, 0x5a5650, 0, -0.5, 0, 8);
+    cyl(g, 0.7, 0.98, 1.75, 0x5a5650, 0, -1.3, 0, 8);
     cyl(g, 0.16, 0.34, 7.2, 0xc8c2b8, 0, 0.45, 0, 8);
     box(g, 0.65, 0.55, 1.1, 0x8a847a, 0, 7.5, 0);
-    box(g, 0.22, 0.22, 0.22, 0x2ee6d6, 0, 8.08, -0.2, 0x2ee6d6, 0.8);
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + 0.35;
       const blade = box(g, 0.18, 2.6, 0.08, 0xd8d2c6, Math.cos(a) * 1.1, 7.75 + Math.sin(a) * 1.1 - 1.3, 0.62);
       blade.rotation.z = a - Math.PI / 2;
     }
   } else if (kind === 'bossaltar') {
-    // 보스 둥지 핏빛 화로와 흑요석 가시 기둥
-    cyl(g, 1.45, 1.8, 1.1, 0x26161a, 0, -0.65, 0, 7);
-    cyl(g, 0.12, 0.62, 5.8, 0x381e24, 0, 0.45, 0, 6);
-    cyl(g, 0.65, 0.4, 0.45, 0x4c242a, 0, 2.3, 0, 6);
-    box(g, 0.62, 0.62, 0.62, 0xff3a2a, 0, 2.7, 0, 0xe0303a, 1.2);
-    oct(g, 0.28, 1, 1.5, 1, 0xff8a2a, 0, 6.5, 0, 0xff5a2a, 1.1);
+    // 보스 둥지 흑요석 가시 기둥과 제단 화로 (공중에 떠 있던 어색한 정육면체/팔면체 제거)
+    cyl(g, 1.35, 1.75, 1.85, 0x26161a, 0, -1.4, 0, 7);
+    cyl(g, 0.12, 0.58, 5.6, 0x381e24, 0, 0.45, 0, 6);
+    cyl(g, 0.58, 0.38, 0.42, 0x4c242a, 0, 2.3, 0, 6);
+    cyl(g, 0.36, 0.44, 0.28, 0xc82832, 0, 2.72, 0, 6, 0x9e1c24, 0.75);
   } else if (kind === 'bossgate') {
-    // 좀비 왕의 둥지 관문: 거대한 흑요석 뿔 기둥과 공중에 떠 있는 핏빛 핵 결정
-    cyl(g, 1.6, 2.0, 1.1, 0x221216, 0, -0.65, 0, 7);
-    const p1 = cyl(g, 0.18, 0.85, 7.6, 0x2d161c, -0.45, 0.4, 0, 6);
+    // 좀비 왕의 둥지 관문: 거대한 흑요석 뿔 기둥 (공중 부유 결정 제거)
+    cyl(g, 1.45, 1.9, 1.85, 0x221216, 0, -1.4, 0, 7);
+    const p1 = cyl(g, 0.16, 0.8, 7.4, 0x2d161c, -0.42, 0.4, 0, 6);
     p1.rotation.z = -0.14;
-    const p2 = cyl(g, 0.12, 0.55, 4.9, 0x3c1c24, 0.65, 0.3, 0.25, 6);
+    const p2 = cyl(g, 0.12, 0.52, 4.8, 0x3c1c24, 0.62, 0.3, 0.22, 6);
     p2.rotation.z = 0.22;
-    box(g, 1.5, 0.28, 0.9, 0x4a2028, -0.1, 3.6, 0);
-    oct(g, 0.48, 0.9, 1.5, 0.9, 0xff3a2a, -0.2, 4.95, 0, 0xe0303a, 1.3);
-    oct(g, 0.26, 1, 1.4, 1, 0xff9a3a, -0.55, 8.2, 0, 0xff6a2a, 1.15);
+    box(g, 1.45, 0.28, 0.85, 0x4a2028, -0.05, 3.55, 0);
+    cyl(g, 0.24, 0.32, 0.95, 0xc82832, -0.08, 3.83, 0, 6, 0x9e1c24, 0.75);
   } else if (kind === 'watchpost') {
     // 기지 외곽 초소 조명탑
-    cyl(g, 0.5, 0.7, 0.85, 0x4a5056, 0, -0.5, 0, 6);
+    cyl(g, 0.5, 0.72, 1.65, 0x4a5056, 0, -1.3, 0, 6);
     box(g, 0.22, 3.8, 0.22, 0x3d444c, 0, 0.35, 0);
     box(g, 0.85, 0.22, 0.55, 0x262c32, 0, 4.1, 0);
-    box(g, 0.46, 0.26, 0.26, 0x2ee6d6, 0, 4.32, 0, 0x2ee6d6, 1.0);
-  } else if (kind === 'portalarch') {
-    // 외곽 스폰 포털 양옆을 지키는 균열 방호벽 모놀리스
-    cyl(g, 1.25, 1.55, 0.9, 0x26161c, 0, -0.65, 0, 6);
-    const main = cyl(g, 0.22, 0.68, 5.6, 0x321a22, 0, 0.25, 0, 6);
-    main.rotation.z = -0.12;
-    box(g, 0.85, 0.24, 0.65, 0x4a222a, 0.1, 2.8, 0);
-    box(g, 0.32, 1.8, 0.32, 0xff4a3a, -0.15, 3.2, 0, 0xe0303a, 1.1);
-    oct(g, 0.24, 1, 1.4, 1, 0xff8a2a, -0.35, 6.2, 0, 0xff5a2a, 1.05);
+    box(g, 0.42, 0.18, 0.22, 0x2ee6d6, 0, 4.32, 0, 0x1a9e94, 0.55);
   } else {
-    cyl(g, 0.42, 0.55, 0.95, 0x5c564c, 0, -0.5, 0, 6);
+    cyl(g, 0.42, 0.58, 1.75, 0x5c564c, 0, -1.3, 0, 6);
     box(g, 0.38, 1.85, 0.38, 0x6e4a32, 0, 0.45, 0);
     box(g, 1.1, 0.24, 0.24, 0xc4553a, 0, 1.9, 0);
     box(g, 0.26, 0.8, 0.26, 0xd7c7a2, 0, 2.2, 0);
-    box(g, 0.24, 0.24, 0.24, 0x2ee6d6, 0, 3.0, 0, 0x2ee6d6, 0.8);
   }
 }
 
-const PROPS: { kind: Kind; x: number; z: number; yaw: number; r: number }[] = [
-  // 기지 외곽 방어선 초소 & 이정표
-  { kind: 'watchpost', x: 15, z: -20, yaw: 0.3, r: 0.7 },
-  { kind: 'watchpost', x: -20, z: 15, yaw: -0.8, r: 0.7 },
-  { kind: 'watchpost', x: 20, z: 15, yaw: 0.9, r: 0.7 },
-  { kind: 'watchpost', x: -16, z: -19, yaw: -0.4, r: 0.7 },
-
-  // 중거리 주요 조형물 (건물·엄폐물과 겹치지 않는 검증된 좌표)
-  { kind: 'obelisk', x: 18, z: -36, yaw: 0.4, r: 1.1 },
-  { kind: 'arch', x: -16, z: 40, yaw: 0.15, r: 1.7 },
-  { kind: 'statue', x: -40, z: 14, yaw: 1.1, r: 0.9 },
-  { kind: 'tank', x: 52, z: 22, yaw: 0.6, r: 1.6 },
-  { kind: 'crane', x: 28, z: -34, yaw: -0.5, r: 1.3 },
-  { kind: 'bus', x: 24, z: 32, yaw: 0.7, r: 1.6 },
-  { kind: 'containers', x: -30, z: 34, yaw: 0.35, r: 2.1 },
-  { kind: 'billboard', x: 16, z: 46, yaw: -0.2, r: 0.5 },
-  { kind: 'shrine', x: -38, z: -36, yaw: 0.8, r: 1.5 },
-  { kind: 'well', x: -22, z: 20, yaw: 0.2, r: 1.1 },
-  { kind: 'antenna', x: 42, z: 40, yaw: 0, r: 0.7 },
-  { kind: 'wall', x: -26, z: -16, yaw: 0.9, r: 1.4 },
-  { kind: 'rocks', x: 50, z: -16, yaw: 0.4, r: 1.5 },
-  { kind: 'cart', x: 22, z: -30, yaw: 1.4, r: 0.9 },
-  { kind: 'totem', x: -14, z: -44, yaw: 0.3, r: 0.7 },
-
-  // 구역별 상징 랜드마크 클러스터 (먼 거리에서도 각 구역의 정체성과 방향이 한눈에 읽히도록 구성)
-  // 북서 숲 (-95, -80)
-  { kind: 'totem', x: -104, z: -70, yaw: 0.5, r: 0.7 },
-  { kind: 'shrine', x: -86, z: -92, yaw: 0.6, r: 1.5 },
-  // 남서 숲 (-60, 115)
-  { kind: 'shrine', x: -50, z: 124, yaw: 1.2, r: 1.5 },
-  { kind: 'totem', x: -72, z: 108, yaw: -0.4, r: 0.7 },
-  // 채석장 (110, -60)
-  { kind: 'crane', x: 120, z: -66, yaw: -0.4, r: 1.3 },
-  { kind: 'containers', x: 98, z: -52, yaw: 0.8, r: 2.1 },
-  { kind: 'cart', x: 114, z: -48, yaw: 0.3, r: 0.9 },
-  // 약초 들판 (-115, 55)
-  { kind: 'well', x: -124, z: 46, yaw: 0.2, r: 1.1 },
-  { kind: 'windturbine', x: -106, z: 66, yaw: 0.5, r: 0.9 },
-  // 폐허 도시 (100, 100) & 북쪽 시가지 (-35, -140) — 건물 블록 바깥 진입 광장에 배치
-  { kind: 'billboard', x: 54, z: 96, yaw: -0.6, r: 0.6 },
-  { kind: 'containers', x: 112, z: 46, yaw: 0.35, r: 2.1 },
-  { kind: 'statue', x: -68, z: -122, yaw: 0.8, r: 0.9 },
-  { kind: 'arch', x: 6, z: -138, yaw: 0.2, r: 1.7 },
-  // 폐광 (150, -150)
-  { kind: 'minehead', x: 144, z: -142, yaw: 0.7, r: 1.8 },
-  { kind: 'antenna', x: 164, z: -136, yaw: 0, r: 0.7 },
-  // 황무지 (165, 55)
-  { kind: 'tank', x: 156, z: 70, yaw: 0.6, r: 1.6 },
-  { kind: 'windturbine', x: 174, z: 44, yaw: -0.6, r: 0.9 },
-  // 보스 둥지 (0, -180): 남쪽 입구 거대 흑요석 관문(bossgate) + 오벨리스크 + 핏빛 제단 기둥
-  { kind: 'bossgate', x: -7.5, z: -165, yaw: 0.25, r: 1.5 },
-  { kind: 'bossgate', x: 14.5, z: -165, yaw: Math.PI - 0.25, r: 1.5 },
-  { kind: 'obelisk', x: -18, z: -172, yaw: -0.4, r: 1.1 },
-  { kind: 'obelisk', x: 18, z: -172, yaw: 0.4, r: 1.1 },
-  { kind: 'bossaltar', x: -14, z: -185, yaw: 0.3, r: 1.3 },
-  { kind: 'bossaltar', x: 14, z: -185, yaw: -0.3, r: 1.3 },
-  // 길목 관문
-  { kind: 'bus', x: -104, z: 88, yaw: 0.9, r: 1.6 },
-  { kind: 'arch', x: 58, z: -96, yaw: 0.15, r: 1.7 },
-];
-
-function scatterRocks(scene: THREE.Scene) {
-  let a = 0x51ed1234;
+function scatterRocks(scene: THREE.Scene, obstacles: Obstacle[]) {
+  let a = 0x7391ab23;
   const rnd = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const tones = [0x7a756c, 0x6a6358, 0x8a7a5c, 0x58524c];
-  // 낱개 돌을 무작위로 흩뿌리는 대신, 어미 바위 + 새끼 바위 1~2개로 이루어진 암석 노두를 배치하되 도로·건물·랜드마크 주변은 깔끔히 비운다
-  for (let i = 0; i < 28; i++) {
-    const x = (rnd() * 2 - 1) * (HALF - 10);
-    const z = (rnd() * 2 - 1) * (HALF - 10);
-    if (Math.hypot(x, z) < 25) continue;
-    if (laneDist(x, z) < 7.5) continue;
-    if (PROPS.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 4.5)) continue;
-    if (MAP.props.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + (p.kind === 'building' ? 3.5 : 4.5))) continue;
+  // 어미 바위 + 새끼 바위 1~2개로 이루어진 암석 노두를 배치하며, 도로·건물·랜드마크·채집 노드와 겹치지 않는다
+  for (let i = 0; i < SCATTER_ROCKS.length; i++) {
+    const { x, z, s, r } = SCATTER_ROCKS[i];
     const g = new THREE.Group();
-    const s = 0.55 + rnd() * 0.9;
     const cMain = tones[Math.floor(rnd() * tones.length)];
-    cyl(g, s * 0.58, s * 1.05, s * (0.75 + rnd() * 0.5), cMain, 0, -0.15, 0, 6);
+    const gy = terrainY(x, z);
+    const mainH = s * (0.75 + rnd() * 0.5);
+    cyl(g, s * 0.58, s * 1.05, mainH + 0.55, cMain, 0, -0.7, 0, 6);
     const subCount = 1 + Math.floor(rnd() * 2);
+    const rotY = rnd() * 6;
+    const cos = Math.cos(rotY), sin = Math.sin(rotY);
     for (let k = 0; k < subCount; k++) {
       const ang = rnd() * Math.PI * 2, dist = s * (0.65 + rnd() * 0.5);
       const ss = s * (0.38 + rnd() * 0.35);
-      cyl(g, ss * 0.65, ss, ss * (0.55 + rnd() * 0.4), tones[(i + k) % tones.length], Math.cos(ang) * dist, -0.15, Math.sin(ang) * dist, 5);
+      const lx = Math.cos(ang) * dist, lz = Math.sin(ang) * dist;
+      const wx = x + lx * cos + lz * sin, wz = z - lx * sin + lz * cos;
+      const dy = terrainY(wx, wz) - gy;
+      const subH = ss * (0.55 + rnd() * 0.4);
+      cyl(g, ss * 0.65, ss, subH + 0.45, tones[(i + k) % tones.length], lx, dy - 0.6, lz, 5);
     }
-    g.position.set(x, terrainY(x, z), z);
-    g.rotation.y = rnd() * 6;
+    g.position.set(x, gy, z);
+    g.rotation.y = rotY;
     scene.add(g);
+    obstacles.push({ x, z, r });
   }
 }
 
 function landmarkClear(x: number, z: number, r: number) {
-  return !MAP.props.some((b) => b.kind === 'building' && Math.hypot(x - b.x, z - b.z) < b.r + r + 2.5);
+  return !MAP.props.some((b) => b.kind === 'building' && distToPropOBB(x, z, b, 2.5) < r);
 }
 
-export function addScenery(scene: THREE.Scene, obstacles: Obstacle[]) {
+/** 랜드마크 형상에 맞춘 정밀 히트박스 등록 (아치 통로 개방, 직사각형 OBB 적용, 과대 반경 축소) */
+function registerLandmarkObstacles(p: LandmarkProp, obstacles: Obstacle[], boxObstacles: BoxObstacle[]) {
+  const cos = Math.cos(p.yaw), sin = Math.sin(p.yaw);
+  const toWorld = (lx: number, lz: number) => ({
+    x: p.x + lx * cos + lz * sin,
+    z: p.z - lx * sin + lz * cos,
+  });
+
+  if (p.kind === 'arch') {
+    // 아치 중앙 통로(폭 2.5m)는 통과할 수 있게 비우고 좌우 석주 2개에만 충돌 원을 둔다
+    const left = toWorld(-1.65, 0);
+    const right = toWorld(1.7, 0.12);
+    obstacles.push({ x: left.x, z: left.z, r: 0.52 });
+    obstacles.push({ x: right.x, z: right.z, r: 0.58 });
+  } else if (p.kind === 'billboard') {
+    // 간판 본체는 3.6m 공중에 있으므로 지상 철제 기둥 2개에만 작은 충돌 원을 둔다
+    for (const sx of [-0.95, 0.95]) {
+      const pole = toWorld(sx, 0);
+      obstacles.push({ x: pole.x, z: pole.z, r: 0.24 });
+    }
+  } else if (p.kind === 'bus') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 1.92, hz: 0.72, rot: p.yaw });
+    for (const sx of [-1.15, 1.15]) {
+      const pt = toWorld(sx, 0);
+      obstacles.push({ x: pt.x, z: pt.z, r: 0.7 });
+    }
+  } else if (p.kind === 'containers') {
+    const main = toWorld(0.05, 0.05);
+    const side = toWorld(1.55, 1.15);
+    boxObstacles.push({ x: main.x, z: main.z, hx: 1.62, hz: 0.62, rot: p.yaw });
+    boxObstacles.push({ x: side.x, z: side.z, hx: 0.82, hz: 0.52, rot: p.yaw });
+    for (const sx of [-0.9, 1.0]) {
+      const pt = toWorld(sx, 0.05);
+      obstacles.push({ x: pt.x, z: pt.z, r: 0.6 });
+    }
+    obstacles.push({ x: side.x, z: side.z, r: 0.65 });
+  } else if (p.kind === 'wall') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 1.72, hz: 0.32, rot: p.yaw });
+    for (const sx of [-1.25, 0, 1.25]) {
+      const pt = toWorld(sx, 0);
+      obstacles.push({ x: pt.x, z: pt.z, r: 0.32 });
+    }
+  } else if (p.kind === 'shrine') {
+    const center = toWorld(0, 0.22);
+    boxObstacles.push({ x: center.x, z: center.z, hx: 1.28, hz: 0.65, rot: p.yaw });
+    for (const sx of [-0.65, 0.65]) {
+      const pt = toWorld(sx, 0.22);
+      obstacles.push({ x: pt.x, z: pt.z, r: 0.58 });
+    }
+  } else if (p.kind === 'cart') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.82, hz: 0.5, rot: p.yaw });
+    obstacles.push({ x: p.x, z: p.z, r: 0.62 });
+  } else if (p.kind === 'minehead') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 1.12, hz: 1.12, rot: p.yaw });
+    obstacles.push({ x: p.x, z: p.z, r: 1.12 });
+  } else if (p.kind === 'tank') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.92, hz: 0.92, rot: p.yaw });
+    obstacles.push({ x: p.x, z: p.z, r: 0.92 });
+  } else if (p.kind === 'crane') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.95, hz: 0.95, rot: p.yaw });
+    obstacles.push({ x: p.x, z: p.z, r: 0.95 });
+  } else {
+    obstacles.push({ x: p.x, z: p.z, r: p.r });
+  }
+}
+
+export function addScenery(scene: THREE.Scene, obstacles: Obstacle[], boxObstacles: BoxObstacle[] = []) {
   addTerrain(scene);
-  for (const p of PROPS) {
+  for (const p of LANDMARKS) {
     if (!landmarkClear(p.x, p.z, p.r)) continue;
     const g = new THREE.Group();
     buildProp(p.kind, g);
-    g.position.set(p.x, terrainY(p.x, p.z), p.z);
+    const gy = terrainY(p.x, p.z);
+    let minPerimY = gy;
+    const sampleR = Math.max(0.8, p.r * 0.85);
+    for (let k = 0; k < 8; k++) {
+      const ang = (k / 8) * Math.PI * 2;
+      minPerimY = Math.min(minPerimY, terrainY(p.x + Math.cos(ang) * sampleR, p.z + Math.sin(ang) * sampleR));
+    }
+    // 급경사면에 놓인 조형물은 중심 높이를 낮은 쪽 사면으로 살짝 내려 기초석이 들뜨지 않게 밀착한다
+    const settleY = Math.min(gy, (gy + minPerimY) * 0.5 + 0.08);
+    g.position.set(p.x, settleY, p.z);
     g.rotation.y = p.yaw;
     scene.add(g);
-    obstacles.push({ x: p.x, z: p.z, r: p.r });
+    registerLandmarkObstacles(p, obstacles, boxObstacles);
   }
-  scatterRocks(scene);
+  scatterRocks(scene, obstacles);
 }

@@ -16,7 +16,9 @@ export function getGroundY(x: number, z: number): number {
 }
 
 export interface Obstacle { x: number; z: number; r: number }
+export interface BoxObstacle { x: number; z: number; hx: number; hz: number; rot?: number }
 export const obstacles: Obstacle[] = [];
+export const boxObstacles: BoxObstacle[] = [];
 
 export interface World { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer; sun: THREE.DirectionalLight }
 
@@ -39,10 +41,12 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160 });
   scene.add(sun, sun.target);
 
-  addScenery(scene, obstacles);
+  obstacles.length = 0;
+  boxObstacles.length = 0;
+  addScenery(scene, obstacles, boxObstacles);
   buildWorldView(scene);
   new Atmosphere(scene, sun, hemi);
-  for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
+  registerPropObstacles(obstacles, boxObstacles);
   registerBoundaryObstacles(obstacles);
   registerMountainObstacles(obstacles);
 
@@ -56,8 +60,33 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   return { scene, camera, renderer, sun };
 }
 
-/** 원형 장애물과의 충돌을 밀어내기로 해결한다. */
+/** 직사각형(OBB)·원형 장애물과의 충돌을 밀어내기로 해결한다. */
 export function resolveObstacles(p: { x: number; z: number }, radius: number) {
+  for (const b of boxObstacles) {
+    const rot = b.rot ?? 0;
+    const cos = Math.cos(rot), sin = Math.sin(rot);
+    const dx = p.x - b.x, dz = p.z - b.z;
+    const lx = dx * cos - dz * sin;
+    const lz = dx * sin + dz * cos;
+    const cx = Math.max(-b.hx, Math.min(b.hx, lx));
+    const cz = Math.max(-b.hz, Math.min(b.hz, lz));
+    const ox = lx - cx, oz = lz - cz;
+    const d2 = ox * ox + oz * oz;
+    if (d2 < radius * radius) {
+      let nlx = lx, nlz = lz;
+      if (d2 > 1e-8) {
+        const d = Math.sqrt(d2);
+        nlx = cx + (ox / d) * radius;
+        nlz = cz + (oz / d) * radius;
+      } else {
+        const px = b.hx - Math.abs(lx), pz = b.hz - Math.abs(lz);
+        if (px < pz) nlx = (lx >= 0 ? 1 : -1) * (b.hx + radius);
+        else nlz = (lz >= 0 ? 1 : -1) * (b.hz + radius);
+      }
+      p.x = b.x + nlx * cos + nlz * sin;
+      p.z = b.z - nlx * sin + nlz * cos;
+    }
+  }
   for (const o of obstacles) {
     const dx = p.x - o.x, dz = p.z - o.z;
     const min = o.r + radius;
@@ -72,12 +101,50 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
   p.z = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.z));
 }
 
-/** 맵 가장자리 장벽 충돌(원형 근사). worldview 가시 벽(H-1.1)과 맞춘다 */
+/** 건물·바리케이드·폐차의 실제 상자 치수(w × d, rot)에 맞춘 정밀 충돌 등록 */
+export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
+  for (const p of MAP.props) {
+    const rot = p.rot ?? 0;
+    const cos = Math.cos(rot), sin = Math.sin(rot);
+    if (p.kind === 'building' && p.w && p.d) {
+      const hx = p.w / 2 + 0.16, hz = p.d / 2 + 0.16;
+      boxes.push({ x: p.x, z: p.z, hx, hz, rot });
+      const r = Math.min(hx, hz) * 0.96;
+      if (hx >= hz) {
+        const off = hx - r;
+        for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
+      } else {
+        const off = hz - r;
+        for (const s of [-1, 1]) out.push({ x: p.x + s * off * sin, z: p.z + s * off * cos, r });
+      }
+    } else if (p.kind === 'wall' && p.w && p.d) {
+      const hx = p.w / 2, hz = (p.d * 1.2) / 2;
+      boxes.push({ x: p.x, z: p.z, hx, hz, rot });
+      const r = hz;
+      const span = Math.max(0, hx - r);
+      const steps = Math.max(2, Math.ceil((span * 2) / 1.1) + 1);
+      for (let i = 0; i < steps; i++) {
+        const lx = steps === 1 ? 0 : -span + (span * 2 * i) / (steps - 1);
+        out.push({ x: p.x + lx * cos, z: p.z - lx * sin, r });
+      }
+    } else if (p.kind === 'car' && p.w && p.d) {
+      const hx = p.w / 2, hz = p.d / 2;
+      boxes.push({ x: p.x, z: p.z, hx, hz, rot });
+      const r = hz * 0.95;
+      const off = Math.max(0, hx - r);
+      for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
+    } else {
+      out.push({ x: p.x, z: p.z, r: p.r });
+    }
+  }
+}
+
+/** 맵 가장자리 장벽 충돌. worldview 가시 벽 안쪽 면(H - 1.8)과 정확히 맞춘다 */
 export function registerBoundaryObstacles(out: Obstacle[]) {
   const H = MAP.half;
-  const edge = H - 1.1;
-  const step = 10;
-  const wallR = 3.6;
+  const edge = H - 0.6;
+  const step = 4;
+  const wallR = 1.2;
   for (let x = -H; x <= H; x += step) {
     out.push({ x, z: edge, r: wallR });
     out.push({ x, z: -edge, r: wallR });
@@ -86,27 +153,28 @@ export function registerBoundaryObstacles(out: Obstacle[]) {
     out.push({ x: edge, z, r: wallR });
     out.push({ x: -edge, z, r: wallR });
   }
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    out.push({ x: sx * edge, z: sz * edge, r: wallR * 1.4 });
-  }
 }
 
-/** 배경 산맥(능선) 메시와 동일한 위치에 충돌 원을 둔다 */
+/** 배경 산맥(능선) 메시와 동일한 시드·위치·스케일에 맞춘 충돌 원을 둔다 */
 export function registerMountainObstacles(out: Obstacle[]) {
   const H = MAP.half;
   let s = 5;
   const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
   for (let i = 0; i < 96; i++) {
     const a = (i / 96) * Math.PI * 2 + (rnd() - 0.5) * 0.03;
-    const d = H * 1.08 + rnd() * 18;
-    const rad = 26 + rnd() * 18;
-    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.52 });
+    const sq = H / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+    const span = rnd(), _h = 15 + rnd() * 22, rad = 26 + rnd() * 18, _yaw = rnd();
+    void _h; void _yaw;
+    const d = sq + rad * 0.62 + 8 + span * 14;
+    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.58 });
   }
   for (let i = 0; i < 72; i++) {
     const a = (i / 72) * Math.PI * 2 + (rnd() - 0.5) * 0.04;
-    const d = H * 1.24 + rnd() * 28;
-    const rad = 38 + rnd() * 26;
-    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.4 });
+    const sq = H / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+    const span = rnd(), _h = 28 + rnd() * 36, rad = 38 + rnd() * 26, _yaw = rnd();
+    void _h; void _yaw;
+    const d = sq + rad * 0.68 + 34 + span * 24;
+    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.65 });
   }
 }
 
