@@ -167,11 +167,11 @@ export const GUN_UNLOCK_GOLD: Partial<Record<GunId, number>> = {
 // 플레이어 이동/전투 공통 수치 (소유: player)
 export const PLAYER = {
   hp: 100,
-  speed: 6.5,          // m/s
+  speed: 7.4,          // m/s (~14% faster than 6.5)
   aimSpeedMul: 0.65,   // 우클릭 조준 중 이동 속도 배율
-  dashSpeed: 17,
-  dashTime: 0.18,
-  dashIframes: 0.3,
+  dashSpeed: 16,       // 구르기(Shift) 순간 이동 속도
+  dashTime: 0.24,
+  dashIframes: 0.38,
   hurtIframes: 0.15,   // 피격 직후 짧은 무적 (한 프레임에 여러 마리가 겹쳐 맞는 것 방지)
   radius: 0.4,
   sens: 0.0025,        // 마우스 감도 (라디안/픽셀)
@@ -461,7 +461,7 @@ export const laneSpawnDist = (w: number) => 60 + Math.max(0, w - 1) * 6;
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;
 export const ENEMY_RULES = {
-  prep: 30,               // 웨이브 사이 준비 시간(초). 첫 웨이브도 동일
+  prep: 60,               // 웨이브 사이 준비 시간(초). 첫 웨이브도 동일
   stunHpRatio: 0.3,       // 체력이 이 비율 이하일 때 기절 판정
   stunBase: 0.35,         // 기본 기절 확률 (+ stats.stunBonus)
   stunTime: 8,            // 기절 유지 시간
@@ -563,7 +563,7 @@ export const ZOMBIE_REWARD: Record<ZType, { gold: number; xp: number }> = {
   king: { gold: 750, xp: 1000 },
 };
 
-/** 모든 웨이브 준비 시간 30초 + 영구 업그레이드 보너스(state.start.prepBonus) */
+/** 모든 웨이브 준비 시간 60초 + 영구 업그레이드 보너스(state.start.prepBonus) */
 export const prepTime = (_wave: number, bonus = 0) => ENEMY_RULES.prep + bonus;
 
 /**

@@ -1,4 +1,4 @@
-// 이동·시선·대시. 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
+// 이동·시선·구르기(Shift). 입력은 이미 숫자로 바뀐 의도(intent)로 받는다.
 import { PLAYER } from '../../data';
 import { state } from '../../core/state';
 import { clamp, forwardOf, rightOf } from './math';

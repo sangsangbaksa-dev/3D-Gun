@@ -18,7 +18,7 @@ const STEPS: Step[] = [
   { until: 'move', keys: ['W', 'A', 'S', 'D'], title: '이동', why: '좀비에게 둘러싸이지 않게 계속 움직이세요' },
   { until: 'fire', keys: ['좌클릭'], title: '시점 · 사격', why: '화면을 클릭하면 마우스가 고정돼요. 마우스로 보고 좌클릭으로 쏩니다 (우클릭 조준)' },
   { until: 'reload', keys: ['R'], title: '재장전', why: '탄창이 비기 전에 미리 채워 두면 위기에 끊기지 않아요' },
-  { until: 'dash', keys: ['왼쪽 Shift'], title: '대시', why: '포위당하면 이동키와 함께 눌러 순간적으로 빠져나가세요' },
+  { until: 'dash', keys: ['Shift'], title: '구르기', why: '포위당하면 이동 방향으로 Shift 를 눌러 잠깐 무적으로 빠져나가세요' },
   { until: 'build', keys: ['B'], title: '건설 모드', why: '준비 시간에만 지을 수 있어요. 포탑이 기지 핵을 지켜 줍니다' },
   { until: 'place', keys: ['1', '좌클릭'], title: `${BUILDINGS.tower.name} 배치`, why: '1 로 감시탑을 고르고 땅을 클릭하세요. 알아서 좀비를 쏩니다' },
   { until: 'wave', keys: ['N'], title: '웨이브 시작', why: '준비가 끝났으면 타이머를 기다리지 말고 바로 부르세요' },

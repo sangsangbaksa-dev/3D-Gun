@@ -38,8 +38,16 @@ const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
 const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
-/** 항상 1인칭. (3인칭 토글 제거) */
-const cameraView: CameraView = 'first';
+const CAMERA_KEY = '3dgun.camera.v1';
+function loadCameraView(): CameraView {
+  try { return localStorage.getItem(CAMERA_KEY) === 'third' ? 'third' : 'first'; } catch { return 'first'; }
+}
+let cameraView: CameraView = loadCameraView();
+function toggleCameraView() {
+  cameraView = cameraView === 'first' ? 'third' : 'first';
+  try { localStorage.setItem(CAMERA_KEY, cameraView); } catch { /* 저장소 불가 */ }
+  events.emit('toast', { text: cameraView === 'third' ? '3인칭 시점' : '1인칭 시점' });
+}
 let shake = 0;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -75,7 +83,7 @@ export const PlayerSystem: System = {
       strafe: playing ? (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0) : 0,
       lookDx: state.mode === 'play' ? input.dx : 0,
       lookDy: state.mode === 'play' ? input.dy : 0,
-      dash: playing && input.pressed.has('ShiftLeft'),
+      dash: playing && (input.pressed.has('ShiftLeft') || input.pressed.has('ShiftRight')),
       aim: playing && input.mouseRightDown,
       fire: playing && input.mouseDown,
       firePressed: playing && input.mouseDown && !prevFire,
@@ -83,6 +91,7 @@ export const PlayerSystem: System = {
       slot: null,
     };
     prevFire = input.mouseDown;
+    if (playing && input.pressed.has('KeyT') && !panel?.open) toggleCameraView();
     if (panel && input.pressed.has('KeyV') && (state.mode === 'play' || panel.open)) togglePanel();
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
     const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: cameraView });
