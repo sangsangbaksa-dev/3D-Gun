@@ -44,6 +44,7 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   new Atmosphere(scene, sun, hemi);
   for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
   registerBoundaryObstacles(obstacles);
+  registerMountainObstacles(obstacles);
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -71,23 +72,41 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
   p.z = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.z));
 }
 
-/** 맵 가장자리 장벽 충돌(원형 근사). createWorld 에서 obstacles 에 등록한다 */
+/** 맵 가장자리 장벽 충돌(원형 근사). worldview 가시 벽(H-1.1)과 맞춘다 */
 export function registerBoundaryObstacles(out: Obstacle[]) {
   const H = MAP.half;
-  const step = 14;
-  const wallR = 2.4;
+  const edge = H - 1.1;
+  const step = 10;
+  const wallR = 3.6;
   for (let x = -H; x <= H; x += step) {
-    out.push({ x, z: H - BOUNDARY_INSET * 0.5, r: wallR });
-    out.push({ x, z: -H + BOUNDARY_INSET * 0.5, r: wallR });
+    out.push({ x, z: edge, r: wallR });
+    out.push({ x, z: -edge, r: wallR });
   }
   for (let z = -H; z <= H; z += step) {
-    out.push({ x: H - BOUNDARY_INSET * 0.5, z, r: wallR });
-    out.push({ x: -H + BOUNDARY_INSET * 0.5, z, r: wallR });
+    out.push({ x: edge, z, r: wallR });
+    out.push({ x: -edge, z, r: wallR });
   }
-  // 모서리를 더 촘촘히 막는다
-  const c = H - BOUNDARY_INSET * 0.5;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    out.push({ x: sx * c, z: sz * c, r: wallR * 1.35 });
+    out.push({ x: sx * edge, z: sz * edge, r: wallR * 1.4 });
+  }
+}
+
+/** 배경 산맥(능선) 메시와 동일한 위치에 충돌 원을 둔다 */
+export function registerMountainObstacles(out: Obstacle[]) {
+  const H = MAP.half;
+  let s = 5;
+  const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 96; i++) {
+    const a = (i / 96) * Math.PI * 2 + (rnd() - 0.5) * 0.03;
+    const d = H * 1.08 + rnd() * 18;
+    const rad = 26 + rnd() * 18;
+    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.52 });
+  }
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2 + (rnd() - 0.5) * 0.04;
+    const d = H * 1.24 + rnd() * 28;
+    const rad = 38 + rnd() * 26;
+    out.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r: rad * 0.4 });
   }
 }
 

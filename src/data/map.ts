@@ -72,6 +72,14 @@ function distSeg(px: number, pz: number, a: Pt, b: Pt) {
 }
 const nearLane = (x: number, z: number, m: number) => lanes.some((l) => l.waypoints.some((_, i) => i > 0 && distSeg(x, z, l.waypoints[i - 1], l.waypoints[i]) < m));
 
+function overlapsBuilding(x: number, z: number, r: number, buildings: MapProp[], pad = 2.5) {
+  for (const b of buildings) {
+    if (b.kind !== 'building') continue;
+    if (Math.hypot(x - b.x, z - b.z) < b.r + r + pad) return true;
+  }
+  return false;
+}
+
 /** 폐허 도시: 구역 안에 격자 도로를 두고 블록마다 건물을 세운다. 중심부는 고층, 외곽은 중저층으로 스카이라인 위계를 만든다 */
 function genProps(): MapProp[] {
   const rnd = mulberry(20250101);
@@ -101,6 +109,7 @@ function genProps(): MapProp[] {
     // 보스 둥지 및 진입로 주변은 시야가 탁 트이게 비운다
     if (Math.hypot(x, z + 180) < 30 || (Math.abs(x) < 22 && z < -145)) return false;
     if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && q.kind !== 'wasteland' && Math.hypot(x - q.x, z - q.z) < q.r * 0.86)) return false;
+    if (overlapsBuilding(x, z, 2.2, out)) return false;
     if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + (p.kind === 'building' ? 5.2 : minClusterGap))) return false;
     return true;
   };
@@ -128,7 +137,8 @@ function genProps(): MapProp[] {
       }
     }
   }
-  return out;
+  const buildings = out.filter((p) => p.kind === 'building');
+  return out.filter((p) => p.kind === 'building' || !overlapsBuilding(p.x, p.z, p.r, buildings, 1.8));
 }
 
 export const MAP: MapDef = {

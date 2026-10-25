@@ -416,15 +416,6 @@ const PROPS: { kind: Kind; x: number; z: number; yaw: number; r: number }[] = [
   { kind: 'obelisk', x: 18, z: -172, yaw: 0.4, r: 1.1 },
   { kind: 'bossaltar', x: -14, z: -185, yaw: 0.3, r: 1.3 },
   { kind: 'bossaltar', x: 14, z: -185, yaw: -0.3, r: 1.3 },
-  // 외곽 스폰 포털(E, S, W, NE, SW) 관문 기둥 (포털 중심에서 7.5m 비켜서 스폰 동선을 방해하지 않음)
-  { kind: 'portalarch', x: 188, z: 4, yaw: 1.6, r: 1.1 },
-  { kind: 'portalarch', x: 188, z: 20, yaw: -1.6, r: 1.1 },
-  { kind: 'portalarch', x: 22, z: 188, yaw: 0.2, r: 1.1 },
-  { kind: 'portalarch', x: 38, z: 188, yaw: 2.9, r: 1.1 },
-  { kind: 'portalarch', x: -188, z: -18, yaw: 0.1, r: 1.1 },
-  { kind: 'portalarch', x: -188, z: -2, yaw: 3.0, r: 1.1 },
-  { kind: 'portalarch', x: 152, z: -164, yaw: 0.8, r: 1.1 },
-  { kind: 'portalarch', x: -152, z: 164, yaw: -2.3, r: 1.1 },
   // 길목 관문
   { kind: 'bus', x: -104, z: 88, yaw: 0.9, r: 1.6 },
   { kind: 'arch', x: 58, z: -96, yaw: 0.15, r: 1.7 },
@@ -441,7 +432,7 @@ function scatterRocks(scene: THREE.Scene) {
     if (Math.hypot(x, z) < 25) continue;
     if (laneDist(x, z) < 7.5) continue;
     if (PROPS.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 4.5)) continue;
-    if (MAP.props.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 4.5)) continue;
+    if (MAP.props.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + (p.kind === 'building' ? 3.5 : 4.5))) continue;
     const g = new THREE.Group();
     const s = 0.55 + rnd() * 0.9;
     const cMain = tones[Math.floor(rnd() * tones.length)];
@@ -458,9 +449,14 @@ function scatterRocks(scene: THREE.Scene) {
   }
 }
 
+function landmarkClear(x: number, z: number, r: number) {
+  return !MAP.props.some((b) => b.kind === 'building' && Math.hypot(x - b.x, z - b.z) < b.r + r + 2.5);
+}
+
 export function addScenery(scene: THREE.Scene, obstacles: Obstacle[]) {
   addTerrain(scene);
   for (const p of PROPS) {
+    if (!landmarkClear(p.x, p.z, p.r)) continue;
     const g = new THREE.Group();
     buildProp(p.kind, g);
     g.position.set(p.x, terrainY(p.x, p.z), p.z);

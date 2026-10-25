@@ -14,7 +14,6 @@ import { Effects } from './view/effects';
 import { CombatHud, UpgradePanel } from './view/hud';
 import { GunSfx } from './view/sfx';
 import { events } from '../core/events';
-import type { CameraView } from './logic/camera';
 import { PlayerView } from './view/playerView';
 import type { System } from '../core/types';
 import type { Player } from './logic/player';
@@ -38,16 +37,6 @@ const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
 const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
-const CAMERA_KEY = '3dgun.camera.v1';
-function loadCameraView(): CameraView {
-  try { return localStorage.getItem(CAMERA_KEY) === 'third' ? 'third' : 'first'; } catch { return 'first'; }
-}
-let cameraView: CameraView = loadCameraView();
-function toggleCameraView() {
-  cameraView = cameraView === 'first' ? 'third' : 'first';
-  try { localStorage.setItem(CAMERA_KEY, cameraView); } catch { /* 저장소 불가 */ }
-  events.emit('toast', { text: cameraView === 'third' ? '3인칭 시점' : '1인칭 시점' });
-}
 let shake = 0;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -92,10 +81,9 @@ export const PlayerSystem: System = {
       slot: null,
     };
     prevFire = input.mouseDown;
-    if (playing && input.pressed.has('KeyT') && !panel?.open) toggleCameraView();
     if (panel && input.pressed.has('KeyV') && (state.mode === 'play' || panel.open)) togglePanel();
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
-    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: cameraView });
+    const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: 'first' });
 
     // 카메라
     const cam = ctx.camera;
@@ -110,7 +98,7 @@ export const PlayerSystem: System = {
     ctx.world.sun.position.set(p.x + 30, 50, p.z + 20);
     ctx.world.sun.target.position.set(p.x, 0, p.z);
 
-    view.update(dt, p, w, cameraView);
+    view.update(dt, p, w, 'first');
     if (!playerOptions.combat) return;
 
     const hudOn = state.mode === 'play' && state.phase !== 'ended';
