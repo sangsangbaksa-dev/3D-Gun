@@ -11,7 +11,8 @@ export type Gains = Partial<Record<WalletKey, number>>;
 export interface Bonuses {
   startGold: number; startRes: Record<ResKey, number>; startSamples: number; startSkillPoints: number;
   coreHp: number; maxHp: number; dmgMul: number; gatherSpeed: number; allyCap: number; turretDmgMul: number;
-  weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number;
+  weaponLv: Record<string, number>; weapons: string[]; prepBonus: number; startWave: number; /** 출격 웨이브 구매 비용 할인 (0~0.8) */
+  waveSkipDiscount: number;
   clickGold: number; exchangeSellBonus: number; incomeMul: number; keepRatio: number; xpMul: number; skillLv: Record<string, number>;
 }
 
@@ -92,10 +93,9 @@ export function bonuses(m: Meta): Bonuses {
   const b: Bonuses = {
     startGold: 0, startRes: { wood: BASE_START.wood, stone: BASE_START.stone, iron: 0, herb: BASE_START.herb, parts: BASE_START.parts },
     startSamples: 2, startSkillPoints: 0, coreHp: 0, maxHp: 0, dmgMul: 0, gatherSpeed: 0, allyCap: 0, turretDmgMul: 0,
-    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE, xpMul: 1,
+    weaponLv: {}, weapons: ['pistol'], prepBonus: 0, startWave: 1, waveSkipDiscount: 0, clickGold: IDLE.baseClickGold, exchangeSellBonus: 0, incomeMul: 1, keepRatio: KEEP_BASE, xpMul: 1,
     skillLv: { ...m.skills },
   };
-  let waveLv = 0;
   for (const u of UPGRADES) {
     const lv = upgradeLv(m, u.id);
     if (lv <= 0) continue;
@@ -114,47 +114,52 @@ export function bonuses(m: Meta): Bonuses {
       case 'weaponLv': b.weaponLv[e.weapon] = (b.weaponLv[e.weapon] ?? 0) + e.per * lv; break;
       case 'weapon': if (!b.weapons.includes(e.id)) b.weapons.push(e.id); break;
       case 'prepBonus': b.prepBonus += e.per * lv; break;
-      case 'startWave': waveLv += e.per * lv; break;
+      case 'startWave': b.waveSkipDiscount = Math.min(0.8, b.waveSkipDiscount + e.per * 0.08 * lv); break;
       case 'clickGold': b.exchangeSellBonus += e.per * lv; break;
       case 'incomeMul': b.incomeMul += e.per * lv; break;
       case 'xpMul': b.xpMul += e.per * lv; break;
       case 'keepRatio': b.keepRatio = Math.min(1, b.keepRatio + e.per * lv); break;
     }
   }
-  b.startWave = 1 + Math.min(waveLv, FINAL_WAVE - 1);
   return b;
 }
 
-/** 이번 출격에서 고를 수 있는 최대 시작 웨이브 */
+/** 이번 출격에서 고를 수 있는 최대 시작 웨이브 (도달 기록) */
 export function maxSelectableStartWave(m: Meta): number {
-  const b = bonuses(m);
-  return Math.min(FINAL_WAVE, Math.max(1, m.bestWave, b.startWave));
+  return Math.min(FINAL_WAVE, Math.max(1, m.bestWave));
 }
 
-/** 출격 직전: 영구 시작 웨이브보다 높은 웨이브로 건너뛰기 비용을 지불한다 */
-export function buyStartWaveSkip(m: Meta, freeThrough: number, targetWave: number): BuyResult {
-  const free = Math.max(1, Math.floor(freeThrough));
-  const target = Math.max(free, Math.floor(targetWave));
-  if (target <= free) return 'ok';
+/** 출격 직전: 1웨이브가 기본. `targetWave`까지 웨이브마다 재화를 지불한다 */
+export function buyStartWaveSkip(m: Meta, targetWave: number): BuyResult {
+  const target = Math.max(1, Math.floor(targetWave));
+  if (target <= 1) return 'ok';
   if (target > maxSelectableStartWave(m)) return 'locked';
-  const c = startWaveSkipCost(free, target);
+  const c = startWaveSkipCost(m, 1, target);
   if (!canAfford(m, c)) return 'poor';
   pay(m, c);
   return 'ok';
 }
 
-/** 영구 보너스(`freeThrough`) 다음부터 `targetWave`까지 건너뛰는 비용 (지갑 재화) */
-export function startWaveSkipCost(freeThrough: number, targetWave: number): Cost {
+/** `from+1` … `to` 웨이브마다 1단계 비용을 합산 (기본 출발은 항상 1웨이브) */
+export function startWaveSkipCost(m: Meta, fromWave: number, targetWave: number): Cost {
+  const disc = bonuses(m).waveSkipDiscount;
+  const mul = Math.max(0.2, 1 - disc);
   const out: Cost = {};
-  const from = Math.max(1, Math.floor(freeThrough));
+  const from = Math.max(1, Math.floor(fromWave));
   const to = Math.max(from, Math.floor(targetWave));
   for (let w = from + 1; w <= to; w++) {
-    out.gold = (out.gold ?? 0) + Math.floor(60 + w * 45 * Math.pow(1.12, w - 2));
-    if (w >= 3) out.iron = (out.iron ?? 0) + Math.floor(1 + w / 4);
-    if (w >= 5) out.parts = (out.parts ?? 0) + Math.floor(1 + w / 6);
+    out.gold = (out.gold ?? 0) + Math.floor((60 + w * 45 * Math.pow(1.12, w - 2)) * mul);
+    if (w >= 3) out.iron = (out.iron ?? 0) + Math.max(1, Math.floor((1 + w / 4) * mul));
+    if (w >= 5) out.parts = (out.parts ?? 0) + Math.max(1, Math.floor((1 + w / 6) * mul));
     if (w >= 8 && w % 4 === 0) out.samples = (out.samples ?? 0) + 1;
   }
   return out;
+}
+
+/** 현재 선택 웨이브에서 +1 할 때 추가 비용 */
+export function startWaveStepCost(m: Meta, currentWave: number): Cost {
+  const w = Math.max(1, Math.floor(currentWave));
+  return startWaveSkipCost(m, w, w + 1);
 }
 
 export function costAffordText(m: Meta, c: Cost): string {

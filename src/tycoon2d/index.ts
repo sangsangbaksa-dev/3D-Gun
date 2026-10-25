@@ -90,9 +90,8 @@ function handleOver(snap: RunSnapshot, reason: 'player' | 'core' = 'player') {
 
 function launch() {
   applyToState();
-  const b = bonuses(meta);
   const startWave = panel.getLaunchStartWave();
-  const skip = buyStartWaveSkip(meta, b.startWave, startWave);
+  const skip = buyStartWaveSkip(meta, startWave);
   if (skip === 'poor') { panel.toast('건너뛰기 재화가 부족합니다'); return; }
   if (skip === 'locked') { panel.toast('아직 도달하지 않은 웨이브입니다'); return; }
   state.start.startWave = startWave;
