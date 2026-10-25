@@ -471,6 +471,8 @@ export const ENEMY_RULES = {
   reach: 0.9,             // 근접 공격 여유 거리
   windup: 0.45,           // 공격 준비 동작
   waveClearGold: 10,      // 웨이브 클리어 골드 = 이 값 + 웨이브 × 2
+  waveClearCorePct: 0.3,  // 웨이브 클리어 시 핵 체력 회복(최대 대비)
+  waveClearStructPct: 0.5, // 웨이브 클리어 시 건물·바리케이드 체력 회복(최대 대비)
   gasRadius: 3.2, gasTime: 4, gasDps: 7, // 뚱보 사망 독가스
   roamAggro: 14, roamPerDanger: 1.25, roamRespawn: 45, // 구역 배회 좀비: 위험도×이 값 ≈ 구역 최대 마리 (웨이브 스폰과 별개)
   laneSpread: 3,          // 레인 경유점 좌우 흩어짐(m)

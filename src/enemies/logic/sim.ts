@@ -36,6 +36,8 @@ export class EnemySim implements DamageSink {
   private coreFallback: TargetRefLike;
   private roamTimer = 0;
   private core: StructureRef | undefined;
+  private coinToastSum = 0;
+  private coinToastT = 0;
 
   constructor(readonly deps: SimDeps) {
     const p = deps.player;
@@ -178,7 +180,12 @@ export class EnemySim implements DamageSink {
     const coins = Math.round(rw.gold * mul * state.stats.goldMul);
     state.gold += coins;
     events.emit('xp:gain', { amount: rw.xp * mul, reason: 'kill' });
-    events.emit('toast', { text: `코인 +${coins}` });
+    if (z.elite || z.isBoss || coins >= 25) {
+      events.emit('toast', { text: `코인 +${coins}` });
+    } else {
+      this.coinToastSum += coins;
+      this.coinToastT = 0.55;
+    }
     changed();
     if (z.type === 'fatty') {
       this.gases.push({ x: z.x, z: z.z, r: ENEMY_RULES.gasRadius, t: ENEMY_RULES.gasTime, tick: 0, dps: ENEMY_RULES.gasDps, kind: 'gas' });
@@ -197,6 +204,13 @@ export class EnemySim implements DamageSink {
 
   // ── 매 프레임 ────────────────────────────────────────
   update(dt: number) {
+    if (this.coinToastSum > 0) {
+      this.coinToastT -= dt;
+      if (this.coinToastT <= 0) {
+        events.emit('toast', { text: `코인 +${this.coinToastSum}` });
+        this.coinToastSum = 0;
+      }
+    }
     this.core = structures.find((s) => s.kind === 'core' && !s.dead);
     const list = this.list.slice();
     for (const z of list) {
