@@ -4,7 +4,7 @@ export interface GameEvents {
   'wave:clear': { wave: number };
   'player:dead': undefined;
   'enemy:killed': { x: number; z: number; type: string; byAlly: boolean };
-  'toast': { text: string };
+  'toast': { text: string; kind?: 'cheat' };
 
   // ↓ 조율 문서(docs/COORDINATION.md)에서 정한 계약. 새 이벤트는 자기 모듈 블록 끝에 추가만 한다.
   // core
