@@ -78,7 +78,40 @@ export const TONE_OF: Record<string, string> = {
   weapon: 'orange', base: 'teal', turret: 'red', ally: 'green', econ: 'gold', skills: 'violet', producers: 'orange',
 };
 
+/** 사용자 제공 카툰 팩 (public/hub/cartoon-sprites.png, 10×6 그리드) */
+const SPRITE_URL = `${import.meta.env.BASE_URL}hub/cartoon-sprites.png`;
+const SPRITE_W = 1145;
+const SPRITE_H = 752;
+const SPRITE_COLS = 10;
+const SPRITE_ROWS = 6;
+
+/** 지갑·웨이브 UI 에만 쓰는 스프라이트 (col, row) */
+const SPRITE_OF: Record<string, [number, number]> = {
+  gold: [0, 0],
+  samples: [1, 0],
+  samplesSp: [3, 0],
+  iron: [2, 0],
+  wood: [4, 0],
+  herb: [5, 0],
+  stone: [3, 5],
+  parts: [6, 1],
+  skillPoints: [0, 5],
+  waveUp: [5, 5],
+};
+
+export function spriteIcon(id: string, cls = 'spr sm'): string | null {
+  const cell = SPRITE_OF[id];
+  if (!cell) return null;
+  const cw = SPRITE_W / SPRITE_COLS;
+  const ch = SPRITE_H / SPRITE_ROWS;
+  const x = -cell[0] * cw;
+  const y = -cell[1] * ch;
+  return `<span class="${cls}" role="img" aria-hidden="true" style="background-image:url('${SPRITE_URL}');background-position:${x}px ${y}px"></span>`;
+}
+
 /** id 로 아이콘을 찾고, 없으면 이모지를 그대로 보여 준다 */
 export function iconOr(id: string, emoji: string, cls?: string): string {
+  const spr = spriteIcon(id, cls?.includes('sm') ? 'spr sm' : cls?.includes('big') ? 'spr lg' : 'spr');
+  if (spr) return spr;
   return icon(ICON_OF[id], cls) ?? `<span class="emo">${emoji}</span>`;
 }

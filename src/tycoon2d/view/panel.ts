@@ -9,7 +9,7 @@ import {
   incomePerSec, maxSelectableStartWave, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, startWaveSkipCost, startWaveStepCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
 } from '../logic/economy';
 import { CSS } from './style';
-import { icon, iconOr, ICON_OF, TONE_OF } from './icons';
+import { icon, iconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -277,7 +277,7 @@ export class TycoonPanel {
   }
 
   private buildSide() {
-    this.side.innerHTML = `<div class="wave-skip"><h3>${icon('flag', 'si sm')}시작 웨이브</h3>
+    this.side.innerHTML = `<div class="wave-skip"><h3>${spriteIcon('waveUp', 'spr sm') ?? icon('flag', 'si sm')}시작 웨이브</h3>
       <p class="ex-sub">기본은 1웨이브 출격. 웨이브를 1 올릴 때마다 지갑 재화가 듭니다 (도달한 최고 웨이브까지).</p>
       <div class="ws-row"><button type="button" class="ws-btn" data-ws="-5">−5</button><button type="button" class="ws-btn" data-ws="-1">−</button>
         <div class="ws-val" data-ws-val>1</div><button type="button" class="ws-btn" data-ws="1">+</button><button type="button" class="ws-btn" data-ws="5">+5</button></div>
