@@ -1,6 +1,8 @@
 import { injectTheme } from './ui/theme';
+import { loadSettings } from './title/settings';
 import { startGame } from './core/game';
 
+loadSettings();
 injectTheme();
 import { PlayerSystem, playerOptions } from './player/player';
 import { GatheringSystem } from './gathering';

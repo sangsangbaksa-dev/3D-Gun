@@ -4,9 +4,10 @@ import { state } from './state';
 import { events } from './events';
 import { zombies } from './entities';
 import {
-  RES_KEYS, RES_LABEL, FINAL_WAVE,
+  RES_KEYS, FINAL_WAVE,
   isBossWave, isBossType, bossTypeFor, ZOMBIE_TUNING, type ZType,
 } from '../data';
+import { onLocaleChange, resLabel, t, zombieName } from '../i18n';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
 
@@ -32,9 +33,12 @@ function applyHpBar(hp: number, maxHp: number) {
 }
 
 function waveBannerText(w: number) {
-  if (w === FINAL_WAVE) return '최종 보스 — 좀비 왕';
-  if (isBossWave(w)) return `웨이브 ${w} — ${ZOMBIE_TUNING[bossTypeFor(w)].name}`;
-  return `웨이브 ${w}`;
+  if (w === FINAL_WAVE) return t('hud.finalBoss');
+  if (isBossWave(w)) {
+    const type = bossTypeFor(w);
+    return t('hud.waveBanner', { n: w, name: zombieName(type, ZOMBIE_TUNING[type].name) });
+  }
+  return t('hud.wave', { n: w });
 }
 
 function showBanner(text: string, ms = 2100) {
@@ -69,7 +73,7 @@ function refreshBossBar() {
   const tune = ZOMBIE_TUNING[boss.type as keyof typeof ZOMBIE_TUNING];
   const pct = boss.maxHp > 0 ? (boss.hp / boss.maxHp) * 100 : 0;
   bossEl.style.display = 'block';
-  bossName.textContent = tune?.name ? `보스 · ${tune.name}` : '보스';
+  bossName.textContent = tune?.name ? t('hud.bossNamed', { name: zombieName(boss.type as string, tune.name) }) : t('hud.boss');
   bossFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   bossEl.classList.toggle('rage', pct > 0 && pct < 50);
 }
@@ -95,12 +99,24 @@ function prepSubText() {
   const w = state.wave;
   let hint = '';
   if (isBossWave(w)) {
-    const name = w === FINAL_WAVE ? '좀비 왕' : ZOMBIE_TUNING[bossTypeFor(w)].name;
-    hint = ` · ⚠ 보스 ${name}`;
+    const type = w === FINAL_WAVE ? 'king' : bossTypeFor(w);
+    const name = zombieName(type, ZOMBIE_TUNING[type as ZType].name);
+    hint = t('hud.prepBoss', { name });
   } else if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) {
-    hint = ' · 다음 웨이브는 보스';
+    hint = t('hud.prepNextBoss');
   }
-  return `준비 ${sec}초${hint} · N 으로 바로 시작`;
+  return t('hud.prep', { sec }) + hint + t('hud.prepStart');
+}
+
+function refreshStaticHud() {
+  const help = document.getElementById('help');
+  if (help) help.innerHTML = t('hud.help');
+  const pause = document.getElementById('pauseBanner');
+  if (pause) pause.textContent = t('hud.pause');
+  const lock = document.getElementById('lockHint');
+  if (lock) lock.textContent = t('hud.lockHint');
+  const coreLbl = document.querySelector('#coreBar .lbl');
+  if (coreLbl && coreLbl.childNodes[0]) coreLbl.childNodes[0].textContent = `${t('hud.coreLabel')} `;
 }
 
 export const HudSystem: System = {
@@ -139,6 +155,8 @@ export const HudSystem: System = {
     events.on('run:start', () => { hideBossBar(); document.body.classList.remove('ztCoreLow'); });
     events.on('core:damaged', () => { refreshCoreWarn(); refreshCoreBar(); });
     events.on('run:start', () => refreshCoreBar());
+    refreshStaticHud();
+    onLocaleChange(() => { refreshStaticHud(); lastWaveText = ''; });
   },
   update(dt) {
     updateKeyBar();
@@ -147,18 +165,18 @@ export const HudSystem: System = {
     if (acc < 0.2) return;
     acc = 0;
     if (wave) {
-      const t = state.phase === 'ended' ? (state.wave >= FINAL_WAVE ? '클리어!' : '런 종료') : `웨이브 ${state.wave}`;
-      if (t !== lastWaveText) {
-        wave.textContent = t;
+      const wt = state.phase === 'ended' ? (state.wave >= FINAL_WAVE ? t('hud.cleared') : t('hud.ended')) : t('hud.wave', { n: state.wave });
+      if (wt !== lastWaveText) {
+        wave.textContent = wt;
         // 웨이브가 바뀌면 주황으로 한 번 튀었다가 흰색으로 돌아온다
         if (lastWaveText) { wave.classList.remove('pop'); void wave.offsetWidth; wave.classList.add('pop'); }
-        lastWaveText = t;
+        lastWaveText = wt;
       }
     }
     if (sub) {
       sub.textContent = state.phase === 'prep'
         ? prepSubText()
-        : `남은 좀비 ${state.waveRemaining} · 핵 ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
+        : `${t('hud.zombiesLeft', { n: state.waveRemaining })} · ${t('hud.core')} ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
       sub.classList.toggle('urgent', state.phase === 'prep' && state.prepLeft > 0 && state.prepLeft <= 5);
     }
     refreshBossBar();
@@ -169,10 +187,10 @@ export const HudSystem: System = {
     if (res) {
       const vac = state.vaccines.reduce((s, n) => s + n, 0);
       res.textContent = [
-        RES_KEYS.map((k) => `${RES_LABEL[k]} ${state.res[k]}`).join(' '),
-        `샘플 ${state.samples}`,
-        vac ? `백신 ${vac}` : '',
-        `코인 ${state.gold}`,
+        RES_KEYS.map((k) => `${resLabel(k)} ${state.res[k]}`).join(' '),
+        `${t('hud.samples')} ${state.samples}`,
+        vac ? `${t('hud.vaccines')} ${vac}` : '',
+        `${t('hud.coins')} ${state.gold}`,
       ].filter(Boolean).join(' · ');
     }
   },

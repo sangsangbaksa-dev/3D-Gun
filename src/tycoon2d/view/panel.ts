@@ -2,8 +2,11 @@
 import { meta } from '../../core/meta';
 import { FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
 import {
-  UPGRADES, PRODUCERS, CAT_ORDER, CAT_LABEL, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
+  UPGRADES, PRODUCERS, CAT_ORDER, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
 } from '../../data/tycoon2d';
+import {
+  catLabel, onLocaleChange, prodDesc, prodName, resLabel, skillBranch, skillDesc, skillName, t, upgDesc, upgName, walletLabel,
+} from '../../i18n';
 import {
   bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, costAffordText, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
   incomePerSec, maxSelectableStartWave, metaBuy, metaSell, metaSellUnit, refundSkills, skillCost, startWaveSkipCost, startWaveStepCost, tick, upgradeCost, upgradeLocked, upgradeLv, type BuyResult, type RunReport,
@@ -20,7 +23,9 @@ const fmt = (n: number) => {
   return String(Math.floor(n + 1e-9));
 };
 const rate = (n: number) => (n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n.toFixed(2));
-const MSG: Record<BuyResult, string> = { ok: '구매 완료!', max: '이미 최대 레벨입니다', poor: '재화가 부족합니다', locked: '아직 잠겨 있습니다', unknown: '' };
+const buyMsg = (r: BuyResult) => ({
+  ok: t('hub.buy.ok'), max: t('hub.buy.max'), poor: t('hub.buy.poor'), locked: t('hub.buy.locked'), unknown: '',
+}[r]);
 
 // 탭별 배경 그림 (public/hub/, 캔바 생성). 없는 탭은 기본 bg.webp.
 const TAB_BG: Record<string, string> = { 'cat:weapon': 'shop', 'cat:econ': 'shop', 'cat:base': 'base', 'cat:turret': 'turret', skills: 'lab', producers: 'outpost' };
@@ -49,10 +54,10 @@ export class TycoonPanel {
     this.root.id = 't2d';
     this.root.innerHTML = `
       <div class="bgimg"></div><div class="bgfx"></div><div class="embers"></div>
-      <header><div class="emblem">${icon('target', 'si big')}</div><h1><span class="kick">SURVIVOR COMMAND</span>생존자 작전 본부<small>쓰러진 뒤에도 남는 것: 영구 업그레이드와 생산 시설 수익</small></h1><div class="report"></div></header>
+      <header><div class="emblem">${icon('target', 'si big')}</div><h1><span class="kick" data-i18n-kicker></span><span data-i18n-hub-title></span><small data-i18n-hub-sub></small></h1><div class="report"></div></header>
       <div class="wallet"></div>
       <main><nav></nav><div class="content"></div><aside></aside></main>
-      <footer><div class="fl"><button class="ghost" data-act="refund">${icon('star', 'si sm')}스킬 초기화(포인트 환급)</button><button class="ghost" data-act="reset">${icon('reset', 'si sm')}진행 초기화</button></div><button class="launch" data-act="launch"><span class="chev">›››</span>${icon('sword', 'si')}<span>출격</span><span class="chev r">‹‹‹</span></button></footer>`;
+      <footer><div class="fl"><button class="ghost" data-act="refund"></button><button class="ghost" data-act="reset"></button></div><button class="launch" data-act="launch"><span class="chev">›››</span>${icon('sword', 'si')}<span data-i18n-launch></span><span class="chev r">‹‹‹</span></button></footer>`;
     const em = this.root.querySelector('.embers') as HTMLElement;
     for (let i = 0; i < 18; i++) {
       const e = document.createElement('i');
@@ -67,16 +72,16 @@ export class TycoonPanel {
     for (const k of WALLET_KEYS) {
       const box = document.createElement('div');
       box.className = 'coin';
-      box.title = WALLET_LABEL[k];
+      box.title = walletLabel(k, WALLET_LABEL[k]);
       box.dataset.k = k;
-      box.innerHTML = `<span class="ic">${iconOr(k, WALLET_ICON[k])}</span><div><div class="lb">${WALLET_LABEL[k]}</div><div class="v">0</div><div class="r"></div></div>`;
+      box.innerHTML = `<span class="ic">${iconOr(k, WALLET_ICON[k])}</span><div><div class="lb" data-wlbl="${k}">${walletLabel(k, WALLET_LABEL[k])}</div><div class="v">0</div><div class="r"></div></div>`;
       wallet.appendChild(box);
       this.walletEl.set(k, { box, v: box.querySelector('.v') as HTMLElement, r: box.querySelector('.r') as HTMLElement, shown: 0 });
     }
     const nav = this.root.querySelector('nav') as HTMLElement;
     const tabs: Array<[Tab, string, string]> = [
-      ...CAT_ORDER.map((c) => [`cat:${c}`, CAT_ICON[c], CAT_LABEL[c]] as [Tab, string, string]),
-      ['skills', '🌳', '스킬 트리'], ['producers', '🏭', '생산 시설'],
+      ...CAT_ORDER.map((c) => [`cat:${c}`, CAT_ICON[c], catLabel(c)] as [Tab, string, string]),
+      ['skills', '🌳', t('hub.tab.skills')], ['producers', '🏭', t('hub.tab.producers')],
     ];
     for (const [id, emo, label] of tabs) {
       const b = document.createElement('button');
@@ -88,10 +93,36 @@ export class TycoonPanel {
     this.root.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).closest('[data-act]')?.getAttribute('data-act');
       if (act === 'launch') this.host.onLaunch();
-      else if (act === 'refund') { const n = refundSkills(meta); this.toast(n > 0 ? `스킬 포인트 ${n} 환급` : '환급할 스킬이 없습니다'); this.changed(); this.setTab(this.tab); }
-      else if (act === 'reset') { if (confirm('영구 진행을 모두 지우고 처음부터 시작할까요?')) { this.host.onReset(); this.setTab(this.tab); } }
+      else if (act === 'refund') { const n = refundSkills(meta); this.toast(n > 0 ? t('hub.refundOk', { n }) : t('hub.refundNone')); this.changed(); this.setTab(this.tab); }
+      else if (act === 'reset') { if (confirm(t('hub.resetConfirm'))) { this.host.onReset(); this.setTab(this.tab); } }
     });
+    this.localizeChrome();
+    onLocaleChange(() => { this.localizeChrome(); if (this.isOpen) { this.setTab(this.tab); this.refreshSide(); } });
     this.buildSide();
+  }
+
+  private localizeChrome() {
+    const kicker = this.root.querySelector('[data-i18n-kicker]');
+    const title = this.root.querySelector('[data-i18n-hub-title]');
+    const sub = this.root.querySelector('[data-i18n-hub-sub]');
+    if (kicker) kicker.textContent = t('hub.kicker');
+    if (title) title.textContent = t('hub.title');
+    if (sub) sub.textContent = t('hub.sub');
+    const launch = this.root.querySelector('[data-i18n-launch]');
+    if (launch) launch.textContent = t('hub.launch');
+    const refund = this.root.querySelector('[data-act=refund]');
+    if (refund) refund.innerHTML = `${icon('star', 'si sm')}${t('hub.refund')}`;
+    const reset = this.root.querySelector('[data-act=reset]');
+    if (reset) reset.innerHTML = `${icon('reset', 'si sm')}${t('hub.reset')}`;
+    this.root.querySelectorAll('[data-wlbl]').forEach((el) => {
+      const k = (el as HTMLElement).dataset.wlbl as WalletKey;
+      (el as HTMLElement).textContent = walletLabel(k, WALLET_LABEL[k]);
+    });
+    this.navBtns.forEach((b, id) => {
+      const label = id.startsWith('cat:') ? catLabel(id.slice(4)) : id === 'skills' ? t('hub.tab.skills') : t('hub.tab.producers');
+      const nl = b.querySelector('.nl');
+      if (nl) nl.textContent = label;
+    });
   }
 
   open(report: RunReport | null) {
@@ -103,14 +134,14 @@ export class TycoonPanel {
     };
     if (report) {
       let i = 0;
-      chip(`💀 웨이브 ${report.wave}에서 쓰러짐`, '', i++);
-      if (report.newBest) chip('🏆 최고 기록!', 'best', i++);
-      chip(`처치 ${report.kills}`, '', i++);
-      chip(`🪙 +${fmt(report.total.gold ?? 0)} (웨이브 보너스 ${fmt(report.waveBonus)})`, '', i++);
+      chip(t('hub.report.fell', { wave: report.wave }), '', i++);
+      if (report.newBest) chip(t('hub.report.best'), 'best', i++);
+      chip(t('hub.report.kills', { n: report.kills }), '', i++);
+      chip(t('hub.report.gold', { total: fmt(report.total.gold ?? 0), bonus: fmt(report.waveBonus) }), '', i++);
       const extras = (Object.keys(report.total) as WalletKey[]).filter((k) => k !== 'gold' && (report.total[k] ?? 0) > 0);
       if (extras.length) chip(extras.map((k) => `${WALLET_ICON[k]}${fmt(report.total[k] ?? 0)}`).join(' '), '', i++);
-      chip(`회수율 ${Math.round(report.keepRatio * 100)}%`, '', i++);
-    } else chip('업그레이드를 고르고 출격하세요');
+      chip(t('hub.report.recovery', { pct: Math.round(report.keepRatio * 100) }), '', i++);
+    } else chip(t('hub.report.pick'));
     this.resetLaunchWave();
     for (const [k, w] of this.walletEl) w.shown = bal(meta, k);
     this.setTab(this.tab);
@@ -120,29 +151,29 @@ export class TycoonPanel {
 
   private changed() { this.host.onChanged(); this.refreshAll(); }
 
-  private setTab(t: Tab) {
-    this.tab = t;
-    this.root.dataset.bg = TAB_BG[t] ?? '';
-    this.navBtns.forEach((b, id) => b.classList.toggle('on', id === t));
+  private setTab(tab: Tab) {
+    this.tab = tab;
+    this.root.dataset.bg = TAB_BG[tab] ?? '';
+    this.navBtns.forEach((b, id) => b.classList.toggle('on', id === tab));
     this.content.innerHTML = '';
     this.cards = [];
     const grid = document.createElement('div'); grid.className = 'grid';
-    if (t.startsWith('cat:')) {
-      const cat = t.slice(4);
+    if (tab.startsWith('cat:')) {
+      const cat = tab.slice(4);
       UPGRADES.filter((u) => u.cat === cat).forEach((u, i) => grid.appendChild(this.upgradeCard(u.id, i)));
-    } else if (t === 'skills') {
+    } else if (tab === 'skills') {
       const note = document.createElement('div'); note.className = 'sect';
-      note.textContent = '스킬 트리 노드를 영구 습득합니다 (스킬 포인트 소모). 출격하면 해당 레벨로 시작합니다.';
+      note.textContent = t('hub.skills.note');
       this.content.appendChild(note);
       const branches = [...new Set(SKILLS.map((s) => s.branch))];
       branches.forEach((br) => {
-        const h = document.createElement('div'); h.className = 'sect'; h.textContent = br;
+        const h = document.createElement('div'); h.className = 'sect'; h.textContent = skillBranch(br);
         grid.appendChild(h);
         SKILLS.filter((s) => s.branch === br).forEach((s, i) => grid.appendChild(this.skillCard(s.id, i)));
       });
     } else {
       const note = document.createElement('div'); note.className = 'sect';
-      note.textContent = '시설은 게임에 접속해 있는 동안(본부·출격 중)에만 재화를 만듭니다. 게임을 끄거나 탭을 숨기면 멈춥니다.';
+      note.textContent = t('hub.prod.note');
       this.content.appendChild(note);
       PRODUCERS.forEach((p, i) => grid.appendChild(this.producerCard(p.id, i)));
     }
@@ -156,7 +187,7 @@ export class TycoonPanel {
       const s = document.createElement('span');
       s.className = 'cost' + (bal(meta, k) + 1e-9 < (c[k] ?? 0) ? ' bad' : '');
       s.innerHTML = `${iconOr(k, WALLET_ICON[k], 'si xs')}${fmt(c[k] ?? 0)}`;
-      s.title = WALLET_LABEL[k];
+      s.title = walletLabel(k, WALLET_LABEL[k]);
       wrap.appendChild(s);
     }
   }
@@ -178,17 +209,17 @@ export class TycoonPanel {
     };
   }
   private afterBuy(el: HTMLElement, r: BuyResult, ev: MouseEvent) {
-    this.toast(MSG[r]);
+    this.toast(buyMsg(r));
     if (r === 'ok') {
       el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
-      this.floatText('▲ LEVEL UP', ev.clientX, ev.clientY);
+      this.floatText(t('hub.levelUp'), ev.clientX, ev.clientY);
       this.changed();
     }
   }
 
   private upgradeCard(id: string, i: number): HTMLElement {
     const d = UPGRADES.find((u) => u.id === id)!;
-    const c = this.makeCard(i, iconOr(id, d.icon), d.name, d.desc, TONE_OF[d.cat]);
+    const c = this.makeCard(i, iconOr(id, d.icon), upgName(id, d.name), upgDesc(id, d.desc), TONE_OF[d.cat]);
     c.btn.onclick = (e) => this.afterBuy(c.el, buyUpgrade(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -202,7 +233,7 @@ export class TycoonPanel {
         c.costs.style.display = max ? 'none' : '';
         if (!max) this.costChips(cost, c.costs);
         c.eff.textContent = lock ?? '';
-        c.btn.textContent = max ? 'MAX' : lock ? '🔒 잠김' : '강화';
+        c.btn.textContent = max ? t('hub.buy.maxBtn') : lock ? t('hub.buy.lockedBtn') : t('hub.buy.upgrade');
         c.btn.disabled = max || !!lock || !canAfford(meta, cost);
         c.el.classList.toggle('maxed', max); c.el.classList.toggle('lock', !!lock);
         c.el.classList.toggle('can', !max && !lock && canAfford(meta, cost));
@@ -214,7 +245,7 @@ export class TycoonPanel {
   private skillCard(id: string, i: number): HTMLElement {
     const s = SKILLS.find((x) => x.id === id)!;
     const icon = { 생존: '❤️', 채집: '🪓', 연구: '🧪', 사령: '🚩' }[s.branch] ?? '🌳';
-    const c = this.makeCard(i, iconOr(ICON_OF[`sk:${id}`] ? `sk:${id}` : s.branch, icon), s.name, s.desc, TONE_OF.skills);
+    const c = this.makeCard(i, iconOr(ICON_OF[`sk:${id}`] ? `sk:${id}` : s.branch, icon), skillName(id, s.name), skillDesc(id, s.desc), TONE_OF.skills);
     c.btn.onclick = (e) => this.afterBuy(c.el, buySkill(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -226,7 +257,7 @@ export class TycoonPanel {
         this.pips(lv, s.max, c.pips);
         c.costs.style.display = max ? 'none' : '';
         if (!max) this.costChips(cost, c.costs);
-        c.btn.textContent = max ? 'MAX' : '습득';
+        c.btn.textContent = max ? t('hub.buy.maxBtn') : t('hub.buy.learn');
         c.btn.disabled = max || !canAfford(meta, cost);
         c.el.classList.toggle('maxed', max); c.el.classList.toggle('can', !max && canAfford(meta, cost));
       },
@@ -236,7 +267,7 @@ export class TycoonPanel {
 
   private producerCard(id: string, i: number): HTMLElement {
     const p = PRODUCERS.find((x) => x.id === id)!;
-    const c = this.makeCard(i, iconOr(id, p.icon), p.name, p.desc, TONE_OF.producers);
+    const c = this.makeCard(i, iconOr(id, p.icon), prodName(id, p.name), prodDesc(id, p.desc), TONE_OF.producers);
     c.btn.onclick = (e) => this.afterBuy(c.el, buyFacility(meta, id), e);
     this.cards.push({
       el: c.el,
@@ -247,10 +278,12 @@ export class TycoonPanel {
         const cost = facilityCost(meta, p);
         c.lv.textContent = `Lv ${lv} / ${p.max}`;
         this.pips(lv, p.max, c.pips);
-        c.eff.textContent = open ? `${WALLET_ICON[p.produces]} 초당 +${rate(facilityIncome(meta, p))}  →  다음 레벨 +${rate(p.perSec * bonuses(meta).incomeMul)}` : `🔒 ${WALLET_LABEL[p.unlockEarned!.key]} ${p.unlockEarned!.amount} 이상 필요`;
+        c.eff.textContent = open
+          ? t('hub.prod.perSec', { icon: WALLET_ICON[p.produces], rate: rate(facilityIncome(meta, p)), next: rate(p.perSec * bonuses(meta).incomeMul) })
+          : t('hub.prod.unlock', { icon: WALLET_ICON[p.unlockEarned!.key], amount: p.unlockEarned!.amount });
         c.costs.style.display = max ? 'none' : '';
         if (!max) this.costChips(cost, c.costs);
-        c.btn.textContent = max ? 'MAX' : lv === 0 ? '건설' : '확장';
+        c.btn.textContent = max ? t('hub.buy.maxBtn') : lv === 0 ? t('hub.buy.build') : t('hub.buy.expand');
         c.btn.disabled = max || !open || !canAfford(meta, cost);
         c.el.classList.toggle('maxed', max); c.el.classList.toggle('lock', !open);
         c.el.classList.toggle('can', !max && open && canAfford(meta, cost));
@@ -273,16 +306,16 @@ export class TycoonPanel {
 
   private formatCost(c: Cost): string {
     const parts = (Object.keys(c) as WalletKey[]).filter((k) => (c[k] ?? 0) > 0).map((k) => `${WALLET_ICON[k]}${fmt(c[k] ?? 0)}`);
-    return parts.length ? parts.join(' ') : '무료';
+    return parts.length ? parts.join(' ') : t('hub.free');
   }
 
   private buildSide() {
-    this.side.innerHTML = `<div class="wave-skip"><h3>${spriteIcon('waveUp', 'spr sm') ?? icon('flag', 'si sm')}시작 웨이브</h3>
-      <p class="ex-sub">기본은 1웨이브 출격. 웨이브를 1 올릴 때마다 지갑 재화가 듭니다 (도달한 최고 웨이브까지).</p>
+    this.side.innerHTML = `<div class="wave-skip"><h3>${spriteIcon('waveUp', 'spr sm') ?? icon('flag', 'si sm')}${t('hub.waveSkip.title')}</h3>
+      <p class="ex-sub">${t('hub.waveSkip.sub')}</p>
       <div class="ws-row"><button type="button" class="ws-btn" data-ws="-5">−5</button><button type="button" class="ws-btn" data-ws="-1">−</button>
         <div class="ws-val" data-ws-val>1</div><button type="button" class="ws-btn" data-ws="1">+</button><button type="button" class="ws-btn" data-ws="5">+5</button></div>
       <div class="ws-cost" data-ws-cost></div><div class="ws-hint" data-ws-hint></div></div>
-      <div class="exchange"><h3>${icon('exchange', 'si sm')}교환소</h3><p class="ex-sub">지갑 골드 ↔ 자원 (판매가·구매가는 인런 상점과 동일)</p><div data-ex-rows></div></div>
+      <div class="exchange"><h3>${icon('exchange', 'si sm')}${t('hub.exchange.title')}</h3><p class="ex-sub">${t('hub.exchange.sub')}</p><div data-ex-rows></div></div>
       <div class="panelbox" data-preview></div>`;
     this.side.querySelectorAll('[data-ws]').forEach((el) => {
       el.addEventListener('click', () => {
@@ -303,10 +336,10 @@ export class TycoonPanel {
         b.addEventListener('click', (e) => { fn(); this.changed(); this.floatText(label, (e as MouseEvent).clientX, (e as MouseEvent).clientY); });
         btns.appendChild(b);
       };
-      mk('팔기 1', () => { metaSell(meta, k, 1); });
-      mk('팔기 전부', () => { metaSell(meta, k, Math.floor(bal(meta, k))); });
-      mk('사기 1', () => { metaBuy(meta, k, 1); });
-      mk('사기 10', () => { metaBuy(meta, k, 10); });
+      mk(t('hub.exchange.sell1'), () => { metaSell(meta, k, 1); });
+      mk(t('hub.exchange.sellAll'), () => { metaSell(meta, k, Math.floor(bal(meta, k))); });
+      mk(t('hub.exchange.buy1'), () => { metaBuy(meta, k, 1); });
+      mk(t('hub.exchange.buy10'), () => { metaBuy(meta, k, 10); });
       rows.appendChild(row);
     }
   }
@@ -321,37 +354,37 @@ export class TycoonPanel {
     const valEl = this.side.querySelector('[data-ws-val]') as HTMLElement | null;
     const costEl = this.side.querySelector('[data-ws-cost]') as HTMLElement | null;
     const hintEl = this.side.querySelector('[data-ws-hint]') as HTMLElement | null;
-    if (valEl) valEl.textContent = `웨이브 ${this.launchStartWave}`;
+    if (valEl) valEl.textContent = t('hub.waveSkip.wave', { n: this.launchStartWave });
     if (costEl) {
       const afford = canAfford(meta, skipCost);
       costEl.innerHTML = this.launchStartWave <= 1
-        ? `<span class="ok">1웨이브 · 비용 없음</span>`
-        : `<span class="${afford ? 'ok' : 'no'}">출격 비용 ${this.formatCost(skipCost)}</span>`;
+        ? `<span class="ok">${t('hub.waveSkip.free')}</span>`
+        : `<span class="${afford ? 'ok' : 'no'}">${t('hub.waveSkip.cost', { cost: this.formatCost(skipCost) })}</span>`;
     }
     if (hintEl) {
-      const disc = b.waveSkipDiscount > 0 ? ` · 건너뛰기 -${Math.round(b.waveSkipDiscount * 100)}%` : '';
+      const disc = b.waveSkipDiscount > 0 ? ` · -${Math.round(b.waveSkipDiscount * 100)}%` : '';
       hintEl.textContent = max <= 1
-        ? `최고 웨이브 기록이 없으면 1웨이브만 출격할 수 있습니다`
-        : `최대 웨이브 ${max} (도달 기록)${disc}`;
-      if (this.launchStartWave < max) hintEl.textContent += ` · +1 시 ${this.formatCost(stepCost)}`;
-      if (this.launchStartWave > 1 && !canAfford(meta, skipCost)) hintEl.textContent += ` · 부족: ${costAffordText(meta, skipCost)}`;
+        ? t('hub.waveSkip.noRecord')
+        : t('hub.waveSkip.max', { max, disc });
+      if (this.launchStartWave < max) hintEl.textContent += t('hub.waveSkip.step', { cost: this.formatCost(stepCost) });
+      if (this.launchStartWave > 1 && !canAfford(meta, skipCost)) hintEl.textContent += t('hub.waveSkip.short', { text: costAffordText(meta, skipCost) });
     }
     for (const k of RES_KEYS) {
       const el = this.side.querySelector(`[data-res="${k}"] [data-ex-label]`) as HTMLElement | null;
       if (el) {
-        const html = `${iconOr(k, WALLET_ICON[k], 'si sm')}<b>${RES_LABEL[k]}</b><span class="own">${fmt(bal(meta, k))}</span>`
-          + `<span class="px ps">판매 ${metaSellUnit(meta, k)}</span><span class="px pb">구매 ${RES_BUY_PRICE[k]}</span>`;
+        const html = `${iconOr(k, WALLET_ICON[k], 'si sm')}<b>${resLabel(k)}</b><span class="own">${fmt(bal(meta, k))}</span>`
+          + `<span class="px ps">${t('hub.exchange.sellPx', { n: metaSellUnit(meta, k) })}</span><span class="px pb">${t('hub.exchange.buyPx', { n: RES_BUY_PRICE[k] })}</span>`;
         if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
       }
     }
     const row = (a: string, v: string) => `<div><span>${a}</span><b>${v}</b></div>`;
     const wl = Object.entries(b.weaponLv).filter(([, v]) => v > 0).map(([k, v]) => `${k} +${v}`).join(', ') || '-';
-    (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>${icon('flag', 'si sm')}다음 출격 미리보기</h3>`
-      + row('시작 웨이브', String(this.launchStartWave)) + row('시작 골드', fmt(b.startGold)) + row('핵 체력', `+${b.coreHp}`)
-      + row('최대 체력', `+${b.maxHp}`) + row('공격력', `+${Math.round(b.dmgMul * 100)}%`) + row('준비 시간', `30 +${b.prepBonus}초`)
-      + row('아군 상한', `+${b.allyCap}`) + row('시작 무기', b.weapons.join(', ')) + row('총 품질', wl)
-      + row('시작 스킬', String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))
-      + row('기록', `최고 웨이브 ${meta.bestWave} · ${meta.totalRuns}회 출격`);
+    (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>${icon('flag', 'si sm')}${t('hub.preview.title')}</h3>`
+      + row(t('hub.preview.startWave'), String(this.launchStartWave)) + row(t('hub.preview.startGold'), fmt(b.startGold)) + row(t('hub.preview.coreHp'), `+${b.coreHp}`)
+      + row(t('hub.preview.maxHp'), `+${b.maxHp}`) + row(t('hub.preview.dmg'), `+${Math.round(b.dmgMul * 100)}%`) + row(t('hub.preview.prep'), `30 +${b.prepBonus}s`)
+      + row(t('hub.preview.allyCap'), `+${b.allyCap}`) + row(t('hub.preview.weapons'), b.weapons.join(', ')) + row(t('hub.preview.gunQuality'), wl)
+      + row(t('hub.preview.skills'), String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))
+      + row(t('hub.preview.record'), `${meta.bestWave} · ${t('hub.preview.sorties', { n: meta.totalRuns })}`);
   }
 
   private refreshAll() {
@@ -368,7 +401,7 @@ export class TycoonPanel {
       const txt = fmt(w.shown);
       if (w.v.textContent !== txt) { w.v.textContent = txt; }
       const r = inc[k] ?? 0;
-      w.r.textContent = r > 0 ? `+${rate(r)}/초` : '';
+      w.r.textContent = r > 0 ? `+${rate(r)}/s` : '';
     }
   }
 

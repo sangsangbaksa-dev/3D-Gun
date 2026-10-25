@@ -12,6 +12,7 @@ import { buildModel, type Model } from './models';
 import { groundPose, groundY } from './ground';
 import { BasePanels, hoverText } from './panels';
 import type { BuildOverlay } from './overlay';
+import { t as tr } from '../../i18n';
 
 const DIGITS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'];
 
@@ -49,11 +50,11 @@ export class BuildController {
 
   enter() {
     if (state.mode !== 'play') return;
-    if (state.phase !== 'prep') { this.toast('전투 중에는 건설할 수 없어요 (수리·보충은 E)'); return; }
+    if (state.phase !== 'prep') { this.toast(tr('build.noCombat')); return; }
     this.active = true; state.mode = 'build'; this.overlay.setBuilding(true);
     if (!this.buildTipShown) {
       this.buildTipShown = true;
-      this.toast('1·2 포탑 배치 후 5 연구소(선택) · 준비 중 핵에서 L 로 백신 제작');
+      this.toast(tr('build.hint'));
     }
   }
   exit(msg?: string) {
