@@ -172,7 +172,9 @@ export class PlayerController {
             out.shot = shot;
             this.fireBuf = 0;
             const sprayKick = 1 + w.bloom * 0.85;
-            p.kick = Math.min(0.62, p.kick + GUNS[shot.weapon].recoil * 2.4 * (p.aiming ? 0.4 : 1) * sprayKick);
+            const kickCap = GUNS[shot.weapon].kind === 'sniper' ? 0.92 : 0.62;
+            const kickMul = GUNS[shot.weapon].kind === 'sniper' ? 3.4 : 2.4;
+            p.kick = Math.min(kickCap, p.kick + GUNS[shot.weapon].recoil * kickMul * (p.aiming ? 0.45 : 1) * sprayKick);
             events.emit('weapon:fired', { weapon: shot.weapon, ammo: shot.ammoLeft, mag: magSize(w, stats) });
             events.emit('weapon:sound', { weapon: shot.weapon, kind: 'fire' });
             const hitKind = shot.pellets.some((pl) => pl.kill) ? 'kill' : shot.pellets.some((pl) => pl.headshot) ? 'headshot' : shot.pellets.some((pl) => pl.kind === 'zombie') ? 'hit' : null;

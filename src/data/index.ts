@@ -103,6 +103,8 @@ export interface WeaponDef {
   falloff: number;
   /** 트레이서 색 (0xRRGGBB) */
   tracer: number;
+  /** PLAYER.bulletDrop 배율 (1=기본). 0.05 ≈ 낙차 1/20 */
+  dropMul?: number;
 }
 export const WEAPON_ORDER: WeaponId[] = ['pistol', 'shotgun', 'smg'];
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -141,7 +143,7 @@ export const GUNS: Record<GunId, GunDef> = {
     kind: 'revolver', auto: false, pierce: 2, adsFov: 54, scope: false, sway: 0.8, snd: { pitch: 120, len: 0.26, noise: 0.65, thump: 0.9 }, desc: '한 방이 묵직하고 관통한다' },
   rifle: { name: '돌격소총', dmg: 12, rate: 0.105, mag: 30, reload: 2.3, pellets: 1, spread: 0.014, range: 110, recoil: 0.024, bloom: 0.1, falloff: 0.25, tracer: 0xffe29a,
     kind: 'rifle', auto: true, pierce: 1, adsFov: 50, scope: false, sway: 0.8, snd: { pitch: 150, len: 0.14, noise: 0.7, thump: 0.6 }, desc: '정확한 연사, 만능 주력 무기' },
-  sniper: { name: '저격총', dmg: 130, rate: 1.25, mag: 5, reload: 2.9, pellets: 1, spread: 0.0004, range: 220, recoil: 0.17, bloom: 0.5, falloff: 0, tracer: 0xbfe8ff,
+  sniper: { name: '저격총', dmg: 200, rate: 1.25, mag: 5, reload: 2.9, pellets: 1, spread: 0.0004, range: 220, recoil: 0.48, bloom: 0.5, falloff: 0, dropMul: 0.05, tracer: 0xbfe8ff,
     kind: 'sniper', auto: false, pierce: 3, adsFov: 24, scope: true, sway: 0.45, snd: { pitch: 75, len: 0.42, noise: 0.55, thump: 1 }, desc: '조준경으로 멀리서 관통 저격' },
 };
 

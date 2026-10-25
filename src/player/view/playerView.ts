@@ -184,7 +184,7 @@ export class PlayerView {
     // ── 반동 ──
     this.recoil = Math.max(0, this.recoil - dt * (def.kind === 'sniper' ? 4 : def.kind === 'smg' || def.kind === 'rifle' ? 11 : 7));
     this.lastShotAge += dt;
-    const kickScale = def.kind === 'sniper' ? 1.6 : def.kind === 'shotgun' ? 1.4 : def.kind === 'revolver' ? 1.3 : def.kind === 'smg' ? 0.55 : 0.85;
+    const kickScale = def.kind === 'sniper' ? 2.85 : def.kind === 'shotgun' ? 1.4 : def.kind === 'revolver' ? 1.3 : def.kind === 'smg' ? 0.55 : 0.85;
     const recoilBack = this.recoil * 0.1 * kickScale;
     const recoilPitch = this.recoil * 0.2 * kickScale;
 

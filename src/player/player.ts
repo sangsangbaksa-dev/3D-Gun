@@ -111,7 +111,7 @@ export const PlayerSystem: System = {
       view.fired(w);
       const muzzle = view.muzzleWorld(w, v0);
       const mdir = view.muzzleDir(w, v1);
-      shake = Math.min(1, shake + (def.kind === 'shotgun' ? 0.6 : def.kind === 'sniper' ? 0.7 : def.kind === 'revolver' ? 0.45 : def.kind === 'smg' ? 0.15 : 0.28));
+      shake = Math.min(1, shake + (def.kind === 'shotgun' ? 0.6 : def.kind === 'sniper' ? 1 : def.kind === 'revolver' ? 0.45 : def.kind === 'smg' ? 0.15 : 0.28));
       fx.sparks(muzzle, mdir, def.pellets > 1 ? 6 : 3);
       view.ejectWorld(w, v2);
       if (def.kind !== 'revolver') fx.casing(v2, Math.cos(p.yaw), -Math.sin(p.yaw), def.kind === 'shotgun', def.kind === 'sniper' || def.kind === 'rifle' ? 1.3 : 1);

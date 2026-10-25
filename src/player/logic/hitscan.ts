@@ -4,13 +4,13 @@ import type { Target } from '../../core/entities';
 import { terrainY } from '../../core/terrain';
 import type { Vec3 } from './math';
 
-export function bulletDropAt(t: number) {
-  return PLAYER.bulletDrop * t * t;
+export function bulletDropAt(t: number, dropMul = 1) {
+  return PLAYER.bulletDrop * dropMul * t * t;
 }
 
 /** 직선 방향 + 약한 포물선 낙차 */
-export function rayPoint(o: Vec3, d: Vec3, t: number): Vec3 {
-  return { x: o.x + d.x * t, y: o.y + d.y * t - bulletDropAt(t), z: o.z + d.z * t };
+export function rayPoint(o: Vec3, d: Vec3, t: number, dropMul = 1): Vec3 {
+  return { x: o.x + d.x * t, y: o.y + d.y * t - bulletDropAt(t, dropMul), z: o.z + d.z * t };
 }
 
 /** 광선이 원기둥에 처음 닿는 거리 t (방향이 단위벡터면 미터). 안 닿으면 null. */
@@ -42,14 +42,14 @@ export function rayCylinder(o: Vec3, d: Vec3, cx: number, cz: number, r: number,
 export interface RayHit<T extends Target> { target: T; t: number; y: number }
 
 /** 가장 가까이 맞는 대상. maxDist 밖이면 null. */
-export function castRay<T extends Target>(o: Vec3, d: Vec3, maxDist: number, targets: readonly T[], pad = 0): RayHit<T> | null {
+export function castRay<T extends Target>(o: Vec3, d: Vec3, maxDist: number, targets: readonly T[], pad = 0, dropMul = 1): RayHit<T> | null {
   let best: RayHit<T> | null = null;
   for (const tg of targets) {
     if (tg.dead) continue;
     const base = terrainY(tg.x, tg.z);
     const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height, base);
     if (t !== null && t <= maxDist) {
-      const y = rayPoint(o, d, t).y - base;
+      const y = rayPoint(o, d, t, dropMul).y - base;
       if (y >= -0.2 && y <= tg.height && (!best || t < best.t)) best = { target: tg, t, y };
     }
   }
@@ -57,8 +57,8 @@ export function castRay<T extends Target>(o: Vec3, d: Vec3, maxDist: number, tar
 }
 
 /** 광선이 굴곡 있는 지면에 닿는 거리. 낙차 포함. */
-export function rayGround(o: Vec3, d: Vec3, maxDist = 400): number | null {
-  const above = (t: number) => rayPoint(o, d, t).y - terrainY(o.x + d.x * t, o.z + d.z * t);
+export function rayGround(o: Vec3, d: Vec3, maxDist = 400, dropMul = 1): number | null {
+  const above = (t: number) => rayPoint(o, d, t, dropMul).y - terrainY(o.x + d.x * t, o.z + d.z * t);
   if (above(0) <= 0) return null;
   let prev = 0;
   for (let t = 2; t <= maxDist; t += 2) {
@@ -76,14 +76,14 @@ export function rayGround(o: Vec3, d: Vec3, maxDist = 400): number | null {
 }
 
 /** 광선이 닿는 모든 대상을 가까운 순으로 (관통탄용). */
-export function castRayAll<T extends Target>(o: Vec3, d: Vec3, maxDist: number, targets: readonly T[], pad = 0): RayHit<T>[] {
+export function castRayAll<T extends Target>(o: Vec3, d: Vec3, maxDist: number, targets: readonly T[], pad = 0, dropMul = 1): RayHit<T>[] {
   const hits: RayHit<T>[] = [];
   for (const tg of targets) {
     if (tg.dead) continue;
     const base = terrainY(tg.x, tg.z);
     const t = rayCylinder(o, d, tg.x, tg.z, tg.radius + pad, tg.height, base);
     if (t !== null && t <= maxDist) {
-      const y = rayPoint(o, d, t).y - base;
+      const y = rayPoint(o, d, t, dropMul).y - base;
       if (y >= -0.2 && y <= tg.height) hits.push({ target: tg, t, y });
     }
   }

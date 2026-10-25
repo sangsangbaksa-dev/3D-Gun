@@ -120,6 +120,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
   w.sinceShot = 0;
 
   const spread = currentSpread(w, env.stats, env.moving, env.aiming);
+  const dropMul = def.dropMul ?? 1;
   w.bloom = Math.min(2.8, w.bloom + def.bloom * 1.15);
 
   // 방향에 수직인 두 축
@@ -134,9 +135,9 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
     const ang = env.rng() * Math.PI * 2, rad = Math.sqrt(env.rng()) * spread;
     const a = Math.cos(ang) * rad, b = Math.sin(ang) * rad;
     const d = normalize({ x: d0.x + rx.x * a + ux.x * b, y: d0.y + rx.y * a + ux.y * b, z: d0.z + rx.z * a + ux.z * b });
-    const at = (t: number): Vec3 => rayPoint(env.origin, d, t);
+    const at = (t: number): Vec3 => rayPoint(env.origin, d, t, dropMul);
 
-    const hits = castRayAll(env.origin, d, def.range, env.targets, PLAYER.aimAssist).slice(0, Math.max(1, def.pierce));
+    const hits = castRayAll(env.origin, d, def.range, env.targets, PLAYER.aimAssist, dropMul).slice(0, Math.max(1, def.pierce));
     if (hits.length) {
       let first: Pellet | null = null;
       hits.forEach((h, k) => {
@@ -152,7 +153,7 @@ export function tryFire(w: WeaponState, env: FireEnv): FireResult | null {
       pellets.push(first!);
       continue;
     }
-    const tg = rayGround(env.origin, d);
+    const tg = rayGround(env.origin, d, def.range, dropMul);
     const t = tg !== null && tg < def.range ? tg : def.range;
     const e = at(t);
     pellets.push({ kind: tg !== null && tg < def.range ? 'ground' : 'air', headshot: false, kill: false, dmg: 0, end: { x: e.x, y: e.y, z: e.z }, also: [] });
