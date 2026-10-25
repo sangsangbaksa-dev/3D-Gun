@@ -4,6 +4,7 @@ import { input } from '../core/input';
 import { state } from '../core/state';
 import { events } from '../core/events';
 import { BUILD_SLOTS, injectKeycapCss, kbd, kbds, keyTableHtml } from './keys';
+import { onLocaleChange, t } from '../i18n';
 
 const CSS = `
 #zkDock{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;max-width:calc(100vw - 600px);z-index:4}
@@ -38,18 +39,26 @@ let lastBar = '', lastPrompt = '';
 let helpOpen = false, wasPaused = false;
 
 const item = (keys: string[], label: string, cls = '') => `<span class="i ${cls}">${kbds(keys)}<span>${label}</span></span>`;
-const HELP_ITEM = item(['H'], '도움말', 'help');
+const HELP_ITEM = () => item(['H'], t('keys.help'), 'help');
 
 function barHtml(): string {
   if (state.mode === 'build') {
-    // 건물 이름은 바로 아래 건물 칸(.bz-pal)에 번호와 함께 보인다. 여기서는 번호 범위와 조작만
-    return item([`1–${BUILD_SLOTS.length}`], '건물 고르기') + item(['좌클릭'], '배치') + item(['우클릭', 'X'], '철거')
-      + item(['F'], '수리') + item(['U'], '강화') + item(['B'], '닫기') + HELP_ITEM;
+    return item([`1–${BUILD_SLOTS.length}`], t('keys.bar.buildPick')) + item(['좌클릭', 'LMB'], t('keys.bar.place')) + item(['우클릭', 'X'], t('keys.bar.demolish'))
+      + item(['F'], t('keys.bar.repair')) + item(['U'], t('keys.bar.upgrade')) + item(['B'], t('keys.bar.close')) + HELP_ITEM();
   }
   if (state.phase === 'prep') {
-    return item(['B'], '건설') + item(['N'], '웨이브 시작') + item(['V'], '상점') + item(['L'], '백신') + HELP_ITEM;
+    return item(['B'], t('keys.bar.build')) + item(['N'], t('keys.bar.wave')) + item(['V'], t('keys.bar.shop')) + item(['L'], t('keys.bar.vaccine')) + HELP_ITEM();
   }
-  return item(['R'], '재장전') + item(['1–6'], '무기') + item(['Shift'], '구르기') + item(['Space'], '점프') + item(['우클릭'], '조준') + HELP_ITEM;
+  return item(['R'], t('keys.bar.reload')) + item(['1–6'], t('keys.bar.weapons')) + item(['Shift'], t('keys.bar.roll')) + item(['Space'], t('keys.bar.jump')) + item(['우클릭', 'RMB'], t('keys.bar.aim')) + HELP_ITEM();
+}
+
+function paintHelp() {
+  if (!help) return;
+  help.setAttribute('aria-label', t('keys.helpTitle'));
+  help.querySelector('.card')!.innerHTML = `<h2>${t('keys.helpTitle')}<button type="button" data-close>${t('keys.helpClose')} (H)</button></h2>
+<div class="loop">${t('keys.helpLoop')}</div>
+<div class="cols">${keyTableHtml()}</div>
+<div class="foot">${kbd('H')} ${kbd('F1')} ${kbd('Esc')}</div>`;
 }
 
 /** 'E 나무 베기' → [E] 나무 베기. E 로 시작하지 않는 안내(예: 백신 없음)는 글자만 */
@@ -108,14 +117,10 @@ export function mountKeyHelp() {
   help.id = 'zkHelp';
   help.setAttribute('role', 'dialog');
   help.setAttribute('aria-modal', 'true');
-  help.setAttribute('aria-label', '도움말 · 조작키');
-  help.innerHTML = `<div class="card">
-<h2>도움말 · 조작키<button type="button" data-close>닫기 (H)</button></h2>
-<div class="loop">한 판의 흐름: <b>준비 시간</b>에 E 로 채집하고 B 로 포탑을 세운다 → <b>N</b> 으로 웨이브를 부른다 →
-좀비를 쓰러뜨려 코인·샘플을 모은다 → V 로 무기를 사고 강화, L 로 백신을 만들어 기절한 좀비를 아군으로.</div>
-<div class="cols">${keyTableHtml()}</div>
-<div class="foot">${kbd('H')} ${kbd('F1')} ${kbd('Esc')} 로 닫기 · 열려 있는 동안 게임이 멈춥니다</div></div>`;
+  help.innerHTML = '<div class="card"></div>';
   document.body.appendChild(help);
+  paintHelp();
+  onLocaleChange(() => { paintHelp(); lastBar = ''; });
   help.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t === help || t.closest('[data-close]')) closeHelp();

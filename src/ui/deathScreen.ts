@@ -3,7 +3,8 @@
 // 카메라는 PlayerSystem 이 매 프레임 놓은 뒤 cameraPost 훅으로 기울인다 (playerView/컨트롤러는 건드리지 않는다).
 import type * as THREE from 'three';
 import type { RunReport } from '../tycoon2d/logic/economy';
-import { WALLET_ICON, WALLET_LABEL, type WalletKey } from '../data/tycoon2d';
+import { WALLET_ICON, type WalletKey } from '../data/tycoon2d';
+import { t, walletLabel } from '../i18n';
 import { cameraPost } from '../player/player';
 import { playSfx } from '../audio';
 
@@ -118,27 +119,27 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
     canvas.style.filter = 'saturate(.18) contrast(1.12) brightness(.78)';
   }
 
-  const title = info.reason === 'core' ? '핵 파괴' : '사망';
-  const sub = info.reason === 'core' ? '기지의 핵이 무너졌다' : `웨이브 ${r.wave}에서 쓰러졌다`;
+  const title = info.reason === 'core' ? t('death.coreTitle') : t('death.playerTitle');
+  const sub = info.reason === 'core' ? t('death.coreSub') : t('death.playerSub', { wave: r.wave });
   const extras = (Object.keys(r.kept) as WalletKey[])
     .filter((k) => k !== 'gold' && k !== 'skillPoints' && (r.kept[k] ?? 0) > 0)
-    .map((k) => `<span title="${WALLET_LABEL[k]}">${WALLET_ICON[k]} ${WALLET_LABEL[k]} +${fmt(r.kept[k] ?? 0)}</span>`).join('');
+    .map((k) => `<span title="${walletLabel(k)}">${WALLET_ICON[k]} ${walletLabel(k)} +${fmt(r.kept[k] ?? 0)}</span>`).join('');
   const root = document.createElement('div');
   root.id = 'ztDeath';
   root.innerHTML = `
     <div class="tint"></div><div class="vig"></div><div class="pulse"></div><div class="shade"></div><div class="art"></div>
     <div class="ttl"><h1>${title}</h1><p>${sub}</p></div>
-    <div class="cardBox" role="dialog" aria-label="런 결과">
-      <h2>런 결과${r.newBest ? '<span class="best">🏆 최고 기록!</span>' : ''}</h2>
-      <div class="row big"><span class="k">도달 웨이브</span><span class="v" data-n="${r.wave}">0</span></div>
-      <div class="row"><span class="k">처치</span><span class="v" data-n="${r.kills}">0</span></div>
-      <div class="row"><span class="k">런 레벨</span><span class="v" data-n="${info.level}">0</span></div>
-      <div class="row gold"><span class="k">🪙 남긴 골드 <small>회수율 ${Math.round(r.keepRatio * 100)}%</small></span><span class="v" data-n="${r.kept.gold ?? 0}" data-p="+">0</span></div>
-      <div class="row gold"><span class="k">🪙 웨이브 보너스</span><span class="v" data-n="${r.waveBonus}" data-p="+">0</span></div>
-      <div class="row"><span class="k">⭐ 스킬 포인트</span><span class="v" data-n="${r.kept.skillPoints ?? 0}" data-p="+">0</span></div>
+    <div class="cardBox" role="dialog" aria-label="${t('death.results')}">
+      <h2>${t('death.results')}${r.newBest ? `<span class="best">${t('death.best')}</span>` : ''}</h2>
+      <div class="row big"><span class="k">${t('death.reachedWave')}</span><span class="v" data-n="${r.wave}">0</span></div>
+      <div class="row"><span class="k">${t('death.kills')}</span><span class="v" data-n="${r.kills}">0</span></div>
+      <div class="row"><span class="k">${t('death.sortieLevel')}</span><span class="v" data-n="${info.level}">0</span></div>
+      <div class="row gold"><span class="k">${t('death.goldKept')} <small>${t('death.recovery', { pct: Math.round(r.keepRatio * 100) })}</small></span><span class="v" data-n="${r.kept.gold ?? 0}" data-p="+">0</span></div>
+      <div class="row gold"><span class="k">${t('death.waveBonus')}</span><span class="v" data-n="${r.waveBonus}" data-p="+">0</span></div>
+      <div class="row"><span class="k">${t('death.skillPoints')}</span><span class="v" data-n="${r.kept.skillPoints ?? 0}" data-p="+">0</span></div>
       ${extras ? `<div class="extras">${extras}</div>` : ''}
-      <div class="go"><div class="bar"><i></i></div><button type="button" data-act="hub">본부로 (Enter)</button></div>
-      <div class="hint">아무 키나 클릭으로 넘기기</div>
+      <div class="go"><div class="bar"><i></i></div><button type="button" data-act="hub">${t('death.toHub')}</button></div>
+      <div class="hint">${t('death.skipHint')}</div>
     </div>`;
   document.body.appendChild(root);
   document.body.classList.add('ztDeathOn');

@@ -5,19 +5,20 @@ import { TITLE_CSS, STORY_FADE_S } from './style';
 import { getSettings, loadSettings, resetSettings, setSettings } from './settings';
 import { resetTutorial } from './tutorial';
 import { injectKeycapCss, keyTableHtml } from '../ui/keys';
+import { LOCALES, onLocaleChange, t, type Locale } from '../i18n';
 
 /** TitleSystem 이 읽는다: 타이틀이 떠 있는 동안 카메라가 핵 주위를 돈다 */
 export const titleView = { orbiting: false };
 
 // art: public/art/ 의 배경 일러스트 (피그마 AI 생성). 0 = 스플래시 키아트, 1~4 = 이야기 장면
-const STORY: { text: string; em?: boolean; art: number }[] = [
-  { text: '2031년, 제약사 헬릭스는 불사 백신 V-0을 발표한다.', art: 1 },
-  { text: '임상 47일째, 투여자 전원의 심장이 멈춘다.', art: 1 },
-  { text: '그리고 다시 일어난다.', art: 2 },
-  { text: '72시간 만에 도시가 함락된다.', art: 3 },
-  { text: '남은 건 백신 원액을 지키는 마지막 코어뿐.', art: 4 },
-  { text: '코어가 꺼지면, 치료제도 끝난다.', em: true, art: 4 },
-  { text: '생존자, 출격하라.', art: 4 },
+const STORY: { key: string; em?: boolean; art: number }[] = [
+  { key: 'story.0', art: 1 },
+  { key: 'story.1', art: 1 },
+  { key: 'story.2', art: 2 },
+  { key: 'story.3', art: 3 },
+  { key: 'story.4', art: 4 },
+  { key: 'story.5', em: true, art: 4 },
+  { key: 'story.6', art: 4 },
 ];
 const ART = ['splash', 'story1', 'story2', 'story3', 'story4'].map((n) => `${import.meta.env.BASE_URL}art/${n}.webp`);
 const STORY_HOLD_S = 2.4;
@@ -29,8 +30,8 @@ const storySeen = () => { try { return localStorage.getItem(STORY_KEY) === '1'; 
 
 /** 조작키 창: ui/keys.ts 의 같은 목록을 그룹별로 (H 도움말 창과 동일) */
 function controlsHtml() {
-  return `<h3>조작키<button class="x" data-close>닫기</button></h3><div class="cols">${keyTableHtml()}</div>`
-    + '<p class="khint">게임 중에는 <kbd class="zk">H</kbd> 또는 <kbd class="zk">F1</kbd> 로 언제든 이 목록을 볼 수 있어요.</p>';
+  return `<h3>${t('controls.title')}<button class="x" data-close>${t('settings.close')}</button></h3><div class="cols">${keyTableHtml()}</div>`
+    + `<p class="khint">${t('controls.hint')}</p>`;
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -39,17 +40,23 @@ function settingsHtml() {
   const s = getSettings();
   const row = (label: string, k: string, min: number, max: number, step: number, v: number, out: string) =>
     `<div class="r c"><span>${label}</span><span class="ctl"><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}" aria-label="${label}"><output data-o="${k}">${out}</output></span></div>`;
-  return '<h3>설정<button class="x" data-close>닫기</button></h3>'
-    + row('전체 볼륨', 'volume', 0, 1, 0.05, s.volume, pct(s.volume))
-    + row('마우스 감도', 'sensitivity', 0.2, 3, 0.05, s.sensitivity, mul(s.sensitivity))
-    + '<div class="r" style="border:0;justify-content:space-between;padding-top:10px"><button class="x" data-tut>튜토리얼 다시 보기</button><button class="x" data-reset>초기화</button></div>';
+  const langOpts = LOCALES.map((l) => `<option value="${l}"${l === s.locale ? ' selected' : ''}>${t(`lang.${l}`)}</option>`).join('');
+  return `<h3>${t('settings.title')}<button class="x" data-close>${t('settings.close')}</button></h3>`
+    + `<div class="r c"><span>${t('lang.label')}</span><span class="ctl"><select data-locale aria-label="${t('lang.label')}">${langOpts}</select></span></div>`
+    + row(t('settings.volume'), 'volume', 0, 1, 0.05, s.volume, pct(s.volume))
+    + row(t('settings.sensitivity'), 'sensitivity', 0.2, 3, 0.05, s.sensitivity, mul(s.sensitivity))
+    + `<div class="r" style="border:0;justify-content:space-between;padding-top:10px"><button class="x" data-tut>${t('settings.tutorial')}</button><button class="x" data-reset>${t('settings.reset')}</button></div>`;
 }
 
 /** 오른쪽 아래 "설정 / 조작키" 버튼과 펼쳐지는 창 */
 function mountMenu(root: HTMLElement) {
   const bar = document.createElement('div');
   bar.className = 'tmenu';
-  bar.innerHTML = '<button type="button" data-p="settings" aria-expanded="false">설정</button><button type="button" data-p="controls" aria-expanded="false">조작키</button>';
+  const refreshBar = () => {
+    bar.innerHTML = `<button type="button" data-p="settings" aria-expanded="false">${t('title.menu.settings')}</button><button type="button" data-p="controls" aria-expanded="false">${t('title.menu.controls')}</button>`;
+  };
+  refreshBar();
+  onLocaleChange(() => { refreshBar(); if (open) panel.innerHTML = open === 'controls' ? controlsHtml() : settingsHtml(); });
   const panel = document.createElement('div');
   panel.className = 'tpanel';
   panel.setAttribute('role', 'dialog');
@@ -64,7 +71,7 @@ function mountMenu(root: HTMLElement) {
     if (open === which) { close(); return; }
     open = which;
     panel.innerHTML = which === 'controls' ? controlsHtml() : settingsHtml();
-    panel.setAttribute('aria-label', which === 'controls' ? '조작키' : '설정');
+    panel.setAttribute('aria-label', which === 'controls' ? t('controls.title') : t('settings.title'));
     bar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.setAttribute('aria-expanded', String(b.dataset.p === which)));
     panel.classList.add('open');
   };
@@ -73,13 +80,13 @@ function mountMenu(root: HTMLElement) {
     if (b?.dataset.p) toggle(b.dataset.p);
   });
   panel.addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    if (t.closest('[data-close]')) close();
-    else if (t.closest('[data-reset]')) { resetSettings(); panel.innerHTML = settingsHtml(); }
-    else if (t.closest('[data-tut]')) {
+    const el = e.target as HTMLElement;
+    if (el.closest('[data-close]')) close();
+    else if (el.closest('[data-reset]')) { resetSettings(); panel.innerHTML = settingsHtml(); }
+    else if (el.closest('[data-tut]')) {
       resetTutorial();
-      const b = t.closest<HTMLButtonElement>('[data-tut]')!;
-      b.textContent = '다음 출격 때 처음부터 안내해요';
+      const b = el.closest<HTMLButtonElement>('[data-tut]')!;
+      b.textContent = t('settings.tutorialQueued');
       b.disabled = true;
     }
   });
@@ -90,6 +97,12 @@ function mountMenu(root: HTMLElement) {
     const s = setSettings({ [k]: Number(el.value) });
     const o = panel.querySelector(`output[data-o="${k}"]`);
     if (o) o.textContent = k === 'volume' ? pct(s.volume) : mul(s.sensitivity);
+  });
+  panel.addEventListener('change', (e) => {
+    const sel = (e.target as HTMLElement).closest<HTMLSelectElement>('select[data-locale]');
+    if (!sel) return;
+    setSettings({ locale: sel.value as Locale });
+    panel.innerHTML = settingsHtml();
   });
   // 창 밖을 누르면 닫는다
   root.addEventListener('pointerdown', (e) => {
@@ -104,7 +117,7 @@ function mountIntro(root: HTMLElement, done: () => void) {
   el.className = 'intro';
   el.innerHTML = `<div class="art">${ART.map((u, i) => `<i style="background-image:url('${u}')"${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>`
     + `<img class="ilogo" src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/>`
-    + '<p class="wait">클릭하거나 아무 키나 누르세요</p><div class="skip" hidden>아무 키나 눌러 건너뛰기</div>';
+    + `<p class="wait">${t('title.splash')}</p><div class="skip" hidden>${t('title.skip')}</div>`;
   root.appendChild(el);
   const p = el.querySelector('p')!;
   const layers = Array.from(el.querySelectorAll<HTMLElement>('.art i'));
@@ -128,10 +141,11 @@ function mountIntro(root: HTMLElement, done: () => void) {
     if (finished) return;
     if (i >= STORY.length) { finish(); return; }
     const s = STORY[i];
+    const text = t(s.key);
     showArt(s.art);
     p.className = s.em ? 'em' : '';
-    const chars = [...s.text], per = fast ? 0 : 55;
-    if (per === 0) p.textContent = s.text;
+    const chars = [...text], per = fast ? 0 : 55;
+    if (per === 0) p.textContent = text;
     else chars.forEach((_, k) => later(k * per, () => {
       p.textContent = chars.slice(0, k + 1).join('');
       const cur = document.createElement('span');
@@ -174,11 +188,18 @@ export function mountTitle(onStart: () => void): TitleHandle {
   const embers = Array.from({ length: 28 }, (_, i) =>
     `<i class="ember" style="left:${(i * 37) % 100}%;animation-duration:${6 + (i % 7)}s;animation-delay:-${((i * 1.3) % 9).toFixed(1)}s;opacity:.8"></i>`).join('');
   root.innerHTML = `${embers}<div class="vig"></div><div class="scan"></div>
-<div class="ui"><img src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/><div class="sub">좀비 타이쿤 3D</div></div>
-<div class="go"><button type="button">출격</button><div class="hint">Enter 또는 클릭</div></div>`;
+<div class="ui"><img src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/><div class="sub" data-i18n-sub></div></div>
+<div class="go"><button type="button" data-i18n-launch></button><div class="hint" data-i18n-hint></div></div>`;
   document.body.appendChild(root);
   const menu = mountMenu(root);
   const go = root.querySelector<HTMLButtonElement>('.go button')!;
+  const paintTitle = () => {
+    root.querySelector('[data-i18n-sub]')!.textContent = t('title.sub');
+    go.textContent = t('title.launch');
+    root.querySelector('[data-i18n-hint]')!.textContent = t('title.launchHint');
+  };
+  paintTitle();
+  onLocaleChange(paintTitle);
 
   let shown = false, ready = false, introDone = false, hideTimer = 0;
   const start = () => {
