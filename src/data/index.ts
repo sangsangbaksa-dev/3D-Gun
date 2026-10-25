@@ -176,6 +176,8 @@ export const PLAYER = {
   radius: 0.4,
   sens: 0.0025,        // 마우스 감도 (라디안/픽셀)
   respawnDelay: 3,     // 사망 후 아무도 되살리지 않을 때 자동 부활까지 (초)
+  jumpSpeed: 7.2,      // Space 점프 초기 수직 속도 (m/s)
+  gravity: 20,         // 점프 중 중력 (m/s²)
   headshotMul: 1.8,    // 머리(키의 78% 이상) 명중 배율
   aimAssist: 0.15,     // 조준 보정: 판정 반경에 더하는 여유(m)
   /** 비행 거리 t(m)에서 y -= bulletDrop * t². 30m ≈ 0.7m, 50m ≈ 2m */
@@ -455,8 +457,8 @@ export function zombieStats(wave: number, t: ZType): ZStats {
 export const MAX_ALIVE = 40;
 export const waveCount = (w: number) => Math.floor(6 + w * 1.6);
 /** 웨이브 좀비가 레인을 따라 핵에서 이만큼(m, 경로 길이) 떨어진 곳에서 나온다.
- *  1웨이브 60m(일반 좀비 ≈ 28초) → 웨이브마다 +6m, 레인 끝(≈200m)에서 멈춘다 */
-export const laneSpawnDist = (w: number) => 60 + Math.max(0, w - 1) * 6;
+ *  1웨이브 72m → 웨이브마다 +7m, 레인 끝(≈190m)에서 멈춘다 */
+export const laneSpawnDist = (w: number) => 72 + Math.max(0, w - 1) * 7;
 
 // ── W2 enemies 구역: 웨이브/좀비 수치 (직렬화 가능한 표와 순수 함수만) ──
 export const CHECKPOINT_EVERY = 5;

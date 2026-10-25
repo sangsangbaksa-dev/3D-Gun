@@ -6,6 +6,8 @@ export interface Player {
   x: number; z: number;
   /** 지면 높이 (지형 높낮이). 지형이 생기기 전까지 0 */
   y: number;
+  jumpVelocity: number;
+  grounded: boolean;
   hp: number; maxHp: number;
   yaw: number; pitch: number;
   /** 무적 남은 시간 (대시, 피격 직후). 0 보다 크면 'player:hit' 을 무시한다 */
@@ -27,6 +29,7 @@ export interface Player {
 export function createPlayerState(maxHp: number): Player {
   return {
     x: MAP.playerStart.x, z: MAP.playerStart.z, y: 0,
+    jumpVelocity: 0, grounded: true,
     hp: maxHp, maxHp,
     yaw: Math.PI, pitch: 0.2, // 핵을 등지고 남쪽 도로를 바라보며 시작
     iframes: 0, dashT: 0, dashCd: 0, dashDirX: 0, dashDirZ: 0,

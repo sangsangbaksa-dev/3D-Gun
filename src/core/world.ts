@@ -5,7 +5,10 @@ import { terrainY } from './terrain';
 import { addScenery } from './scenery';
 import { Atmosphere } from './atmosphere';
 
+/** 플레이어·좀비가 나갈 수 없는 반경. 가장자리 장벽 안쪽과 맞춘다 */
 export const WORLD_HALF = MAP.half;
+export const BOUNDARY_INSET = 2.2;
+export const PLAY_HALF = MAP.half - BOUNDARY_INSET;
 
 /** 지형 높이(m). 기지는 평평하고 바깥은 언덕이다. */
 export function getGroundY(x: number, z: number): number {
@@ -40,6 +43,7 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   buildWorldView(scene);
   new Atmosphere(scene, sun, hemi);
   for (const p of MAP.props) obstacles.push({ x: p.x, z: p.z, r: p.r });
+  registerBoundaryObstacles(obstacles);
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -63,8 +67,28 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
       p.z = o.z + (dz / d) * min;
     }
   }
-  p.x = Math.max(-WORLD_HALF, Math.min(WORLD_HALF, p.x));
-  p.z = Math.max(-WORLD_HALF, Math.min(WORLD_HALF, p.z));
+  p.x = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.x));
+  p.z = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.z));
+}
+
+/** 맵 가장자리 장벽 충돌(원형 근사). createWorld 에서 obstacles 에 등록한다 */
+export function registerBoundaryObstacles(out: Obstacle[]) {
+  const H = MAP.half;
+  const step = 14;
+  const wallR = 2.4;
+  for (let x = -H; x <= H; x += step) {
+    out.push({ x, z: H - BOUNDARY_INSET * 0.5, r: wallR });
+    out.push({ x, z: -H + BOUNDARY_INSET * 0.5, r: wallR });
+  }
+  for (let z = -H; z <= H; z += step) {
+    out.push({ x: H - BOUNDARY_INSET * 0.5, z, r: wallR });
+    out.push({ x: -H + BOUNDARY_INSET * 0.5, z, r: wallR });
+  }
+  // 모서리를 더 촘촘히 막는다
+  const c = H - BOUNDARY_INSET * 0.5;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    out.push({ x: sx * c, z: sz * c, r: wallR * 1.35 });
+  }
 }
 
 /** 그림자 카메라와 해를 플레이어 주변으로 옮겨 넓은 맵에서도 가까운 그림자가 선명하게 한다. */
