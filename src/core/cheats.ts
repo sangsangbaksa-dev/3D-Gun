@@ -15,7 +15,7 @@ function activateUnlimited() {
   state.samples = CHEAT_FILL;
   state.samplesSp = CHEAT_FILL;
   changed();
-  events.emit('toast', { text: '치트 활성: 자원·코인 무제한' });
+  events.emit('toast', { text: '치트 활성: 자원·코인 무제한', kind: 'cheat' });
   buf = '';
 }
 
@@ -29,5 +29,5 @@ export function initCheats() {
     buf += e.key;
     if (buf.length > CODE.length) buf = buf.slice(-CODE.length);
     if (buf === CODE) activateUnlimited();
-  });
+  }, true);
 }

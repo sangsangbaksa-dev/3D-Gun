@@ -124,7 +124,9 @@ export const HudSystem: System = {
     if (help) help.style.display = 'none';
     mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
     mountWaveClearFlash();
-    events.on('toast', ({ text }) => showToast(text));
+    events.on('toast', ({ text, kind }) => {
+      showToast(text, kind === 'cheat' ? 4200 : 1600, kind === 'cheat' ? 'toast-cheat' : '');
+    });
     events.on('player:hp', ({ hp, maxHp }) => applyHpBar(hp, maxHp));
     events.on('ui:modal', ({ open }) => {
       const hud = document.getElementById('hud');
@@ -180,12 +182,13 @@ export const HudSystem: System = {
 };
 
 /** 짧은 알림. 처치 코인처럼 자주 나와도 모달을 띄우지 않는다. */
-function showToast(text: string) {
+function showToast(text: string, ms = 1600, extraClass = '') {
   const box = document.getElementById('toasts');
   if (!box) return;
   const d = document.createElement('div');
+  if (extraClass) d.className = extraClass;
   d.textContent = text;
   box.appendChild(d);
   while (box.children.length > 5) box.removeChild(box.firstChild as ChildNode);
-  setTimeout(() => d.remove(), 1600);
+  setTimeout(() => d.remove(), ms);
 }

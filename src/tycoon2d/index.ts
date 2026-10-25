@@ -23,6 +23,14 @@ let acc = 0;
 let grant: RunGrant = { gold: 0, res: {}, samples: 0, skillPoints: 0 };
 
 function snapshot(wave: number, checkpoint: number, kills: number, gold: number): RunSnapshot {
+  // 치트로 채운 인런 재화는 영구 지갑 정산에 넣지 않는다 (시작 지급 수준만 남김).
+  if (state.cheatUnlimited) {
+    const res = Object.fromEntries(RES_KEYS.map((k) => [k, grant.res[k] ?? 0])) as RunSnapshot['res'];
+    return {
+      wave, checkpoint, kills, gold: grant.gold, res,
+      samples: grant.samples, samplesSp: 0, skillPoints: state.skillPoints, grant,
+    };
+  }
   return { wave, checkpoint, kills, gold, res: { ...state.res }, samples: state.samples, samplesSp: state.samplesSp, skillPoints: state.skillPoints, grant };
 }
 
