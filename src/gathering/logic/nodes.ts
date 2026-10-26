@@ -1,7 +1,7 @@
 // 채집 노드 데이터 모델과 배치(layout). three/DOM 을 쓰지 않는 순수 TS.
 // 위치는 하드코딩하지 않는다: MAP.resourceNodes 가 있으면 그대로, 비었으면 MAP.zones 로 절차 생성.
 import { GATHER_LAYOUT, GATHER_NODES, GATHER_OPEN_DENSITY, GATHER_ZONE_DENSITY, NODE_KINDS, type NodeKind, type ResKey } from '../../data';
-import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, type MapDef, type Pt } from '../../data/map';
+import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, ZONE_DECOR, type MapDef, type Pt } from '../../data/map';
 import { randRange, type Rng } from './rng';
 
 export interface GatherNode {
@@ -69,6 +69,10 @@ export function generateLayout(rng: Rng, map: LayoutMap): GatherNode[] {
     }
     for (const sr of SCATTER_ROCKS) {
       if (Math.hypot(x - sr.x, z - sr.z) < sr.r + r + 0.9) return false;
+    }
+    for (const d of ZONE_DECOR) {
+      const dr = d.kind === 'herb' ? 0.35 : d.kind === 'pine' || d.kind === 'oak' ? 0.55 : 0.4;
+      if (Math.hypot(x - d.x, z - d.z) < dr * d.s + r + 0.85) return false;
     }
     for (const n of nodes) if (Math.hypot(x - n.x, z - n.z) < n.r + r + L.gap) return false;
     return true;
