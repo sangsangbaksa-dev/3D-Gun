@@ -101,7 +101,7 @@ function overlapsBuilding(x: number, z: number, r: number, buildings: MapProp[],
   return false;
 }
 
-export const LANDMARKS: LandmarkProp[] = [
+const STATIC_LANDMARKS: LandmarkProp[] = [
   // 기지 외곽 방어선 초소 & 이정표 (NE·SW 도로 및 연석과 겹치지 않는 좌표)
   { kind: 'watchpost', x: 12, z: -23, yaw: 0.3, r: 0.55 },
   { kind: 'watchpost', x: -23, z: 12, yaw: -0.8, r: 0.55 },
@@ -192,7 +192,7 @@ function genProps(): MapProp[] {
     if (Math.hypot(x, z + 180) < 30 || (Math.abs(x) < 22 && z < -145)) return false;
     if (zones.some((q) => q.kind !== 'ruins' && q.kind !== 'base' && q.kind !== 'wasteland' && Math.hypot(x - q.x, z - q.z) < q.r * 0.86)) return false;
     if (overlapsBuilding(x, z, 3.6, out)) return false;
-    if (LANDMARKS.some((lm) => Math.hypot(x - lm.x, z - lm.z) < lm.r + 4.8)) return false;
+    if (STATIC_LANDMARKS.some((lm) => Math.hypot(x - lm.x, z - lm.z) < lm.r + 4.8)) return false;
     if (out.some((p) => p.kind === 'building' ? distToPropOBB(x, z, p, 3.6) < 2.2 : Math.hypot(x - p.x, z - p.z) < p.r + minClusterGap)) return false;
     return true;
   };
@@ -226,27 +226,172 @@ function genProps(): MapProp[] {
 
 export interface ScatterRockSpot { x: number; z: number; s: number; r: number }
 
-function genScatterRocks(props: MapProp[]): ScatterRockSpot[] {
+export type ZoneDecorKind = 'pine' | 'oak' | 'herb' | 'rubble' | 'roadPost' | 'barrel';
+export interface ZoneDecorSpot { kind: ZoneDecorKind; x: number; z: number; yaw: number; s: number }
+
+const BOSS_CLEAR = (x: number, z: number) => Math.hypot(x, z + 180) < 32 || (Math.abs(x) < 24 && z < -142);
+
+function spotBlocked(
+  x: number, z: number, r: number, props: MapProp[], landmarks: LandmarkProp[],
+  rocks: ScatterRockSpot[], lanePad = 7.8,
+): boolean {
+  if (Math.abs(x) > 188 || Math.abs(z) > 188) return true;
+  if (Math.hypot(x, z) < 26) return true;
+  if (nearLane(x, z, lanePad)) return true;
+  if (BOSS_CLEAR(x, z)) return true;
+  if (overlapsBuilding(x, z, r + 1.2, props, 2.2)) return true;
+  for (const p of props) {
+    if (p.kind === 'building') continue;
+    if (distToPropOBB(x, z, p, 3.2) < r + 0.8) return true;
+  }
+  for (const lm of landmarks) {
+    if (Math.hypot(x - lm.x, z - lm.z) < lm.r + r + 3.6) return true;
+  }
+  for (const sr of rocks) {
+    if (Math.hypot(x - sr.x, z - sr.z) < sr.r + r + 1.4) return true;
+  }
+  return false;
+}
+
+const FILL_LM_BY_ZONE: Record<ZoneKind, LandmarkKind[]> = {
+  base: [],
+  forest: ['totem', 'shrine', 'well', 'rocks'],
+  quarry: ['rocks', 'cart', 'crane'],
+  mine: ['cart', 'rocks', 'antenna'],
+  field: ['well', 'shrine', 'windturbine'],
+  ruins: [],
+  wasteland: ['rocks', 'cart', 'antenna'],
+  boss: [],
+};
+
+function genFillLandmarks(props: MapProp[]): LandmarkProp[] {
+  const rnd = mulberry(0x7a4e21);
+  const out: LandmarkProp[] = [];
+  const kindsByR: Partial<Record<LandmarkKind, number>> = {
+    totem: 0.5, well: 0.9, rocks: 1.2, cart: 0.8, shrine: 1.25, antenna: 0.55,
+    crane: 0.95, windturbine: 0.7,
+  };
+  for (const z of zones) {
+    if (z.kind === 'base' || z.kind === 'boss' || z.kind === 'ruins') continue;
+    const pool = FILL_LM_BY_ZONE[z.kind];
+    if (!pool.length) continue;
+    for (let attempt = 0; attempt < 5 && out.length < 24; attempt++) {
+      const ang = rnd() * Math.PI * 2;
+      const dist = z.r * (0.52 + rnd() * 0.38);
+      const x = z.x + Math.cos(ang) * dist;
+      const zz = z.z + Math.sin(ang) * dist;
+      const kind = pool[Math.floor(rnd() * pool.length)];
+      const r = kindsByR[kind] ?? 0.85;
+      const allLm = [...STATIC_LANDMARKS, ...out];
+      if (spotBlocked(x, zz, r, props, allLm, [], 7.2)) continue;
+      if (out.some((p) => Math.hypot(x - p.x, p.z - zz) < p.r + r + 5.5)) continue;
+      out.push({ kind, x, z: zz, yaw: rnd() * Math.PI * 2, r });
+    }
+  }
+  return out;
+}
+
+function genScatterRocks(props: MapProp[], landmarks: LandmarkProp[]): ScatterRockSpot[] {
   let a = 0x51ed1234;
   const rnd = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const out: ScatterRockSpot[] = [];
-  const half = 200;
-  for (let i = 0; i < 28; i++) {
-    const x = (rnd() * 2 - 1) * (half - 10);
-    const z = (rnd() * 2 - 1) * (half - 10);
-    if (Math.hypot(x, z) < 25) continue;
-    if (nearLane(x, z, 8.0)) continue;
-    if (LANDMARKS.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 4.8)) continue;
-    if (props.some((p) => distToPropOBB(x, z, p, p.kind === 'building' ? 3.8 : 4.2) < 1.6)) continue;
-    const s = 0.55 + rnd() * 0.9;
-    // 메시(주 암석 반경 ≈ s×0.58)보다 살짝 넓게 — 기존 s×0.82 는 도로에서 과하게 막았다
-    out.push({ x, z, s, r: s * 0.66 });
+  const fillZones = zones.filter((q) => q.kind !== 'base' && q.kind !== 'boss' && q.kind !== 'ruins');
+  const tryRock = (x: number, z: number, s: number) => {
+    const r = s * 0.66;
+    if (spotBlocked(x, z, r, props, landmarks, out, 8.2)) return false;
+    if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + r + 1.8)) return false;
+    out.push({ x, z, s, r });
+    return true;
+  };
+  for (let i = 0; i < 34; i++) {
+    const zone = fillZones[Math.floor(rnd() * fillZones.length)];
+    const ang = rnd() * Math.PI * 2;
+    const dist = zone.r * (0.35 + rnd() * 0.55);
+    let x = zone.x + Math.cos(ang) * dist;
+    let zz = zone.z + Math.sin(ang) * dist;
+    if (rnd() < 0.22) {
+      x = (rnd() * 2 - 1) * 178;
+      zz = (rnd() * 2 - 1) * 178;
+    }
+    const s = 0.5 + rnd() * 0.85;
+    if (!tryRock(x, zz, s)) continue;
+    const satellites = 1 + Math.floor(rnd() * 2);
+    for (let k = 0; k < satellites; k++) {
+      const a2 = rnd() * Math.PI * 2;
+      const d = 2.4 + rnd() * 3.2;
+      tryRock(x + Math.cos(a2) * d, zz + Math.sin(a2) * d, s * (0.42 + rnd() * 0.28));
+    }
+  }
+  return out;
+}
+
+function genZoneDecor(props: MapProp[], landmarks: LandmarkProp[], rocks: ScatterRockSpot[]): ZoneDecorSpot[] {
+  const rnd = mulberry(0x3c91ef);
+  const out: ZoneDecorSpot[] = [];
+  const decorByZone: Record<ZoneKind, ZoneDecorKind[]> = {
+    base: [], boss: [], ruins: [],
+    forest: ['pine', 'oak', 'pine'],
+    quarry: ['rubble', 'rubble'],
+    mine: ['rubble', 'barrel'],
+    field: ['herb', 'herb', 'oak'],
+    wasteland: ['rubble', 'barrel', 'roadPost'],
+  };
+  for (const z of zones) {
+    const pool = decorByZone[z.kind];
+    if (!pool.length) continue;
+    const clusters = z.kind === 'forest' ? 3 : 2;
+    for (let c = 0; c < clusters; c++) {
+      const ang = rnd() * Math.PI * 2;
+      const dist = z.r * (0.45 + rnd() * 0.42);
+      const cx = z.x + Math.cos(ang) * dist;
+      const cz = z.z + Math.sin(ang) * dist;
+      const count = 2 + Math.floor(rnd() * 3);
+      for (let j = 0; j < count; j++) {
+        const kind = pool[Math.floor(rnd() * pool.length)];
+        const a2 = rnd() * Math.PI * 2;
+        const d = j === 0 ? 0 : 1.8 + rnd() * 4.2;
+        const x = cx + Math.cos(a2) * d;
+        const zz = cz + Math.sin(a2) * d;
+        const s = 0.75 + rnd() * 0.45;
+        if (spotBlocked(x, zz, kind === 'herb' ? 0.35 : 0.55, props, landmarks, rocks, 6.8)) continue;
+        if (out.some((p) => Math.hypot(x - p.x, p.z - zz) < 2.2)) continue;
+        out.push({ kind, x, z: zz, yaw: rnd() * Math.PI * 2, s });
+      }
+    }
+  }
+  // 도로변 이정표·통: 레인 중간 구간 바깥 어깨(6.5~9m)에만 소량 배치
+  for (const lane of lanes) {
+    if (lane.id === 'N') continue;
+    for (let i = 1; i < lane.waypoints.length - 1; i++) {
+      if (rnd() > 0.38) continue;
+      const a = lane.waypoints[i - 1];
+      const b = lane.waypoints[i];
+      const t = 0.35 + rnd() * 0.45;
+      const px = a.x + (b.x - a.x) * t;
+      const pz = a.z + (b.z - a.z) * t;
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.hypot(dx, dz) || 1;
+      const nx = -dz / len;
+      const nz = dx / len;
+      const side = rnd() < 0.5 ? 1 : -1;
+      const off = 6.8 + rnd() * 2.4;
+      const x = px + nx * off * side;
+      const zz = pz + nz * off * side;
+      const kind: ZoneDecorKind = rnd() < 0.55 ? 'roadPost' : 'barrel';
+      if (spotBlocked(x, zz, 0.45, props, landmarks, rocks, 5.2)) continue;
+      if (out.some((p) => Math.hypot(x - p.x, p.z - zz) < 3.5)) continue;
+      out.push({ kind, x, z: zz, yaw: Math.atan2(dz, dx) + (rnd() - 0.5) * 0.4, s: 0.9 + rnd() * 0.2 });
+    }
   }
   return out;
 }
 
 const mapProps = genProps();
-export const SCATTER_ROCKS: ScatterRockSpot[] = genScatterRocks(mapProps);
+const FILL_LANDMARKS = genFillLandmarks(mapProps);
+export const LANDMARKS: LandmarkProp[] = [...STATIC_LANDMARKS, ...FILL_LANDMARKS];
+export const SCATTER_ROCKS: ScatterRockSpot[] = genScatterRocks(mapProps, LANDMARKS);
+export const ZONE_DECOR: ZoneDecorSpot[] = genZoneDecor(mapProps, LANDMARKS, SCATTER_ROCKS);
 
 export const MAP: MapDef = {
   half: 200,

@@ -1,7 +1,7 @@
 // 맵을 채우는 지형 메시와 조형물. 규칙은 없고, 큰 조형물만 장애물이 된다.
 import * as THREE from 'three';
 import type { BoxObstacle, Obstacle } from './world';
-import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, type LandmarkKind, type LandmarkProp, MAP } from '../data/map';
+import { distToPropOBB, LANDMARKS, SCATTER_ROCKS, ZONE_DECOR, type LandmarkKind, type LandmarkProp, type ZoneDecorKind, MAP } from '../data/map';
 import { terrainY } from './terrain';
 
 const HALF = MAP.half;
@@ -334,6 +334,46 @@ function buildProp(kind: LandmarkKind, g: THREE.Group) {
   }
 }
 
+function buildZoneDecor(kind: ZoneDecorKind, g: THREE.Group, s: number) {
+  if (kind === 'pine') {
+    cyl(g, s * 0.14, s * 0.22, s * 1.5, 0x6b4a2b, 0, -0.2, 0, 7);
+    cyl(g, s * 0.95, s * 0.95, s * 1.1, 0x3a6b38, 0, s * 1.2, 0, 7);
+    cyl(g, s * 0.72, s * 0.72, s * 0.85, 0x58963f, 0, s * 2.05, 0, 7);
+  } else if (kind === 'oak') {
+    cyl(g, s * 0.18, s * 0.28, s * 1.35, 0x6b4a2b, 0, -0.15, 0, 8);
+    const blobs: [number, number, number, number][] = [[0, s * 1.55, 0, s * 0.55], [s * 0.35, s * 1.35, s * 0.2, s * 0.38], [-s * 0.3, s * 1.4, -s * 0.15, s * 0.42]];
+    blobs.forEach(([x, y, z, r]) => cyl(g, r, r, r * 1.1, 0x58963f, x, y, z, 7));
+  } else if (kind === 'herb') {
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      cyl(g, s * 0.08, s * 0.12, s * 0.35, 0x6cb85a, Math.cos(a) * s * 0.22, s * 0.12, Math.sin(a) * s * 0.22, 6);
+    }
+  } else if (kind === 'rubble') {
+    cyl(g, s * 0.42, s * 0.58, s * 0.35, 0x7a756c, -s * 0.15, -0.1, s * 0.1, 5);
+    cyl(g, s * 0.32, s * 0.48, s * 0.28, 0x6a6358, s * 0.22, -0.08, -s * 0.12, 5);
+    box(g, s * 0.38, s * 0.22, s * 0.32, 0x58524c, -s * 0.05, s * 0.05, -s * 0.18);
+  } else if (kind === 'roadPost') {
+    cyl(g, s * 0.06, s * 0.08, s * 1.05, 0x4a5056, 0, s * 0.42, 0, 6);
+    box(g, s * 0.14, s * 0.1, s * 0.08, 0xe8c84a, 0, s * 0.98, 0);
+  } else if (kind === 'barrel') {
+    cyl(g, s * 0.28, s * 0.32, s * 0.55, 0x6e3b26, 0, s * 0.2, 0, 8);
+    box(g, s * 0.52, s * 0.08, s * 0.52, 0x4a4038, 0, s * 0.42, 0);
+  }
+}
+
+function scatterZoneDecor(scene: THREE.Scene, obstacles: Obstacle[]) {
+  for (const d of ZONE_DECOR) {
+    const g = new THREE.Group();
+    buildZoneDecor(d.kind, g, d.s);
+    const gy = terrainY(d.x, d.z);
+    g.position.set(d.x, gy, d.z);
+    g.rotation.y = d.yaw;
+    scene.add(g);
+    if (d.kind === 'pine' || d.kind === 'oak') obstacles.push({ x: d.x, z: d.z, r: d.s * 0.38 });
+    else if (d.kind === 'rubble' || d.kind === 'barrel') obstacles.push({ x: d.x, z: d.z, r: d.s * 0.32 });
+  }
+}
+
 function scatterRocks(scene: THREE.Scene, obstacles: Obstacle[]) {
   let a = 0x7391ab23;
   const rnd = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -449,4 +489,5 @@ export function addScenery(scene: THREE.Scene, obstacles: Obstacle[], boxObstacl
     registerLandmarkObstacles(p, obstacles, boxObstacles);
   }
   scatterRocks(scene, obstacles);
+  scatterZoneDecor(scene, obstacles);
 }
