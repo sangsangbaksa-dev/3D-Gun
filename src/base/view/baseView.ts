@@ -40,6 +40,8 @@ class Bar {
 interface Rec {
   b: Building; model: Model; root: THREE.Group; yawNode: THREE.Group; tiltNode: THREE.Group; bar: Bar;
   level: number; born: number; kick: number; smokeT: number; flashing: boolean; yaw: number;
+  /** 포탑 머리 시각 각도 (로직 aimYaw 를 부드럽게 따라감) */
+  aimVis: number;
 }
 
 export class BaseView {
@@ -81,7 +83,7 @@ export class BaseView {
     this.scene.add(root);
     const bar = new Bar(Math.max(1.3, b.radius * 1.3));
     this.scene.add(bar.group);
-    const rec: Rec = { b, model, root, yawNode, tiltNode, bar, level: b.level, born: this.t, kick: 0, smokeT: 0, flashing: false, yaw };
+    const rec: Rec = { b, model, root, yawNode, tiltNode, bar, level: b.level, born: this.t, kick: 0, smokeT: 0, flashing: false, yaw, aimVis: b.aimYaw - yaw };
     this.recs.set(b.id, rec);
     b.view = root;
   }
@@ -152,7 +154,11 @@ export class BaseView {
       // 포탑 조준
       if (m.head) {
         const idle = b.tracking ? 0 : Math.sin(t * 0.7 + b.id) * 0.5;
-        m.head.rotation.y = b.aimYaw - rec.yaw + idle;
+        const want = b.aimYaw - rec.yaw + idle;
+        let d = want - rec.aimVis;
+        d = ((d + Math.PI) % (Math.PI * 2)) - Math.PI;
+        rec.aimVis += d * Math.min(1, dt * 16);
+        m.head.rotation.y = rec.aimVis;
         rec.kick = Math.max(0, rec.kick - dt * 9);
       }
       m.tick?.(dt);

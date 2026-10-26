@@ -9,7 +9,7 @@ const CSS = `
 .bz-banner{position:absolute;top:56px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:999px;background:linear-gradient(90deg,#0e2a36e6,#12384ae6);border:1px solid #7fe3ff66;font-size:13px;letter-spacing:.2px;text-shadow:0 1px 2px #000;white-space:nowrap;display:none}
 .bz-banner b{color:#7fe3ff}
 .bz-pal{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:none;gap:8px;padding:10px;border-radius:14px;background:#0b141bd9;border:1px solid #ffffff22;backdrop-filter:blur(6px);box-shadow:0 8px 30px #000a}
-.bz-slot{position:relative;width:96px;padding:8px 6px 7px;border-radius:10px;background:#16222c;border:1px solid #ffffff1a;text-align:center;transition:transform .12s,border-color .12s}
+.bz-slot{position:relative;width:96px;padding:8px 6px 7px;border-radius:10px;background:#16222c;border:1px solid #ffffff1a;text-align:center;transition:transform .2s ease-out,border-color .2s ease-out,box-shadow .2s ease-out,opacity .2s ease-out}
 .bz-slot.sel{border-color:#7fe3ff;background:#1b3340;transform:translateY(-6px);box-shadow:0 6px 18px #7fe3ff33}
 .bz-slot.off{opacity:.55}
 .bz-key{position:absolute;top:4px;left:6px;font-size:10px;color:#9fb3c0;font-weight:700}

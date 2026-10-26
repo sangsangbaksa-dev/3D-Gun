@@ -297,18 +297,18 @@ function genScatterRocks(props: MapProp[], landmarks: LandmarkProp[]): ScatterRo
   const out: ScatterRockSpot[] = [];
   const fillZones = zones.filter((q) => q.kind !== 'base' && q.kind !== 'boss' && q.kind !== 'ruins');
   const tryRock = (x: number, z: number, s: number) => {
-    const r = s * 0.82;
+    const r = s * 0.66;
     if (spotBlocked(x, z, r, props, landmarks, out, 8.2)) return false;
     if (out.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + r + 1.8)) return false;
     out.push({ x, z, s, r });
     return true;
   };
   for (let i = 0; i < 34; i++) {
-    const z = fillZones[Math.floor(rnd() * fillZones.length)];
+    const zone = fillZones[Math.floor(rnd() * fillZones.length)];
     const ang = rnd() * Math.PI * 2;
-    const dist = z.r * (0.35 + rnd() * 0.55);
-    let x = z.x + Math.cos(ang) * dist;
-    let zz = z.z + Math.sin(ang) * dist;
+    const dist = zone.r * (0.35 + rnd() * 0.55);
+    let x = zone.x + Math.cos(ang) * dist;
+    let zz = zone.z + Math.sin(ang) * dist;
     if (rnd() < 0.22) {
       x = (rnd() * 2 - 1) * 178;
       zz = (rnd() * 2 - 1) * 178;

@@ -106,11 +106,11 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'e_sp', cat: 'econ', name: '교범 학습', desc: '런 경험치 +20% (레벨업마다 스킬 포인트)', icon: '📘', max: 5, cost: { gold: 300, samples: 4 }, costGrowth: 1.9, effect: { kind: 'xpMul', per: 0.2 } },
 ];
 
-/** 사망 시 런에 남은 재화를 지갑으로 옮기는 기본 비율 */
-export const KEEP_BASE = 0.7;
+/** 사망 시 런에 남은 재화를 지갑으로 옮기는 기본 비율 (2~4h 완주 목표: 스노볼 약간 억제) */
+export const KEEP_BASE = 0.66;
 /** 도달한 웨이브마다 지갑에 더해 주는 보상 (골드 = wave × 이 값, 클리어한 웨이브 수 기준) */
-export const WAVE_BONUS_GOLD = 15;
-export const KILL_BONUS_GOLD = 0.5;
+export const WAVE_BONUS_GOLD = 13;
+export const KILL_BONUS_GOLD = 0.45;
 
 /** 방치형 생산 건물. 초당 수입 = perSec × 레벨 × 수입 배율 */
 export interface ProducerDef {
@@ -122,9 +122,9 @@ export interface ProducerDef {
 }
 export const PRODUCERS: ProducerDef[] = [
   // 방치 수입: 접속 중 tick만. 2차 패치 — 웨이브 정산 대비 스노볼 대폭 축소 (perSec·max·비용·producerIncomeMul)
-  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.1, max: 16, cost: { gold: 58 }, costGrowth: 1.24 },
-  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.055, max: 14, cost: { gold: 72, wood: 12 }, costGrowth: 1.25 },
-  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.044, max: 14, cost: { gold: 105, wood: 30 }, costGrowth: 1.25 },
+  { id: 'p_gold', name: '약탈 정찰대', icon: '🪙', desc: '폐허에서 골드를 모아 온다', produces: 'gold', perSec: 0.092, max: 15, cost: { gold: 62 }, costGrowth: 1.26 },
+  { id: 'p_wood', name: '벌목장', icon: '🪵', desc: '나무를 계속 베어 온다', produces: 'wood', perSec: 0.05, max: 13, cost: { gold: 78, wood: 12 }, costGrowth: 1.27 },
+  { id: 'p_stone', name: '채석장', icon: '🪨', desc: '돌을 캔다', produces: 'stone', perSec: 0.04, max: 13, cost: { gold: 112, wood: 30 }, costGrowth: 1.27 },
   { id: 'p_herb', name: '약초밭', icon: '🌿', desc: '약초를 키운다', produces: 'herb', perSec: 0.03, max: 14, cost: { gold: 135, wood: 42 }, costGrowth: 1.26 },
   { id: 'p_iron', name: '철광 갱도', icon: '⛓️', desc: '철을 캔다', produces: 'iron', perSec: 0.016, max: 12, cost: { gold: 340, stone: 55 }, costGrowth: 1.28 },
   { id: 'p_parts', name: '폐차 해체장', icon: '⚙️', desc: '부품을 뜯어 낸다', produces: 'parts', perSec: 0.008, max: 12, cost: { gold: 620, iron: 32 }, costGrowth: 1.3 },
@@ -137,9 +137,10 @@ export const IDLE = {
   baseClickGold: 3,
   skillCostBase: 1,        // 스킬 노드 구매 비용 = base + 현재 레벨 (스킬 포인트)
   /** 생산 시설 tick 배율 (1 = 데이터 perSec 그대로) */
-  producerIncomeMul: 0.58,
+  producerIncomeMul: 0.5,
 };
 
 /** 런 경험치: 처치 XP(ZOMBIE_REWARD.xp)로 레벨이 오르고, 레벨마다 스킬 포인트를 준다 (런 끝에 전부 저축).
  *  다음 레벨까지 = base + perLevel × 현재 레벨. 일반 좀비 5 XP 기준 1~5웨이브에서 약 3레벨 */
-export const RUN_XP = { base: 60, perLevel: 40, spPerLevel: 1 };
+/** 런당 스킬 포인트 속도: 50웨이브 완주 전에 핵심 스킬 8~12개 정도 (2~4h 가정, 런 10~18회) */
+export const RUN_XP = { base: 68, perLevel: 44, spPerLevel: 1 };

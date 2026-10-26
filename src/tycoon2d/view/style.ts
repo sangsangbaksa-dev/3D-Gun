@@ -58,7 +58,7 @@ export const CSS = `
 /* 본문 */
 #t2d main{position:relative;flex:1;display:flex;min-height:0}
 #t2d nav{width:168px;padding:10px 10px 10px 16px;display:flex;flex-direction:column;gap:6px;overflow:auto}
-#t2d nav button{display:flex;align-items:center;gap:10px;background:var(--glass);color:#d9c9c3;border:1px solid var(--line);border-radius:6px;padding:7px 10px 7px 7px;text-align:left;cursor:pointer;font:inherit;font-size:14px;font-weight:600;transition:.15s;backdrop-filter:blur(6px);position:relative}
+#t2d nav button{display:flex;align-items:center;gap:10px;background:var(--glass);color:#d9c9c3;border:1px solid var(--line);border-radius:6px;padding:7px 10px 7px 7px;text-align:left;cursor:pointer;font:inherit;font-size:14px;font-weight:600;transition:border-color .22s ease,transform .22s ease,color .22s ease,background .22s ease,box-shadow .22s ease;backdrop-filter:blur(6px);position:relative}
 #t2d nav .ni{width:30px;height:30px;display:grid;place-items:center;border-radius:5px;background:#ffffff0a;color:var(--tc);flex:none;transition:.15s}
 #t2d nav button:hover{border-color:#2EE6D655;transform:translateX(2px);color:#fff}
 #t2d nav button.on{color:#fff;border-color:var(--or);background:linear-gradient(90deg,#FF8A2A44,#FF8A2A0d 75%),var(--glass2);box-shadow:0 0 18px #FF8A2A33}

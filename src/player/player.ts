@@ -8,6 +8,7 @@ import { zombies } from '../core/entities';
 import { getGroundY, resolveObstacles } from '../core/world';
 import { GUNS } from '../data';
 import { PlayerController, type FrameIntent } from './logic/controller';
+import { lerp } from './logic/math';
 import { createRng } from './logic/math';
 import { magSize } from './logic/weapons';
 import { Effects } from './view/effects';
@@ -38,6 +39,9 @@ const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
 let shake = 0;
+let camFov = 70;
+const camPos = { x: 0, y: 0, z: 0 };
+let camInit = false;
 const rng = createRng((Math.random() * 2 ** 32) >>> 0);
 const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -55,7 +59,11 @@ export const PlayerSystem: System = {
     events.on('state:changed', refresh);
     events.on('weapon:upgraded', () => { refresh(); hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons); });
     events.on('weapon:switched', () => hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons));
-    events.on('run:start', () => { if (panel?.open) closePanel(); });
+    events.on('run:start', () => {
+      if (panel?.open) closePanel();
+      camInit = false;
+      camFov = 70;
+    });
     addEventListener('keydown', (e) => { if (e.code === 'Escape' && panel?.open) closePanel(); });
     hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons);
   },
@@ -85,13 +93,23 @@ export const PlayerSystem: System = {
     for (let i = 0; i < SLOT_KEYS.length; i++) if (input.pressed.has(SLOT_KEYS[i])) intent.slot = i;
     const out = c.update(dt, intent, { zombies, collide: resolveObstacles, groundY, rng, canShoot: playing, combat: playerOptions.combat, view: 'first' });
 
-    // 카메라
+    // 카메라: FOV·위치는 즉시 스냅하지 않고 프레임당 지수 보간 (조준·대시 시 덜 끊기게)
     const cam = ctx.camera;
-    cam.fov = out.pose.fov;
+    const fovK = Math.min(1, dt * 14);
+    camFov = lerp(camFov, out.pose.fov, fovK);
+    cam.fov = camFov;
     cam.updateProjectionMatrix();
+    if (!camInit) {
+      camPos.x = out.pose.pos.x; camPos.y = out.pose.pos.y; camPos.z = out.pose.pos.z;
+      camInit = true;
+    }
+    const posK = Math.min(1, dt * (p.dashT > 0 ? 22 : 18));
+    camPos.x = lerp(camPos.x, out.pose.pos.x, posK);
+    camPos.y = lerp(camPos.y, out.pose.pos.y, posK);
+    camPos.z = lerp(camPos.z, out.pose.pos.z, posK);
     shake = Math.max(0, shake - dt * 4);
     const s = shake * shake * 0.06;
-    cam.position.set(out.pose.pos.x + (Math.random() - 0.5) * s, out.pose.pos.y + (Math.random() - 0.5) * s, out.pose.pos.z + (Math.random() - 0.5) * s);
+    cam.position.set(camPos.x + (Math.random() - 0.5) * s, camPos.y + (Math.random() - 0.5) * s, camPos.z + (Math.random() - 0.5) * s);
     cam.lookAt(cam.position.x + out.pose.dir.x, cam.position.y + out.pose.dir.y, cam.position.z + out.pose.dir.z);
     for (const f of cameraPost) f(cam);
     ctx.aimDir.set(out.pose.dir.x, out.pose.dir.y, out.pose.dir.z);

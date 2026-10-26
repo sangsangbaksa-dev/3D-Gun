@@ -4,6 +4,7 @@ import { events } from '../../core/events';
 import { state, changed } from '../../core/state';
 import { MAP } from '../../data/map';
 import { ENEMY_RULES, MAX_ALIVE, ZOMBIE_TUNING, bossTypeFor, eliteChance, isBossWave, prepTime, waveCount, waveRoster, FINAL_WAVE, type ZType } from '../../data';
+import { t, zombieName } from '../../i18n';
 import type { EnemySim } from './sim';
 
 interface Pending { type: ZType; lane: number; elite?: boolean }
@@ -89,9 +90,15 @@ export class WaveDirector {
     state.waveRemaining = q.length + (boss ? 1 : 0);
     changed();
     events.emit('wave:start', { wave: w });
-    if (boss) events.emit('toast', { text: w === FINAL_WAVE ? '⚠ 좀비 왕이 깨어났다!' : `⚠ ${w}웨이브 보스 ${ZOMBIE_TUNING[bossTypeFor(w)].name} 출현!` });
+    if (boss) {
+      const bt = bossTypeFor(w);
+      const name = zombieName(bt, ZOMBIE_TUNING[bt].name);
+      events.emit('toast', { text: w === FINAL_WAVE ? t('toast.bossKing') : t('toast.bossWave', { n: w, name }) });
+    }
     const fresh = waveRoster(w).filter((e) => e.type !== 'normal' && !waveRoster(w - 1).some((o) => o.type === e.type));
-    for (const e of fresh) events.emit('toast', { text: `새 적 등장: ${ZOMBIE_TUNING[e.type].name}` });
+    for (const e of fresh) {
+      events.emit('toast', { text: t('toast.newEnemy', { name: zombieName(e.type, ZOMBIE_TUNING[e.type].name) }) });
+    }
   }
   private bossPending: Pending | null = null;
 

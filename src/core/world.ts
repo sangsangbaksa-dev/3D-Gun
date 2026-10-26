@@ -23,9 +23,14 @@ export const boxObstacles: BoxObstacle[] = [];
 export interface World { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer; sun: THREE.DirectionalLight }
 
 export function createWorld(canvas: HTMLCanvasElement): World {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  // 고 DPI에서 과한 supersampling 은 프레임 타임만 흔들리므로 상한을 낮춘다
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.06;
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   // 색·강도는 Atmosphere 가 페이즈(준비/전투/종료)에 맞춰 매 프레임 덮어쓴다
   scene.background = new THREE.Color(0x10141a);
@@ -33,22 +38,20 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
 
   const hemi = new THREE.HemisphereLight(0x2ee6d6, 0x3a332c, 1);
-  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xff8a2a, 1.6);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.00025;
+  sun.shadow.normalBias = 0.028;
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160 });
-  scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0x3a5a68, 0.32);
+  fill.position.set(-28, 22, -32);
+  scene.add(hemi, fill, sun, sun.target);
 
-  obstacles.length = 0;
-  boxObstacles.length = 0;
-  addScenery(scene, obstacles, boxObstacles);
+  populateWorldObstacles(scene, obstacles, boxObstacles);
   buildWorldView(scene);
   new Atmosphere(scene, sun, hemi);
-  registerPropObstacles(obstacles, boxObstacles);
-  registerBoundaryObstacles(obstacles);
-  registerMountainObstacles(obstacles);
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -58,6 +61,21 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   addEventListener('resize', resize);
   resize();
   return { scene, camera, renderer, sun };
+}
+
+/** 장애물 목록을 채운다 (지형 조형물·프롭·경계·산맥). headless 충돌 검사에서도 쓴다. */
+export function populateWorldObstacles(
+  scene: THREE.Scene,
+  out: Obstacle[] = obstacles,
+  boxes: BoxObstacle[] = boxObstacles,
+) {
+  out.length = 0;
+  boxes.length = 0;
+  addScenery(scene, out, boxes);
+  registerPropObstacles(out, boxes);
+  registerBoundaryObstacles(out);
+  registerMountainObstacles(out);
+  return { obstacles: out, boxObstacles: boxes };
 }
 
 /** 직사각형(OBB)·원형 장애물과의 충돌을 밀어내기로 해결한다. */
@@ -91,10 +109,14 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
     const dx = p.x - o.x, dz = p.z - o.z;
     const min = o.r + radius;
     const d2 = dx * dx + dz * dz;
-    if (d2 < min * min && d2 > 1e-6) {
-      const d = Math.sqrt(d2);
-      p.x = o.x + (dx / d) * min;
-      p.z = o.z + (dz / d) * min;
+    if (d2 < min * min) {
+      if (d2 > 1e-8) {
+        const d = Math.sqrt(d2);
+        p.x = o.x + (dx / d) * min;
+        p.z = o.z + (dz / d) * min;
+      } else {
+        p.x = o.x + min;
+      }
     }
   }
   p.x = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.x));
@@ -107,32 +129,15 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
     const rot = p.rot ?? 0;
     const cos = Math.cos(rot), sin = Math.sin(rot);
     if (p.kind === 'building' && p.w && p.d) {
-      const hx = p.w / 2 + 0.16, hz = p.d / 2 + 0.16;
+      // OBB 하나로 충분하다. 끝단 원형 캡을 겹치면 한 프레임에 두 번 밀려 코너에 걸린다.
+      const hx = p.w / 2 + 0.1, hz = p.d / 2 + 0.1;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = Math.min(hx, hz) * 0.96;
-      if (hx >= hz) {
-        const off = hx - r;
-        for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
-      } else {
-        const off = hz - r;
-        for (const s of [-1, 1]) out.push({ x: p.x + s * off * sin, z: p.z + s * off * cos, r });
-      }
     } else if (p.kind === 'wall' && p.w && p.d) {
-      const hx = p.w / 2, hz = (p.d * 1.2) / 2;
+      const hx = p.w / 2, hz = p.d / 2 + 0.06;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = hz;
-      const span = Math.max(0, hx - r);
-      const steps = Math.max(2, Math.ceil((span * 2) / 1.1) + 1);
-      for (let i = 0; i < steps; i++) {
-        const lx = steps === 1 ? 0 : -span + (span * 2 * i) / (steps - 1);
-        out.push({ x: p.x + lx * cos, z: p.z - lx * sin, r });
-      }
     } else if (p.kind === 'car' && p.w && p.d) {
       const hx = p.w / 2, hz = p.d / 2;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = hz * 0.95;
-      const off = Math.max(0, hx - r);
-      for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
     } else {
       out.push({ x: p.x, z: p.z, r: p.r });
     }
@@ -143,8 +148,12 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
 export function registerBoundaryObstacles(out: Obstacle[]) {
   const H = MAP.half;
   const edge = H - 0.6;
-  const step = 4;
-  const wallR = 1.2;
+  const step = 3;
+  const wallR = 1.15;
+  const corners = [
+    { x: edge, z: edge }, { x: -edge, z: edge }, { x: edge, z: -edge }, { x: -edge, z: -edge },
+  ];
+  for (const c of corners) out.push({ x: c.x, z: c.z, r: wallR + 0.35 });
   for (let x = -H; x <= H; x += step) {
     out.push({ x, z: edge, r: wallR });
     out.push({ x, z: -edge, r: wallR });
