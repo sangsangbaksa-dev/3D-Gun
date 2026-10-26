@@ -45,6 +45,7 @@ export const KO_UI: Record<string, string> = {
   'hub.report.pick': '업그레이드를 고르고 출격하세요',
   'hub.buy.ok': '구매 완료!', 'hub.buy.max': '이미 최대 레벨입니다', 'hub.buy.poor': '재화가 부족합니다',
   'hub.buy.locked': '아직 잠겨 있습니다', 'hub.buy.upgrade': '강화', 'hub.buy.learn': '습득', 'hub.buy.build': '건설',
+  'hub.buy.requires': '{name} Lv{lv} 필요',
   'hub.buy.expand': '확장', 'hub.buy.maxBtn': 'MAX', 'hub.buy.lockedBtn': '🔒 잠김',
   'hub.skills.note': '스킬 트리 노드를 영구 습득합니다 (스킬 포인트 소모). 출격하면 해당 레벨로 시작합니다.',
   'hub.prod.note': '시설은 게임에 접속해 있는 동안(본부·출격 중)에만 재화를 만듭니다. 게임을 끄거나 탭을 숨기면 멈춥니다.',

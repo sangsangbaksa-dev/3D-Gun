@@ -45,6 +45,7 @@ export const EN_UI: Record<string, string> = {
   'hub.report.pick': 'Pick upgrades, then deploy',
   'hub.buy.ok': 'Purchased!', 'hub.buy.max': 'Already max level', 'hub.buy.poor': 'Not enough resources',
   'hub.buy.locked': 'Still locked', 'hub.buy.upgrade': 'Upgrade', 'hub.buy.learn': 'Learn', 'hub.buy.build': 'Build',
+  'hub.buy.requires': 'Requires {name} Lv{lv}',
   'hub.buy.expand': 'Expand', 'hub.buy.maxBtn': 'MAX', 'hub.buy.lockedBtn': '🔒 Locked',
   'hub.skills.note': 'Permanently learn skill nodes (spends skill points). Levels apply on your next sortie.',
   'hub.prod.note': 'Facilities earn only while you are in-game (HQ or sortie). They stop when you quit or hide the tab.',
