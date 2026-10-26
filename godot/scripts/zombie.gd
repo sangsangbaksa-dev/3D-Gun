@@ -18,6 +18,10 @@ var atk_cd := 0.0
 var windup := 0.0
 var dead := false
 var _walk := 0.0
+var _detour := Vector3.ZERO
+var _detour_t := 0.0
+var _stuck_t := 0.0
+var _last_pos := Vector3.ZERO
 var _flash := 0.0
 var _mats: Array[StandardMaterial3D] = []
 var _base_cols: Array[Color] = []
@@ -164,13 +168,24 @@ func _physics_process(dt: float) -> void:
 			windup = GameData.enemy_rules.windup
 	else:
 		var v := to / dist * speed
-		# 길찾기 대신: 벽에 막히면 벽을 따라 옆으로 돌아간다 (내비메시는 다음 단계)
-		if is_on_wall():
-			var n := get_wall_normal()
-			var side := n.cross(Vector3.UP)
+		# 길찾기 대신: 벽에 막히면 한쪽을 골라 1초쯤 벽을 따라 돌아간다 (내비메시는 다음 단계)
+		_detour_t -= dt
+		if is_on_wall() and _detour_t <= 0.0:
+			var side := get_wall_normal().cross(Vector3.UP).normalized()
 			if side.dot(to) < 0.0:
 				side = -side
-			v = (v * 0.3 + side.normalized() * speed).normalized() * speed
+			_detour = side
+			_detour_t = 1.0
+		# 2초 동안 거의 못 움직였으면 반대쪽으로 돌아간다 (모서리에 끼었을 때)
+		_stuck_t += dt
+		if _stuck_t >= 2.0:
+			if global_position.distance_to(_last_pos) < 1.0:
+				_detour = -_detour if _detour != Vector3.ZERO else (to / dist).cross(Vector3.UP)
+				_detour_t = 1.5
+			_stuck_t = 0.0
+			_last_pos = global_position
+		if _detour_t > 0.0:
+			v = (v * 0.3 + _detour * speed).normalized() * speed
 		velocity.x = v.x
 		velocity.z = v.z
 		_walk += dt * speed * 2.2

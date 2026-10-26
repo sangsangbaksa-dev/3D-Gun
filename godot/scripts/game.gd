@@ -5,6 +5,7 @@ extends Node3D
 
 const ZombieScript := preload("res://scripts/zombie.gd")
 const PlayerScript := preload("res://scripts/player.gd")
+const ShopScript := preload("res://scripts/weapon_shop.gd")
 const PREP_TIME := 8.0 # 웹 게임은 60초(기지 건설 시간). 건설이 없는 첫 슬라이스라 짧게
 const SPAWN_MIN := 26.0
 const SPAWN_MAX := 40.0
@@ -24,6 +25,9 @@ var lbl_top: Label
 var lbl_ammo: Label
 var lbl_center: Label
 var lbl_hint: Label
+var lbl_gun: Label
+var scope: Control
+var shop: CanvasLayer
 var hp_bar: ProgressBar
 var crosshair: Control
 var hitmark := 0.0
@@ -45,6 +49,9 @@ func _ready() -> void:
 	add_child(zombies_root)
 	_build_hud()
 	I18n.locale_changed.connect(_refresh_hud)
+	shop = ShopScript.new()
+	shop.game = self
+	add_child(shop)
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
@@ -228,8 +235,10 @@ func _on_zombie_killed(_z: Node, gold: int) -> void:
 
 # ── 사격 연출 ─────────────────────────────────────────────────────────
 
-func _on_fired(from: Vector3, to: Vector3, hit_zombie: bool, headshot: bool, kill: bool) -> void:
+func _on_fired(from: Vector3, to: Vector3, hit_zombie: bool, headshot: bool, kill: bool, also: Array) -> void:
 	_tracer(from, to)
+	for pt in also:
+		_blood(pt)
 	if hit_zombie:
 		hitmark = 0.25 if kill or headshot else 0.15
 		crosshair.set_meta("hit_col", Color(1, 0.25, 0.2) if kill else (Color(1, 0.85, 0.2) if headshot else Color.WHITE))
@@ -301,6 +310,12 @@ func _build_hud() -> void:
 	hurt_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hurt_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(hurt_flash)
+	scope = Control.new()
+	scope.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scope.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scope.draw.connect(_draw_scope)
+	scope.visible = false
+	hud.add_child(scope)
 	crosshair = Control.new()
 	crosshair.set_anchors_preset(Control.PRESET_CENTER)
 	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -310,6 +325,10 @@ func _build_hud() -> void:
 	lbl_ammo = _label(hud, 34, Control.PRESET_BOTTOM_RIGHT, Vector2(-220, -78))
 	lbl_ammo.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	lbl_ammo.size.x = 196
+	lbl_gun = _label(hud, 18, Control.PRESET_BOTTOM_RIGHT, Vector2(-320, -104))
+	lbl_gun.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lbl_gun.size.x = 296
+	lbl_gun.modulate.a = 0.85
 	lbl_center = _label(hud, 40, Control.PRESET_CENTER_TOP, Vector2(-400, 90))
 	lbl_center.size.x = 800
 	lbl_center.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -356,12 +375,18 @@ func _refresh_hud() -> void:
 	lbl_top.text = "%s    %s    %s" % [I18n.t("hud.wave", {"n": maxi(wave, 1)}), I18n.t("hud.kills", {"n": kills}), I18n.t("hud.coins", {"n": coins})]
 	if to_spawn == 0 and alive == 0 and not player.dead:
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
-	lbl_ammo.text = I18n.t("hud.reloading") if player.is_reloading() else "%d / %d" % [player.ammo, int(player.gun.mag)]
+	lbl_ammo.text = I18n.t("hud.reloading") if player.is_reloading() else "%d / %d" % [player.ammo, player.mag_size(player.gun_id)]
+	lbl_gun.text = "%s  Lv %d" % [I18n.gun_name(player.gun_id), player.lv[player.gun_id]]
+	var scoped: bool = player.aiming and bool(player.gun.scope)
+	scope.visible = scoped
+	crosshair.visible = not scoped
 	hp_bar.max_value = player.max_hp
 	hp_bar.value = player.hp
 	var help := I18n.t("help")
 	lbl_hint.text = help if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else I18n.t("hud.click") + "  ·  " + help
 	crosshair.queue_redraw()
+	if scoped:
+		scope.queue_redraw()
 
 ## Crosshair gap follows the real spread, like the web HUD.
 func _draw_crosshair() -> void:
@@ -374,6 +399,34 @@ func _draw_crosshair() -> void:
 		var hc: Color = crosshair.get_meta("hit_col", Color.WHITE)
 		for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 			crosshair.draw_line(d * 7.0, d * 14.0, hc, 2.5)
+
+## Sniper scope: black outside a circle, thin cross lines.
+func _draw_scope() -> void:
+	var sz := scope.size
+	var c := sz * 0.5
+	var r := sz.y * 0.42
+	var black := Color(0, 0, 0, 0.96)
+	scope.draw_rect(Rect2(0, 0, c.x - r, sz.y), black)
+	scope.draw_rect(Rect2(c.x + r, 0, sz.x - c.x - r, sz.y), black)
+	var pts := PackedVector2Array()
+	for i in 65: # 원 바깥 위/아래를 다각형으로 칠한다
+		var a := PI + PI * i / 64.0
+		pts.append(c + Vector2(cos(a), sin(a)) * r)
+	pts.append(Vector2(c.x + r, 0))
+	pts.append(Vector2(c.x - r, 0))
+	scope.draw_colored_polygon(pts, black)
+	var pts2 := PackedVector2Array()
+	for i in 65:
+		var a := PI * i / 64.0
+		pts2.append(c + Vector2(cos(a), sin(a)) * r)
+	pts2.append(Vector2(c.x - r, sz.y))
+	pts2.append(Vector2(c.x + r, sz.y))
+	scope.draw_colored_polygon(pts2, black)
+	scope.draw_arc(c, r, 0, TAU, 96, Color(0, 0, 0), 4.0)
+	var line := Color(0, 0, 0, 0.85)
+	scope.draw_line(Vector2(c.x - r, c.y), Vector2(c.x + r, c.y), line, 1.5)
+	scope.draw_line(Vector2(c.x, c.y - r), Vector2(c.x, c.y + r), line, 1.5)
+	scope.draw_circle(c, 2.0, Color(1, 0.2, 0.15))
 
 # ── 사망 카드 ─────────────────────────────────────────────────────────
 

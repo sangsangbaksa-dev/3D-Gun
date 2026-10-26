@@ -4,6 +4,9 @@ extends Node
 
 var player: Dictionary
 var guns: Dictionary
+var gun_order: Array
+var gun_upgrade: Dictionary
+var gun_unlock_gold: Dictionary
 var zombie_tuning: Dictionary
 var zombie_reward: Dictionary
 var enemy_rules: Dictionary
@@ -16,6 +19,9 @@ func _ready() -> void:
 	var d: Dictionary = JSON.parse_string(f.get_as_text())
 	player = d.player
 	guns = d.guns
+	gun_order = d.gunOrder
+	gun_upgrade = d.gunUpgrade
+	gun_unlock_gold = d.gunUnlockGold
 	zombie_tuning = d.zombieTuning
 	zombie_reward = d.zombieReward
 	enemy_rules = d.enemyRules
