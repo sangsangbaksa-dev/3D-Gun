@@ -239,7 +239,8 @@ function genScatterRocks(props: MapProp[]): ScatterRockSpot[] {
     if (LANDMARKS.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 4.8)) continue;
     if (props.some((p) => distToPropOBB(x, z, p, p.kind === 'building' ? 3.8 : 4.2) < 1.6)) continue;
     const s = 0.55 + rnd() * 0.9;
-    out.push({ x, z, s, r: s * 0.82 });
+    // 메시(주 암석 반경 ≈ s×0.58)보다 살짝 넓게 — 기존 s×0.82 는 도로에서 과하게 막았다
+    out.push({ x, z, s, r: s * 0.66 });
   }
   return out;
 }
