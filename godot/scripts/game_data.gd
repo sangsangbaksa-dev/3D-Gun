@@ -18,6 +18,13 @@ var elite: Dictionary
 var final_wave: int
 var core: Dictionary
 var map: Dictionary
+var res: Dictionary
+var gather: Dictionary
+var gather_layout: Array
+var buildings: Dictionary
+var building_order: Array
+var base: Dictionary
+var models: Dictionary
 var _roster: Array
 var _elite_chance: Array
 var _lane_spawn: Array
@@ -43,6 +50,14 @@ func _ready() -> void:
 	final_wave = int(d.finalWave)
 	core = d.core
 	map = d.map
+	res = d.res
+	gather = d.gather
+	gather_layout = d.gatherLayout
+	buildings = d.buildings
+	building_order = d.buildingOrder
+	base = d.base
+	var mf := FileAccess.open("res://data/models.json", FileAccess.READ)
+	models = JSON.parse_string(mf.get_as_text())
 	_roster = d.waveRoster
 	_elite_chance = d.eliteChance
 	_lane_spawn = d.laneSpawnDist

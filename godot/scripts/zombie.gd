@@ -85,91 +85,86 @@ func _ready() -> void:
 
 # ── 모델 ─────────────────────────────────────────────────────────────
 
-## Look per type: colours and proportions, standing in for src/enemies/view/models.ts.
-const LOOK := {
-	"normal": {"skin": Color(0.45, 0.58, 0.36), "shirt": Color(0.32, 0.26, 0.3)},
-	"runner": {"skin": Color(0.6, 0.5, 0.33), "shirt": Color(0.45, 0.15, 0.12)},
-	"fatty": {"skin": Color(0.55, 0.6, 0.4), "shirt": Color(0.5, 0.45, 0.35), "wide": 1.7},
-	"crawler": {"skin": Color(0.5, 0.45, 0.4), "shirt": Color(0.25, 0.25, 0.22)},
-	"swarmer": {"skin": Color(0.62, 0.55, 0.45), "shirt": Color(0.3, 0.2, 0.18)},
-	"leaper": {"skin": Color(0.4, 0.5, 0.45), "shirt": Color(0.18, 0.28, 0.3), "long": 1.25},
-	"spitter": {"skin": Color(0.5, 0.7, 0.3), "shirt": Color(0.25, 0.35, 0.15), "glow": Color(0.5, 1.0, 0.2)},
-	"bomber": {"skin": Color(0.55, 0.5, 0.4), "shirt": Color(0.35, 0.3, 0.2), "glow": Color(1.0, 0.35, 0.1)},
-	"screamer": {"skin": Color(0.78, 0.76, 0.7), "shirt": Color(0.4, 0.38, 0.42)},
-	"tank": {"skin": Color(0.42, 0.5, 0.36), "shirt": Color(0.3, 0.32, 0.35), "wide": 1.35, "armor": true},
-	"boss": {"skin": Color(0.45, 0.4, 0.32), "shirt": Color(0.3, 0.1, 0.08), "wide": 1.3},
-	"bossBomb": {"skin": Color(0.5, 0.42, 0.3), "shirt": Color(0.4, 0.2, 0.05), "wide": 1.3, "glow": Color(1.0, 0.4, 0.1)},
-	"bossAcid": {"skin": Color(0.45, 0.65, 0.25), "shirt": Color(0.2, 0.3, 0.1), "wide": 1.4, "glow": Color(0.5, 1.0, 0.2)},
-	"bossLord": {"skin": Color(0.4, 0.38, 0.4), "shirt": Color(0.25, 0.05, 0.1), "wide": 1.3, "armor": true},
-	"king": {"skin": Color(0.35, 0.3, 0.3), "shirt": Color(0.35, 0.05, 0.08), "wide": 1.4, "armor": true, "crown": true},
+## 웹 게임의 src/enemies/view/models.ts 를 그대로 내보낸 모델 (godot/tools/models). 종류별 가로·깊이 배율은 거기 값이다.
+const WIDTH := {
+	"runner": [0.84, 1.0], "fatty": [1.4, 1.3], "leaper": [0.9, 1.0], "bomber": [1.12, 1.0], "screamer": [0.85, 1.0],
+	"tank": [1.25, 1.15], "boss": [1.3, 1.15], "bossBomb": [1.3, 1.2], "bossAcid": [1.4, 1.25], "bossLord": [1.25, 1.15], "king": [1.2, 1.1],
 }
+const UNIT_H := 1.88
+static var _lib: Node
+var _torso: Node3D
+var _head: Node3D
+var _hunch := 0.22
+var _eye_mats: Array[StandardMaterial3D] = []
+
+static func _library() -> Node:
+	if _lib == null:
+		_lib = (load("res://assets/models/zombies.glb") as PackedScene).instantiate()
+	return _lib
 
 func _build_model() -> void:
-	var look: Dictionary = LOOK.get(type, LOOK.normal)
 	_body = Node3D.new()
-	_body.scale = Vector3.ONE * scale_k
 	add_child(_body)
-	var skin_col: Color = look.skin
-	if elite:
-		skin_col = skin_col.lerp(Color(1.0, 0.8, 0.25), 0.55) # 엘리트는 금빛
-	var skin := _mat(skin_col)
-	var shirt := _mat(look.shirt)
-	var pants := _mat(Color(0.2, 0.22, 0.3))
-	var wide: float = look.get("wide", 1.0)
-	var arm_len: float = 0.7 * float(look.get("long", 1.0))
-	for side in [-1, 1]:
-		var leg := _pivot(_body, Vector3(0.13 * side * wide, 0.9, 0))
-		_part(leg, Vector3(0.17 * wide, 0.9, 0.2), Vector3(0, -0.45, 0), pants)
-		_legs.append(leg)
-		var arm := _pivot(_body, Vector3((0.26 * wide + 0.07) * side, 1.5, 0))
-		_part(arm, Vector3(0.13, arm_len, 0.14), Vector3(0, -arm_len * 0.47, 0), skin)
-		arm.rotation.x = 1.35 # 좀비 자세: 팔을 앞으로
-		_arms.append(arm)
-	_part(_body, Vector3(0.5 * wide, 0.65, 0.28 * wide), Vector3(0, 1.22, 0), shirt)
-	if look.get("armor", false):
-		var plate := _mat(Color(0.35, 0.36, 0.4))
-		plate.metallic = 0.7
-		_part(_body, Vector3(0.56 * wide, 0.45, 0.06), Vector3(0, 1.28, -0.16 * wide), plate)
-		_part(_body, Vector3(0.22, 0.12, 0.3), Vector3(-0.3 * wide, 1.55, 0), plate)
-		_part(_body, Vector3(0.22, 0.12, 0.3), Vector3(0.3 * wide, 1.55, 0), plate)
-	if look.has("glow"):
-		var g := StandardMaterial3D.new()
-		g.albedo_color = look.glow
-		g.emission_enabled = true
-		g.emission = look.glow
-		g.emission_energy_multiplier = 1.5
-		if type == "bomber" or type == "bossBomb":
-			_part(_body, Vector3(0.36, 0.4, 0.2), Vector3(0, 1.25, 0.24 * wide), g) # 등에 멘 폭탄
-		else:
-			_part(_body, Vector3(0.14, 0.06, 0.04), Vector3(0, 1.62, -0.17), g)    # 빛나는 입
-	var head := MeshInstance3D.new()
-	var sph := SphereMesh.new()
-	sph.radius = 0.17
-	sph.height = 0.36
-	head.mesh = sph
-	head.material_override = skin
-	head.position = Vector3(0, 1.72, 0.03)
-	_body.add_child(head)
-	var eye := StandardMaterial3D.new()
-	eye.albedo_color = Color(0.9, 0.15, 0.1)
-	eye.emission_enabled = true
-	eye.emission = Color(1, 0.15, 0.1)
-	eye.emission_energy_multiplier = 2.0
-	for side in [-1, 1]:
-		_part(_body, Vector3(0.05, 0.03, 0.02), Vector3(0.07 * side, 1.75, -0.15), eye)
-	if look.get("crown", false):
-		var gold := StandardMaterial3D.new()
-		gold.albedo_color = Color(1.0, 0.8, 0.2)
-		gold.metallic = 0.9
-		gold.emission_enabled = true
-		gold.emission = Color(0.6, 0.45, 0.1)
-		for i in 5:
-			var a := TAU * i / 5.0
-			_part(_body, Vector3(0.06, 0.14, 0.06), Vector3(cos(a) * 0.15, 1.95, sin(a) * 0.15), gold)
-	# 기어다니는 좀비: 몸을 앞으로 눕힌다 (판정 높이 0.85m)
+	var tag := "z_%s_%s" % [type, ("e%d" % (get_instance_id() % 2)) if elite else str(get_instance_id() % 6)]
+	if type == "boss" and wave >= 20 and not elite:
+		tag = "z_boss_w%d" % mini(40, (wave / 10) * 10)
+	var src: Node = _library().get_node_or_null(tag)
+	if src == null:
+		src = _library().get_node("z_normal_0")
+	var model: Node3D = src.duplicate()
+	_body.add_child(model)
+	var k: float = height / UNIT_H if type != "crawler" else 0.9 * scale_k * float(tune.height) / float(tune.height)
 	if type == "crawler":
-		_body.rotation.x = -1.2
-		_body.position = Vector3(0, 0.35, 0.6) * scale_k
+		k = 0.9 * scale_k
+	var w: Array = WIDTH.get(type, [1.0, 1.0])
+	model.scale = Vector3(k * float(w[0]), k, k * float(w[1]))
+	_hunch = float(GameData.models.zombies.hunch.get(type, 0.22))
+	for n in model.find_children("*", "Node3D", true, false):
+		var nm: String = String(n.name).get_slice("-", 0)
+		match nm:
+			"leg0": _legs.append(n)
+			"leg1": _legs.append(n)
+			"arm0": _arms.append(n)
+			"arm1": _arms.append(n)
+			"torso": _torso = n
+			"head": _head = n
+	_legs.sort_custom(func(a, b): return String(a.name) < String(b.name))
+	_arms.sort_custom(func(a, b): return String(a.name) < String(b.name))
+	# 몸 재질은 개체마다 따로 (피격 번쩍임), 눈은 발광
+	var cache := {}
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m: Material = mi.mesh.surface_get_material(0)
+		if m == null:
+			continue
+		if not cache.has(m):
+			var d: StandardMaterial3D = (m as StandardMaterial3D).duplicate()
+			var mname := String(m.resource_name)
+			if mname.begins_with("eyes"):
+				d.emission_enabled = true
+				d.emission = d.albedo_color
+				d.emission_energy_multiplier = 1.6
+				d.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+				_eye_mats.append(d)
+			elif mname.begins_with("body") or true:
+				d.emission_enabled = true
+				d.emission = Color.BLACK
+				if elite:
+					d.emission = Color(0.14, 0.1, 0.0)
+				_mats.append(d)
+				_base_cols.append(d.emission)
+			cache[m] = d
+		mi.set_surface_override_material(0, cache[m])
+	if _torso:
+		_torso.rotation.x = -_hunch
+	if _head:
+		_head.rotation.x = 0.12
+	for a in _arms:
+		a.rotation.x = 1.35
+	# 기어다니는 좀비: 다리 없이 몸을 앞으로 눕힌다 (판정 높이 0.85m)
+	if type == "crawler":
+		_body.rotation.x = -1.25
+		_body.position = Vector3(0, 0.18, 0)
+		_head.rotation.x = 0.95
 
 func _mat(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -248,7 +243,7 @@ func _physics_process(dt: float) -> void:
 		_flash = maxf(0.0, _flash - dt)
 		var k := 0.7 if _flash > 0.0 else 0.0 # 맞은 순간 하얗게 번쩍
 		for i in _mats.size():
-			_mats[i].albedo_color = _base_cols[i].lerp(Color.WHITE, k)
+			_mats[i].emission = _base_cols[i].lerp(Color(0.9, 0.7, 0.6), k)
 	if dead:
 		return
 	atk_t -= dt

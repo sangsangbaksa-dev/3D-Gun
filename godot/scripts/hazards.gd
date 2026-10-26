@@ -37,7 +37,7 @@ func ring(pos: Vector3, r: float, time: float, col: Color = WARN) -> void:
 	m.rings = 48
 	mi.mesh = m
 	mi.material_override = _glow(col, 0.85)
-	mi.position = Vector3(pos.x, 0.06, pos.z)
+	mi.position = Vector3(pos.x, game.world.ground_y(pos.x, pos.z) + 0.06, pos.z)
 	mi.scale = Vector3(1, 0.05, 1)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
@@ -48,7 +48,7 @@ func ring(pos: Vector3, r: float, time: float, col: Color = WARN) -> void:
 	c.height = 0.02
 	fill.mesh = c
 	fill.material_override = _glow(col, 0.25)
-	fill.position = Vector3(pos.x, 0.04, pos.z)
+	fill.position = Vector3(pos.x, game.world.ground_y(pos.x, pos.z) + 0.04, pos.z)
 	fill.scale = Vector3(0.05, 1, 0.05)
 	fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(fill)
@@ -67,7 +67,7 @@ func spit(from: Vector3, to: Vector3, time: float, r: float, dmg: float, pool: f
 	ball.material_override = _glow(Color(0.5, 1.0, 0.2), 1.0)
 	add_child(ball)
 	ball.global_position = from
-	var land := Vector3(to.x, 0.0, to.z)
+	var land := Vector3(to.x, game.world.ground_y(to.x, to.z), to.z)
 	ring(land, r, time)
 	var tw := create_tween()
 	tw.tween_method(func(k: float):
@@ -82,7 +82,7 @@ func spit(from: Vector3, to: Vector3, time: float, r: float, dmg: float, pool: f
 
 ## Delayed explosion with a warning ring (boss bomb rain).
 func bomb_at(pos: Vector3, delay: float, r: float, dmg: float) -> void:
-	var p := Vector3(pos.x, 0.0, pos.z)
+	var p := Vector3(pos.x, game.world.ground_y(pos.x, pos.z), pos.z)
 	ring(p, r, delay)
 	get_tree().create_timer(delay, false).timeout.connect(func(): explode(p, r, dmg, "bomb"))
 
@@ -122,7 +122,7 @@ func _blast(pos: Vector3, r: float, col: Color) -> void:
 	mi.mesh = s
 	var mat := _glow(col, 0.7)
 	mi.material_override = mat
-	mi.position = Vector3(pos.x, 0.1, pos.z)
+	mi.position = Vector3(pos.x, game.world.ground_y(pos.x, pos.z) + 0.1, pos.z)
 	mi.scale = Vector3.ONE * 0.2
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)

@@ -8,6 +8,7 @@ const PlayerScript := preload("res://scripts/player.gd")
 const ShopScript := preload("res://scripts/weapon_shop.gd")
 const HazardsScript := preload("res://scripts/hazards.gd")
 const CoreScript := preload("res://scripts/core.gd")
+const WorldScript := preload("res://scripts/world.gd")
 const PREP_TIME := 15.0 # 웹 게임은 60초(기지 건설 시간). 건설이 아직 없어 짧게. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -47,6 +48,9 @@ var crosshair: Control
 var hitmark := 0.0
 var hurt_flash: ColorRect
 var zombies_root: Node3D
+var world: Node3D
+var core_visual: Node3D
+var _t := 0.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -57,7 +61,7 @@ func _ready() -> void:
 	_build_world()
 	player = PlayerScript.new()
 	var ps: Dictionary = GameData.map.playerStart
-	player.position = Vector3(float(ps.x), 0.1, float(ps.z) + 3.0)
+	player.position = Vector3(float(ps.x), world.ground_y(float(ps.x), float(ps.z) + 3.0) + 0.3, float(ps.z) + 3.0)
 	player.rotation.y = PI # 핵을 등지고 바깥을 본다
 	add_child(player)
 	player.fired.connect(_on_fired)
@@ -87,116 +91,59 @@ func _build_environment() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.5
+	env.ambient_light_energy = 1.0
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.4, 0.14, 0.1)
-	env.fog_density = 0.006
+	env.fog_density = 0.0045
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.light_color = Color(1.0, 0.72, 0.55)
-	sun.light_energy = 1.1
-	sun.rotation_degrees = Vector3(-28, -40, 0)
+	sun.light_energy = 0.85
+	sun.rotation_degrees = Vector3(-54, 56, 0)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 80.0
 	add_child(sun)
 
 func _build_world() -> void:
-	var half: float = GameData.map.half
-	# 땅: 400m × 400m (MAP.half = 200), 잡음 텍스처로 흙/풀 얼룩
-	var noise := FastNoiseLite.new()
-	noise.frequency = 0.03
-	var tex := NoiseTexture2D.new()
-	tex.noise = noise
-	tex.seamless = true
-	var grad := Gradient.new()
-	grad.set_color(0, Color(0.16, 0.12, 0.08))
-	grad.set_color(1, Color(0.3, 0.27, 0.15))
-	tex.color_ramp = grad
-	var ground_mat := StandardMaterial3D.new()
-	ground_mat.albedo_texture = tex
-	ground_mat.uv1_scale = Vector3(48, 48, 1)
-	ground_mat.roughness = 1.0
-	var ground := _static_box(Vector3(half * 2, 1, half * 2), Vector3(0, -0.5, 0), ground_mat)
-	ground.get_child(0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# 가운데 핵 (기지 자리 표시). 기지 건설은 다음 슬라이스에서
-	var core_mat := StandardMaterial3D.new()
-	core_mat.albedo_color = Color(0.1, 0.45, 0.45)
-	core_mat.metallic = 0.5
-	core_mat.emission_enabled = true
-	core_mat.emission = Color(0.18, 0.9, 0.84)
-	core_mat.emission_energy_multiplier = 0.35
+	world = WorldScript.new()
+	add_child(world)
 	core = CoreScript.new()
 	core.setup(GameData.core)
 	core.destroyed.connect(_on_core_destroyed)
-	_static_cylinder(core.radius, float(GameData.core.height), Vector3(0, float(GameData.core.height) * 0.5, 0), core_mat, core)
-	_build_lanes()
+	var shape := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = core.radius
+	cyl.height = float(GameData.core.height)
+	shape.shape = cyl
+	shape.position.y = cyl.height * 0.5
+	core.add_child(shape)
+	add_child(core)
+	core.position.y = world.ground_y(0, 0)
+	# 핵 모양은 웹 게임의 buildCoreModel 그대로
+	var lib: Node = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
+	core_visual = lib.get_node("core_0").duplicate()
+	core.add_child(core_visual)
+	for n in core_visual.find_children("shield*", "MeshInstance3D", true, false):
+		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var core_light := OmniLight3D.new()
-	core_light.light_color = Color(0.3, 1, 0.9)
-	core_light.omni_range = 14.0
-	core_light.light_energy = 1.5
-	core_light.position = Vector3(0, 4.5, 0)
-	add_child(core_light)
-	# 엄폐물: 상자, 무너진 벽, 폐차 덩어리를 흩어 둔다 (data/map.ts 의 장애물 자리 대신 임시 배치)
-	var crate := StandardMaterial3D.new()
-	crate.albedo_color = Color(0.42, 0.3, 0.17)
-	var concrete := StandardMaterial3D.new()
-	concrete.albedo_color = Color(0.45, 0.43, 0.42)
-	var rust := StandardMaterial3D.new()
-	rust.albedo_color = Color(0.45, 0.2, 0.1)
-	rust.metallic = 0.4
-	var layout := RandomNumberGenerator.new()
-	layout.seed = 20240607 # GATHER_LAYOUT.seed 와 같은 씨앗
-	var placed := 0
-	while placed < 150:
-		var a := layout.randf() * TAU
-		var r := layout.randf_range(9.0, half - 10.0)
-		var p := Vector3(cos(a) * r, 0, sin(a) * r)
-		if _near_lane(p, 7.0):
-			continue # 레인은 비워 둔다 (MAP 의 nearLane 과 같은 규칙)
-		placed += 1
-		var kind := layout.randi() % 3
-		var node: Node3D
-		match kind:
-			0:
-				var s := layout.randf_range(0.9, 1.6)
-				node = _static_box(Vector3(s, s, s), p + Vector3(0, s * 0.5, 0), crate)
-			1:
-				var w := layout.randf_range(3.0, 7.0)
-				var h := layout.randf_range(1.2, 2.8)
-				node = _static_box(Vector3(w, h, 0.5), p + Vector3(0, h * 0.5, 0), concrete)
-			_:
-				node = _static_box(Vector3(1.9, 1.3, 4.2), p + Vector3(0, 0.65, 0), rust)
-		node.rotation.y = layout.randf() * TAU
-	# 맵 가장자리 벽
-	for side in 4:
-		var horiz := side < 2
-		var off := half * (1 if side % 2 == 0 else -1)
-		var size := Vector3(half * 2, 6, 1) if horiz else Vector3(1, 6, half * 2)
-		var pos := Vector3(0, 3, off) if horiz else Vector3(off, 3, 0)
-		_static_box(size, pos, concrete)
+	core_light.light_color = Color(0.4, 0.8, 1.0)
+	core_light.omni_range = 18.0
+	core_light.light_energy = 1.6
+	core_light.position = Vector3(0, 3.2, 0)
+	core.add_child(core_light)
 
-## Lanes as darker dirt roads from MAP.lanes, so the player can see where waves come from.
-func _build_lanes() -> void:
-	var road := StandardMaterial3D.new()
-	road.albedo_color = Color(0.12, 0.08, 0.06)
-	road.roughness = 1.0
-	for l in GameData.map.lanes:
-		var pts: Array = l.waypoints
-		for i in range(1, pts.size()):
-			var a := Vector3(float(pts[i - 1].x), 0, float(pts[i - 1].z))
-			var b := Vector3(float(pts[i].x), 0, float(pts[i].z))
-			var mi := MeshInstance3D.new()
-			var m := PlaneMesh.new()
-			m.size = Vector2(6.0, a.distance_to(b) + 6.0)
-			mi.mesh = m
-			mi.material_override = road
-			mi.position = (a + b) * 0.5 + Vector3(0, 0.01, 0)
-			mi.rotation.y = atan2(b.x - a.x, b.z - a.z)
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			add_child(mi)
+func _process_core_visual(t: float) -> void:
+	if core_visual == null:
+		return
+	var crystal := core_visual.find_child("crystal-*", true, false)
+	if crystal:
+		crystal.rotation.y = t * 0.8
+		crystal.position.y = 2.9 + sin(t * 1.6) * 0.12
+	for sh in core_visual.find_children("shards*", "Node3D", true, false):
+		sh.rotation.y = -t * 0.5
 
 func _near_lane(p: Vector3, margin: float) -> bool:
 	for l in GameData.map.lanes:
@@ -243,6 +190,8 @@ func _static(mesh: Mesh, shape: Shape3D, pos: Vector3, mat: Material, body: Stat
 # ── 웨이브 ───────────────────────────────────────────────────────────
 
 func _process(dt: float) -> void:
+	_t += dt
+	_process_core_visual(_t)
 	hitmark = maxf(0.0, hitmark - dt)
 	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
 	if phase == "ended":
@@ -357,7 +306,7 @@ func spawn_zombie(type: String, pos: Vector3, lane: int, elite: bool) -> Node3D:
 	z.elite = elite
 	z.lane = lane
 	z.game = self
-	z.position = pos
+	z.position = Vector3(pos.x, world.ground_y(pos.x, pos.z) + 0.3, pos.z)
 	z.killed.connect(_on_zombie_killed)
 	zombies_root.add_child(z)
 	alive += 1

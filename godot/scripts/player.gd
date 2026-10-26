@@ -66,56 +66,34 @@ func _ready() -> void:
 	camera.current = true
 	_build_view_model()
 
-## Low-poly stand-ins for src/player/view/guns.ts, one per gun kind. Rebuilt on weapon switch.
+## 웹 게임의 src/player/view/guns.ts 를 그대로 내보낸 총 모델 (godot/tools/models). 크기·위치는 playerView.ts 의 1인칭 배치값이다.
+const FP_SCALE := 0.45
+const FP_HIP := Vector3(0.21, -0.19, -0.5)
+const ADS_DIST := 0.5
+static var _guns: Node
+var _sight_h := 0.15
+var _mag: Node3D
+
 func _build_view_model() -> void:
 	if view_model:
 		view_model.queue_free()
+	if _guns == null:
+		_guns = (load("res://assets/models/guns.glb") as PackedScene).instantiate()
 	view_model = Node3D.new()
 	view_model.position = _hip_pos()
+	view_model.scale = Vector3.ONE * FP_SCALE
 	camera.add_child(view_model)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.16, 0.17, 0.19)
-	metal.metallic = 0.6
-	metal.roughness = 0.4
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color(0.32, 0.2, 0.12)
-	var tip := 0.14
-	match String(gun.kind):
-		"pistol":
-			_box(view_model, Vector3(0.04, 0.045, 0.19), Vector3(0, 0.02, -0.04), metal)
-			_box(view_model, Vector3(0.036, 0.11, 0.05), Vector3(0, -0.05, 0.03), wood)
-			_box(view_model, Vector3(0.01, 0.012, 0.01), Vector3(0, 0.048, -0.125), metal)
-		"revolver":
-			_box(view_model, Vector3(0.03, 0.035, 0.22), Vector3(0, 0.025, -0.08), metal)
-			_box(view_model, Vector3(0.055, 0.055, 0.06), Vector3(0, 0.015, 0.0), metal) # 실린더
-			_box(view_model, Vector3(0.04, 0.12, 0.05), Vector3(0, -0.055, 0.045), wood)
-			tip = 0.2
-		"smg":
-			_box(view_model, Vector3(0.05, 0.07, 0.3), Vector3(0, 0.02, -0.08), metal)
-			_box(view_model, Vector3(0.03, 0.14, 0.035), Vector3(0, -0.07, -0.1), metal) # 탄창
-			_box(view_model, Vector3(0.036, 0.1, 0.045), Vector3(0, -0.05, 0.04), metal)
-			tip = 0.24
-		"shotgun":
-			_box(view_model, Vector3(0.045, 0.05, 0.5), Vector3(0, 0.03, -0.18), metal)
-			_box(view_model, Vector3(0.05, 0.05, 0.18), Vector3(0, -0.015, -0.2), wood) # 펌프
-			_box(view_model, Vector3(0.05, 0.09, 0.2), Vector3(0, -0.02, 0.12), wood)    # 개머리
-			tip = 0.44
-		"rifle":
-			_box(view_model, Vector3(0.05, 0.07, 0.48), Vector3(0, 0.02, -0.16), metal)
-			_box(view_model, Vector3(0.035, 0.15, 0.06), Vector3(0, -0.08, -0.08), metal) # 탄창
-			_box(view_model, Vector3(0.02, 0.04, 0.05), Vector3(0, 0.075, -0.06), metal)  # 가늠자
-			_box(view_model, Vector3(0.045, 0.08, 0.16), Vector3(0, -0.01, 0.14), metal)
-			tip = 0.42
-		_: # sniper
-			_box(view_model, Vector3(0.045, 0.06, 0.62), Vector3(0, 0.02, -0.22), metal)
-			_box(view_model, Vector3(0.045, 0.045, 0.2), Vector3(0, 0.085, -0.06), metal) # 조준경
-			_box(view_model, Vector3(0.05, 0.09, 0.22), Vector3(0, -0.02, 0.16), wood)
-			tip = 0.54
-	if not String(gun.kind) in ["pistol", "revolver"]:
-		view_model.scale = Vector3.ONE * 0.72 # 긴 총은 화면을 덜 가리게 작게
-	muzzle = Node3D.new()
-	muzzle.position = Vector3(0, 0.02, -tip)
-	view_model.add_child(muzzle)
+	var gm: Node3D = _guns.get_node("g_%s" % gun_id).duplicate()
+	view_model.add_child(gm)
+	_sight_h = float(GameData.models.guns[gun_id].sightH)
+	_mag = gm.find_child("mag-*", true, false) as Node3D
+	var hand: Node3D = _guns.get_node("hand").duplicate()
+	view_model.add_child(hand)
+	for mi in gm.find_children("*", "MeshInstance3D", true, false):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for mi in hand.find_children("*", "MeshInstance3D", true, false):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	muzzle = gm.find_child("muzzle-*", true, false) as Node3D
 	flash = OmniLight3D.new()
 	flash.light_color = Color(1.0, 0.8, 0.45)
 	flash.omni_range = 6.0
@@ -123,7 +101,13 @@ func _build_view_model() -> void:
 	muzzle.add_child(flash)
 
 func _hip_pos() -> Vector3:
-	return Vector3(0.2, -0.19, -0.45) if String(gun.kind) in ["pistol", "revolver"] else Vector3(0.16, -0.15, -0.34)
+	return FP_HIP
+
+func _ads_scale() -> float:
+	return 0.5 * tan(deg_to_rad(float(gun.adsFov) * 0.5)) / tan(deg_to_rad(27.5))
+
+func _ads_pos() -> Vector3:
+	return Vector3(0.0, -_sight_h * _ads_scale(), -ADS_DIST)
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> void:
 	var m := MeshInstance3D.new()
@@ -337,11 +321,15 @@ func _animate(dt: float) -> void:
 	if is_moving() and is_on_floor():
 		_bob += dt * 9.0
 	var bob := Vector3(sin(_bob) * 0.01, absf(cos(_bob)) * 0.012, 0) * float(gun.sway)
-	var rest := Vector3(0.0, -0.06, -0.34) if aiming else _hip_pos()
+	var rest := _ads_pos() if aiming else _hip_pos()
 	view_model.visible = not (aiming and bool(gun.scope)) # 조준경: 총을 숨기고 HUD 가 스코프를 그린다
 	var reload_dip := 0.0
 	if is_reloading():
 		reload_dip = sin(PI * (1.0 - reload_left / float(stats(gun_id).reload))) * 0.18
-	view_model.position = view_model.position.lerp(rest + bob + Vector3(0, -reload_dip, _kick * 0.06), minf(1.0, dt * 18.0))
+	view_model.position = view_model.position.lerp(rest + bob * (0.25 if aiming else 1.0) + Vector3(0, -reload_dip, _kick * 0.06), minf(1.0, dt * 18.0))
+	var tgt_scale: float = _ads_scale() if aiming else FP_SCALE
+	view_model.scale = view_model.scale.lerp(Vector3.ONE * tgt_scale, minf(1.0, dt * 14.0))
+	if _mag:
+		_mag.position.y = -reload_dip * 0.9
 	view_model.rotation.x = _kick * 0.25 + reload_dip * 2.0
 	flash.light_energy = 3.0 if since_shot < 0.04 else 0.0
