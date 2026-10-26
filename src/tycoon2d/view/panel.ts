@@ -1,11 +1,11 @@
 // 2D 업그레이드 타이쿤 화면 (DOM). 규칙은 logic/economy.ts 에 있고, 여기서는 그리기와 클릭 연결만 한다.
 import { meta } from '../../core/meta';
-import { FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS } from '../../data';
+import { FINAL_WAVE, RES_BUY_PRICE, RES_KEYS, RES_LABEL, SKILLS, ZOMBIE_TUNING, bossTypeFor, isBossWave, type ZType } from '../../data';
 import {
   UPGRADES, PRODUCERS, IDLE, CAT_ORDER, CAT_ICON, WALLET_KEYS, WALLET_ICON, WALLET_LABEL, type Cost, type WalletKey,
 } from '../../data/tycoon2d';
 import {
-  catLabel, onLocaleChange, prodDesc, prodName, resLabel, skillBranch, skillDesc, skillName, t, upgDesc, upgName, walletLabel,
+  catLabel, onLocaleChange, prodDesc, prodName, resLabel, skillBranch, skillDesc, skillName, t, upgDesc, upgName, walletLabel, zombieName,
 } from '../../i18n';
 import {
   bal, bonuses, buyFacility, buySkill, buyUpgrade, canAfford, costAffordText, facilityCost, facilityIncome, facilityLv, facilityUnlocked,
@@ -379,8 +379,13 @@ export class TycoonPanel {
     }
     const row = (a: string, v: string) => `<div><span>${a}</span><b>${v}</b></div>`;
     const wl = Object.entries(b.weaponLv).filter(([, v]) => v > 0).map(([k, v]) => `${k} +${v}`).join(', ') || '-';
+    let threat = t('hub.preview.threatNormal');
+    if (isBossWave(this.launchStartWave)) {
+      const type: ZType = this.launchStartWave === FINAL_WAVE ? 'king' : bossTypeFor(this.launchStartWave);
+      threat = t('hub.preview.threatBoss', { name: zombieName(type, ZOMBIE_TUNING[type].name) });
+    }
     (this.side.querySelector('[data-preview]') as HTMLElement).innerHTML = `<h3>${icon('flag', 'si sm')}${t('hub.preview.title')}</h3>`
-      + row(t('hub.preview.startWave'), String(this.launchStartWave)) + row(t('hub.preview.startGold'), fmt(b.startGold)) + row(t('hub.preview.coreHp'), `+${b.coreHp}`)
+      + row(t('hub.preview.startWave'), String(this.launchStartWave)) + row(t('hub.preview.threat'), threat) + row(t('hub.preview.startGold'), fmt(b.startGold)) + row(t('hub.preview.coreHp'), `+${b.coreHp}`)
       + row(t('hub.preview.maxHp'), `+${b.maxHp}`) + row(t('hub.preview.dmg'), `+${Math.round(b.dmgMul * 100)}%`) + row(t('hub.preview.prep'), `30 +${b.prepBonus}s`)
       + row(t('hub.preview.allyCap'), `+${b.allyCap}`) + row(t('hub.preview.weapons'), b.weapons.join(', ')) + row(t('hub.preview.gunQuality'), wl)
       + row(t('hub.preview.skills'), String(Object.values(b.skillLv).reduce((a, v) => a + v, 0)))

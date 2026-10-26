@@ -7,6 +7,7 @@ import {
   RES_KEYS, FINAL_WAVE,
   isBossWave, isBossType, bossTypeFor, ZOMBIE_TUNING, type ZType,
 } from '../data';
+import { structures } from './entities';
 import { onLocaleChange, resLabel, t, zombieName } from '../i18n';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
@@ -15,6 +16,8 @@ let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, 
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
 let bossEl: HTMLElement | null, bossName: HTMLElement | null, bossFill: HTMLElement | null, banner: HTMLElement | null;
 let coreBar: HTMLElement | null, coreFill: HTMLElement | null, coreText: HTMLElement | null;
+let prepBar: HTMLElement | null, prepFill: HTMLElement | null;
+let prepTotal = 0;
 let acc = 0;
 let lastPct = 100;
 let lastWaveText = '';
@@ -94,6 +97,34 @@ function refreshCoreBar() {
   coreBar.classList.toggle('low', pct > 0 && pct < 28);
 }
 
+function defenseSummary() {
+  let turrets = 0;
+  let other = 0;
+  let minPct = 100;
+  let any = false;
+  for (const s of structures) {
+    if (s.dead || s.kind === 'core') continue;
+    any = true;
+    if (s.kind === 'turret') turrets++;
+    else other++;
+    if (s.maxHp > 0) minPct = Math.min(minPct, (s.hp / s.maxHp) * 100);
+  }
+  if (!any) return '';
+  return ` · ${t('hud.defenses', { t: turrets, s: other, pct: Math.round(minPct) })}`;
+}
+
+function refreshPrepBar() {
+  if (!prepBar || !prepFill) return;
+  const prep = state.phase === 'prep' && prepTotal > 0;
+  prepBar.style.display = prep ? 'block' : 'none';
+  if (!prep) return;
+  const pct = Math.max(0, Math.min(100, (state.prepLeft / prepTotal) * 100));
+  prepFill.style.width = `${pct}%`;
+  const urgent = state.prepLeft > 0 && state.prepLeft <= 5;
+  prepBar.classList.toggle('urgent', urgent);
+  prepBar.classList.toggle('paused', state.mode === 'build');
+}
+
 function prepSubText() {
   const sec = Math.ceil(state.prepLeft);
   const w = state.wave;
@@ -135,6 +166,8 @@ export const HudSystem: System = {
     coreBar = document.getElementById('coreBar');
     coreFill = document.getElementById('coreFill');
     coreText = document.getElementById('coreText');
+    prepBar = document.getElementById('prepBar');
+    prepFill = document.getElementById('prepFill');
     if (help) help.style.display = 'none';
     mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
     mountWaveClearFlash();
@@ -147,9 +180,11 @@ export const HudSystem: System = {
       if (hud) hud.style.display = open ? 'none' : '';
     });
     events.on('wave:start', ({ wave: w }) => showBanner(waveBannerText(w)));
-    events.on('wave:prep', ({ wave: w }) => {
+    events.on('wave:prep', ({ wave: w, time }) => {
+      prepTotal = time;
       hideBossBar();
-      if (isBossWave(w) && w > 1) showBanner(`다음 — ${waveBannerText(w)}`, 2400);
+      refreshPrepBar();
+      if (isBossWave(w) && w > 1) showBanner(t('hud.nextBanner', { text: waveBannerText(w) }), 2400);
     });
     events.on('boss:spawn', ({ type }) => { activeBossType = type; refreshBossBar(); });
     events.on('boss:dead', () => hideBossBar());
@@ -177,9 +212,10 @@ export const HudSystem: System = {
     if (sub) {
       sub.textContent = state.phase === 'prep'
         ? prepSubText()
-        : `${t('hud.zombiesLeft', { n: state.waveRemaining })} · ${t('hud.core')} ${Math.ceil(state.coreHp)}/${state.coreMaxHp}`;
+        : `${t('hud.zombiesLeft', { n: state.waveRemaining })} · ${t('hud.core')} ${Math.ceil(state.coreHp)}/${state.coreMaxHp}${defenseSummary()}`;
       sub.classList.toggle('urgent', state.phase === 'prep' && state.prepLeft > 0 && state.prepLeft <= 5);
     }
+    refreshPrepBar();
     refreshBossBar();
     refreshCoreWarn();
     refreshCoreBar();

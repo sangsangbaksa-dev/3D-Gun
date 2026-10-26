@@ -1,6 +1,7 @@
 // 웨이브 클리어 짧은 연출: 골드·회복 안내. 전투 HUD 와 겹치지 않게 상단에 띄운다.
 import { events } from '../core/events';
 import { ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
+import { onLocaleChange, t } from '../i18n';
 
 const CSS = `
 #ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:none;pointer-events:none;
@@ -17,18 +18,29 @@ const CSS = `
 
 let el: HTMLDivElement | null = null;
 let timer = 0;
+let lastWave = 0;
 
 function waveClearGold(w: number) {
   return ENEMY_RULES.waveClearGold + w * 2;
 }
 
+function render() {
+  if (!el || !lastWave) return;
+  const w = lastWave;
+  const gold = waveClearGold(w);
+  const heal = t('waveClear.heal', {
+    corePct: Math.round(ENEMY_RULES.waveClearCorePct * 100),
+    structPct: Math.round(ENEMY_RULES.waveClearStructPct * 100),
+  });
+  let extra = '';
+  if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = t('waveClear.nextBoss');
+  el.innerHTML = `<div class="box"><b>${t('waveClear.title', { n: w })}</b><div class="sub">${t('waveClear.rewards', { gold, heal })}${extra}</div></div>`;
+}
+
 function show(w: number) {
   if (!el) return;
-  const gold = waveClearGold(w);
-  const heal = `핵 +${Math.round(ENEMY_RULES.waveClearCorePct * 100)}% · 시설 +${Math.round(ENEMY_RULES.waveClearStructPct * 100)}%`;
-  let extra = '';
-  if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = ' · 다음 웨이브는 보스';
-  el.innerHTML = `<div class="box"><b>웨이브 ${w} 클리어!</b><div class="sub">🪙 골드 +${gold} · ${heal}${extra}</div></div>`;
+  lastWave = w;
+  render();
   el.classList.remove('on');
   void el.offsetWidth;
   el.classList.add('on');
@@ -45,6 +57,7 @@ export function mountWaveClearFlash() {
   document.body.appendChild(el);
   events.on('wave:clear', ({ wave }) => show(wave));
   events.on('run:start', () => { timer = 0; el?.classList.remove('on'); });
+  onLocaleChange(() => { if (timer > 0) render(); });
 }
 
 export function updateWaveClearFlash(dt: number) {

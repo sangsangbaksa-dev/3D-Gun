@@ -30,6 +30,10 @@
   #sub { font-size:14px; opacity:.9; white-space:nowrap; transition:color .25s; }
   #sub.urgent { color:#FF8A2A; font-weight:700; animation:subPulse 1s ease-in-out infinite; }
   @keyframes subPulse { 50% { opacity:.65; } }
+  #prepBar { display:none; margin:7px auto 0; width:min(300px,88vw); height:5px; background:#0009; border-radius:3px; overflow:hidden; border:1px solid #2EE6D633; }
+  #prepBar .fill { height:100%; width:100%; background:linear-gradient(90deg,#1a8a82,#2EE6D6); transition:width .12s linear; }
+  #prepBar.urgent .fill { background:linear-gradient(90deg,#c45a10,#FF8A2A); }
+  #prepBar.paused .fill { background:#5a6a70; opacity:.85; }
   #boss { display:none; margin:8px auto 0; width:min(420px,92vw); text-align:left; }
   #bossName { font-size:12px; font-weight:800; letter-spacing:.12em; color:#FF8A2A; margin-bottom:4px; text-shadow:0 1px 4px #000; }
   #boss .track { position:relative; height:14px; background:#000a; border:1px solid #E0303A88; border-radius:4px; overflow:hidden; box-shadow:0 0 12px #E0303A33 inset; }
@@ -85,7 +89,7 @@
 <div id="hud">
   <img id="logo" src="/logo.svg" alt="3D-GUN" />
   <div id="help">WASD 이동 · Shift 대시 · 클릭 사격 · R 재장전<br>B 건설 · 1 감시탑 · 5 연구소 · L 백신 · N 웨이브 · H 도움말</div>
-  <div id="top"><div id="wave"></div><div id="sub"></div><div id="coreBar"><div class="lbl">핵 <span id="coreText"></span></div><div class="track"><div class="fill" id="coreFill"></div></div></div><div id="boss"><div id="bossName"></div><div class="track"><div class="fill" id="bossFill"></div></div></div></div>
+  <div id="top"><div id="wave"></div><div id="sub"></div><div id="prepBar"><div class="fill" id="prepFill"></div></div><div id="coreBar"><div class="lbl">핵 <span id="coreText"></span></div><div class="track"><div class="fill" id="coreFill"></div></div></div><div id="boss"><div id="bossName"></div><div class="track"><div class="fill" id="bossFill"></div></div></div></div>
   <div id="res"></div>
   <div id="cross"></div>
   <div id="prompt"></div><div id="prog"><div></div></div>
