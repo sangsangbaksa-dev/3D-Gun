@@ -49,14 +49,9 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   fill.position.set(-28, 22, -32);
   scene.add(hemi, fill, sun, sun.target);
 
-  obstacles.length = 0;
-  boxObstacles.length = 0;
-  addScenery(scene, obstacles, boxObstacles);
+  populateWorldObstacles(scene, obstacles, boxObstacles);
   buildWorldView(scene);
   new Atmosphere(scene, sun, hemi);
-  registerPropObstacles(obstacles, boxObstacles);
-  registerBoundaryObstacles(obstacles);
-  registerMountainObstacles(obstacles);
 
   const resize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -66,6 +61,21 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   addEventListener('resize', resize);
   resize();
   return { scene, camera, renderer, sun };
+}
+
+/** 장애물 목록을 채운다 (지형 조형물·프롭·경계·산맥). headless 충돌 검사에서도 쓴다. */
+export function populateWorldObstacles(
+  scene: THREE.Scene,
+  out: Obstacle[] = obstacles,
+  boxes: BoxObstacle[] = boxObstacles,
+) {
+  out.length = 0;
+  boxes.length = 0;
+  addScenery(scene, out, boxes);
+  registerPropObstacles(out, boxes);
+  registerBoundaryObstacles(out);
+  registerMountainObstacles(out);
+  return { obstacles: out, boxObstacles: boxes };
 }
 
 /** 직사각형(OBB)·원형 장애물과의 충돌을 밀어내기로 해결한다. */
@@ -119,32 +129,15 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
     const rot = p.rot ?? 0;
     const cos = Math.cos(rot), sin = Math.sin(rot);
     if (p.kind === 'building' && p.w && p.d) {
+      // OBB 하나로 충분하다. 끝단 원형 캡을 겹치면 한 프레임에 두 번 밀려 코너에 걸린다.
       const hx = p.w / 2 + 0.1, hz = p.d / 2 + 0.1;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = Math.min(hx, hz) * 0.96;
-      if (hx >= hz) {
-        const off = hx - r;
-        for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
-      } else {
-        const off = hz - r;
-        for (const s of [-1, 1]) out.push({ x: p.x + s * off * sin, z: p.z + s * off * cos, r });
-      }
     } else if (p.kind === 'wall' && p.w && p.d) {
       const hx = p.w / 2, hz = p.d / 2 + 0.06;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = hz;
-      const span = Math.max(0, hx - r);
-      const steps = Math.max(2, Math.ceil((span * 2) / 1.1) + 1);
-      for (let i = 0; i < steps; i++) {
-        const lx = steps === 1 ? 0 : -span + (span * 2 * i) / (steps - 1);
-        out.push({ x: p.x + lx * cos, z: p.z - lx * sin, r });
-      }
     } else if (p.kind === 'car' && p.w && p.d) {
       const hx = p.w / 2, hz = p.d / 2;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
-      const r = hz * 0.95;
-      const off = Math.max(0, hx - r);
-      for (const s of [-1, 1]) out.push({ x: p.x + s * off * cos, z: p.z - s * off * sin, r });
     } else {
       out.push({ x: p.x, z: p.z, r: p.r });
     }
