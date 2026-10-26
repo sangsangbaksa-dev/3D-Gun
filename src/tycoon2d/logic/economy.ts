@@ -161,7 +161,7 @@ export function startWaveSkipCost(m: Meta, fromWave: number, targetWave: number)
   const from = Math.max(1, Math.floor(fromWave));
   const to = Math.max(from, Math.floor(targetWave));
   for (let w = from + 1; w <= to; w++) {
-    out.gold = (out.gold ?? 0) + Math.floor((60 + w * 45 * Math.pow(1.12, w - 2)) * mul);
+    out.gold = (out.gold ?? 0) + Math.floor((68 + w * 48 * Math.pow(1.13, w - 2)) * mul);
     if (w >= 3) out.iron = (out.iron ?? 0) + Math.max(1, Math.floor((1 + w / 4) * mul));
     if (w >= 5) out.parts = (out.parts ?? 0) + Math.max(1, Math.floor((1 + w / 6) * mul));
     if (w >= 8 && w % 4 === 0) out.samples = (out.samples ?? 0) + 1;

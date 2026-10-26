@@ -23,9 +23,14 @@ export const boxObstacles: BoxObstacle[] = [];
 export interface World { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer; sun: THREE.DirectionalLight }
 
 export function createWorld(canvas: HTMLCanvasElement): World {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  // 고 DPI에서 과한 supersampling 은 프레임 타임만 흔들리므로 상한을 낮춘다
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.06;
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   // 색·강도는 Atmosphere 가 페이즈(준비/전투/종료)에 맞춰 매 프레임 덮어쓴다
   scene.background = new THREE.Color(0x10141a);
@@ -33,13 +38,16 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
 
   const hemi = new THREE.HemisphereLight(0x2ee6d6, 0x3a332c, 1);
-  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xff8a2a, 1.6);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.00025;
+  sun.shadow.normalBias = 0.028;
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160 });
-  scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0x3a5a68, 0.32);
+  fill.position.set(-28, 22, -32);
+  scene.add(hemi, fill, sun, sun.target);
 
   obstacles.length = 0;
   boxObstacles.length = 0;

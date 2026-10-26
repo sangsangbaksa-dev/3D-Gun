@@ -49,13 +49,10 @@ function showBanner(text: string, ms = 2100) {
   banner.textContent = text;
   banner.classList.remove('show');
   if (!reducedMotion()) void banner.offsetWidth;
-  banner.style.opacity = reducedMotion() ? '1' : '';
+  banner.style.removeProperty('opacity');
   banner.classList.add('show');
   clearTimeout(bannerT);
-  bannerT = window.setTimeout(() => {
-    banner!.style.opacity = '0';
-    banner!.classList.remove('show');
-  }, ms);
+  bannerT = window.setTimeout(() => banner!.classList.remove('show'), ms);
 }
 
 function hideBossBar() {
@@ -242,5 +239,7 @@ function showToast(text: string, ms = 1600, extraClass = '') {
   d.textContent = text;
   box.appendChild(d);
   while (box.children.length > 5) box.removeChild(box.firstChild as ChildNode);
+  const fade = Math.min(400, ms * 0.35);
+  setTimeout(() => { d.style.opacity = '0'; d.style.transform = 'translateX(-6px)'; }, ms - fade);
   setTimeout(() => d.remove(), ms);
 }
