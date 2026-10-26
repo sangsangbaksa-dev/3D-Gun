@@ -20,6 +20,15 @@ func _ready() -> void:
 	_load_terrain()
 	var vis: Node3D = (load("res://assets/models/world.glb") as PackedScene).instantiate()
 	add_child(vis)
+	# 지형은 빛 반사(스페큘러)를 끈다: 낮은 해에서 기지 둘레가 주황 띠로 번쩍이던 문제
+	for mi in vis.find_children("*", "MeshInstance3D", true, false):
+		var m := (mi as MeshInstance3D).mesh.surface_get_material(0)
+		if m is StandardMaterial3D:
+			(m as StandardMaterial3D).metallic = 0.0
+			(m as StandardMaterial3D).metallic_specular = 0.0
+			(m as StandardMaterial3D).roughness = 1.0
+			if (m as StandardMaterial3D).vertex_color_use_as_albedo:
+				(m as StandardMaterial3D).albedo_color = Color(0.46, 0.44, 0.44) # 웹은 ACES 라 지형색을 2.2배 키워 둔 값. Godot 에서는 그대로면 흙길이 주황으로 번쩍인다
 	_build_collision()
 
 # ── 높이 ─────────────────────────────────────────────────────────────
