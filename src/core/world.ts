@@ -99,10 +99,14 @@ export function resolveObstacles(p: { x: number; z: number }, radius: number) {
     const dx = p.x - o.x, dz = p.z - o.z;
     const min = o.r + radius;
     const d2 = dx * dx + dz * dz;
-    if (d2 < min * min && d2 > 1e-6) {
-      const d = Math.sqrt(d2);
-      p.x = o.x + (dx / d) * min;
-      p.z = o.z + (dz / d) * min;
+    if (d2 < min * min) {
+      if (d2 > 1e-8) {
+        const d = Math.sqrt(d2);
+        p.x = o.x + (dx / d) * min;
+        p.z = o.z + (dz / d) * min;
+      } else {
+        p.x = o.x + min;
+      }
     }
   }
   p.x = Math.max(-PLAY_HALF, Math.min(PLAY_HALF, p.x));
@@ -115,7 +119,7 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
     const rot = p.rot ?? 0;
     const cos = Math.cos(rot), sin = Math.sin(rot);
     if (p.kind === 'building' && p.w && p.d) {
-      const hx = p.w / 2 + 0.16, hz = p.d / 2 + 0.16;
+      const hx = p.w / 2 + 0.1, hz = p.d / 2 + 0.1;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
       const r = Math.min(hx, hz) * 0.96;
       if (hx >= hz) {
@@ -126,7 +130,7 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
         for (const s of [-1, 1]) out.push({ x: p.x + s * off * sin, z: p.z + s * off * cos, r });
       }
     } else if (p.kind === 'wall' && p.w && p.d) {
-      const hx = p.w / 2, hz = (p.d * 1.2) / 2;
+      const hx = p.w / 2, hz = p.d / 2 + 0.06;
       boxes.push({ x: p.x, z: p.z, hx, hz, rot });
       const r = hz;
       const span = Math.max(0, hx - r);
@@ -151,8 +155,12 @@ export function registerPropObstacles(out: Obstacle[], boxes: BoxObstacle[]) {
 export function registerBoundaryObstacles(out: Obstacle[]) {
   const H = MAP.half;
   const edge = H - 0.6;
-  const step = 4;
-  const wallR = 1.2;
+  const step = 3;
+  const wallR = 1.15;
+  const corners = [
+    { x: edge, z: edge }, { x: -edge, z: edge }, { x: edge, z: -edge }, { x: -edge, z: -edge },
+  ];
+  for (const c of corners) out.push({ x: c.x, z: c.z, r: wallR + 0.35 });
   for (let x = -H; x <= H; x += step) {
     out.push({ x, z: edge, r: wallR });
     out.push({ x, z: -edge, r: wallR });

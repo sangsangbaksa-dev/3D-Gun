@@ -381,8 +381,8 @@ function registerLandmarkObstacles(p: LandmarkProp, obstacles: Obstacle[], boxOb
     // 아치 중앙 통로(폭 2.5m)는 통과할 수 있게 비우고 좌우 석주 2개에만 충돌 원을 둔다
     const left = toWorld(-1.65, 0);
     const right = toWorld(1.7, 0.12);
-    obstacles.push({ x: left.x, z: left.z, r: 0.52 });
-    obstacles.push({ x: right.x, z: right.z, r: 0.58 });
+    obstacles.push({ x: left.x, z: left.z, r: 0.5 });
+    obstacles.push({ x: right.x, z: right.z, r: 0.5 });
   } else if (p.kind === 'billboard') {
     // 간판 본체는 3.6m 공중에 있으므로 지상 철제 기둥 2개에만 작은 충돌 원을 둔다
     for (const sx of [-0.95, 0.95]) {
@@ -391,45 +391,38 @@ function registerLandmarkObstacles(p: LandmarkProp, obstacles: Obstacle[], boxOb
     }
   } else if (p.kind === 'bus') {
     boxObstacles.push({ x: p.x, z: p.z, hx: 1.92, hz: 0.72, rot: p.yaw });
-    for (const sx of [-1.15, 1.15]) {
-      const pt = toWorld(sx, 0);
-      obstacles.push({ x: pt.x, z: pt.z, r: 0.7 });
-    }
   } else if (p.kind === 'containers') {
     const main = toWorld(0.05, 0.05);
     const side = toWorld(1.55, 1.15);
-    boxObstacles.push({ x: main.x, z: main.z, hx: 1.62, hz: 0.62, rot: p.yaw });
-    boxObstacles.push({ x: side.x, z: side.z, hx: 0.82, hz: 0.52, rot: p.yaw });
-    for (const sx of [-0.9, 1.0]) {
-      const pt = toWorld(sx, 0.05);
-      obstacles.push({ x: pt.x, z: pt.z, r: 0.6 });
-    }
-    obstacles.push({ x: side.x, z: side.z, r: 0.65 });
+    boxObstacles.push({ x: main.x, z: main.z, hx: 1.55, hz: 0.58, rot: p.yaw });
+    boxObstacles.push({ x: side.x, z: side.z, hx: 0.78, hz: 0.48, rot: p.yaw });
   } else if (p.kind === 'wall') {
-    boxObstacles.push({ x: p.x, z: p.z, hx: 1.72, hz: 0.32, rot: p.yaw });
-    for (const sx of [-1.25, 0, 1.25]) {
-      const pt = toWorld(sx, 0);
-      obstacles.push({ x: pt.x, z: pt.z, r: 0.32 });
-    }
+    boxObstacles.push({ x: p.x, z: p.z, hx: 1.72, hz: 0.28, rot: p.yaw });
   } else if (p.kind === 'shrine') {
     const center = toWorld(0, 0.22);
-    boxObstacles.push({ x: center.x, z: center.z, hx: 1.28, hz: 0.65, rot: p.yaw });
-    for (const sx of [-0.65, 0.65]) {
-      const pt = toWorld(sx, 0.22);
-      obstacles.push({ x: pt.x, z: pt.z, r: 0.58 });
+    boxObstacles.push({ x: center.x, z: center.z, hx: 1.12, hz: 0.58, rot: p.yaw });
+    for (const sx of [-1.15, 1.15]) {
+      const pt = toWorld(sx, 0.55);
+      obstacles.push({ x: pt.x, z: pt.z, r: 0.38 });
     }
   } else if (p.kind === 'cart') {
     boxObstacles.push({ x: p.x, z: p.z, hx: 0.82, hz: 0.5, rot: p.yaw });
-    obstacles.push({ x: p.x, z: p.z, r: 0.62 });
   } else if (p.kind === 'minehead') {
-    boxObstacles.push({ x: p.x, z: p.z, hx: 1.12, hz: 1.12, rot: p.yaw });
-    obstacles.push({ x: p.x, z: p.z, r: 1.12 });
+    boxObstacles.push({ x: p.x, z: p.z, hx: 1.08, hz: 1.08, rot: p.yaw });
   } else if (p.kind === 'tank') {
-    boxObstacles.push({ x: p.x, z: p.z, hx: 0.92, hz: 0.92, rot: p.yaw });
-    obstacles.push({ x: p.x, z: p.z, r: 0.92 });
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.88, hz: 0.88, rot: p.yaw });
   } else if (p.kind === 'crane') {
-    boxObstacles.push({ x: p.x, z: p.z, hx: 0.95, hz: 0.95, rot: p.yaw });
-    obstacles.push({ x: p.x, z: p.z, r: 0.95 });
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.9, hz: 0.9, rot: p.yaw });
+  } else if (p.kind === 'bossgate') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.95, hz: 0.82, rot: p.yaw });
+  } else if (p.kind === 'bossaltar') {
+    boxObstacles.push({ x: p.x, z: p.z, hx: 0.72, hz: 0.72, rot: p.yaw });
+  } else if (p.kind === 'windturbine') {
+    obstacles.push({ x: p.x, z: p.z, r: 0.48 });
+  } else if (p.kind === 'watchpost') {
+    obstacles.push({ x: p.x, z: p.z, r: 0.42 });
+  } else if (p.kind === 'rocks') {
+    obstacles.push({ x: p.x, z: p.z, r: 1.05 });
   } else {
     obstacles.push({ x: p.x, z: p.z, r: p.r });
   }
