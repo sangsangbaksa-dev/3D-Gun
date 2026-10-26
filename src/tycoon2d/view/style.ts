@@ -17,6 +17,8 @@ export const CSS = `
 #t2d[data-bg=outpost] .bgimg{background-image:url(${ART}outpost.webp)}
 #t2d[data-bg=turret] .bgimg{background-image:url(${ART}turret.webp)}
 #t2d[data-bg=base] .bgimg{background-image:url(${ART}base.webp)}
+#t2d[data-bg=ally] .bgimg{background-image:url(${ART}ally.webp);filter:brightness(1.25)}
+#t2d[data-bg=econ] .bgimg{background-image:url(${ART}econ.webp);filter:brightness(1.2)}
 /* 탭 그림이 있을 때는 가운데를 덜 가려 그림이 보이게 한다 (양옆 글자 쪽만 어둡게) */
 #t2d[data-bg]:not([data-bg=""]) .bgimg::after{background:
   linear-gradient(90deg,#0a0507d9 0,#0a050766 14%,#0a050700 38%,#0a050700 64%,#0a050773 82%,#0a0507e0 100%),
