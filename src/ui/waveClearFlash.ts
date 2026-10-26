@@ -3,9 +3,9 @@ import { events } from '../core/events';
 import { ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
 
 const CSS = `
-#ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:none;pointer-events:none;
-  font-family:var(--zt-font,'Pretendard','Malgun Gothic',system-ui,sans-serif);text-align:center}
-#ztWaveClear.on{display:block;animation:ztWcDrop .28s ease-out}
+#ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:block;pointer-events:none;opacity:0;visibility:hidden;
+  font-family:var(--zt-font,'Pretendard','Malgun Gothic',system-ui,sans-serif);text-align:center;transition:opacity .35s ease-out,visibility .35s}
+#ztWaveClear.on{opacity:1;visibility:visible;animation:ztWcDrop .32s ease-out}
 #ztWaveClear .box{background:#121A20e8;border:1px solid #2EE6D666;border-radius:10px;padding:10px 24px 12px;
   box-shadow:0 8px 32px #000a,0 0 24px #2EE6D622}
 #ztWaveClear b{display:block;font-size:26px;font-weight:800;color:#2EE6D6;text-shadow:0 2px 6px #000;letter-spacing:.04em}

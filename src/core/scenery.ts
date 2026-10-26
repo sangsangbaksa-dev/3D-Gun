@@ -153,7 +153,9 @@ function addTerrain(scene: THREE.Scene) {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.93, metalness: 0.03, flatShading: false,
+  }));
   mesh.receiveShadow = true;
   scene.add(mesh);
 }
