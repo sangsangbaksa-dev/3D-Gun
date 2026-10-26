@@ -92,6 +92,11 @@ export function terrainY(x: number, z: number): number {
     bowl(x, z, 0, -180, 320, -1.1) * flatMask
     + rim(x, z, 0, -180, 21.5, 5.8, 2.65) * bossCorridor * flatMask;
 
-  const outerY = outer * (dunes + nwForest + swForest + herbField + quarryPit + minePit + wasteland + bossCrater);
+  // 구역 사이 빈 들판: 낮은 스크럽 언덕으로 지형 리듬만 살짝 채운다 (도로·포털은 laneMask 로 평탄 유지)
+  const scrubNW = bowl(x, z, -42, -18, 520, 0.95) * flatMask;
+  const scrubSE = bowl(x, z, 58, 38, 480, 0.85) * flatMask;
+  const scrubMid = bowl(x, z, 12, -95, 620, 0.7) * flatMask;
+
+  const outerY = outer * (dunes + nwForest + swForest + herbField + quarryPit + minePit + wasteland + bossCrater + scrubNW + scrubSE + scrubMid);
   return innerY + outerY;
 }
