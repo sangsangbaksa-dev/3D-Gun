@@ -5,8 +5,10 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   GUNS, GUN_ORDER, GUN_UPGRADE, GUN_UNLOCK_GOLD, PLAYER, ZOMBIE_TUNING, ZOMBIE_REWARD,
-  ENEMY_RULES, MAX_ALIVE, zombieStats, waveCount, type ZType,
+  ENEMY_RULES, MAX_ALIVE, zombieStats, waveCount, waveRoster, eliteChance, laneSpawnDist,
+  BOSS_KIT, BOSS_MOVE, BOSS_TYPES, ELITE, FINAL_WAVE, CORE, type ZType,
 } from '../../src/data';
+import { MAP } from '../../src/data/map';
 
 const types = Object.keys(ZOMBIE_TUNING) as ZType[];
 // zombieStats 는 웨이브에 따라 변하는 식이라, 1~50 웨이브 값을 표로 펼쳐 둔다
@@ -26,6 +28,17 @@ const out = {
   waveCount: Array.from({ length: 50 }, (_, i) => waveCount(i + 1)),
   enemyRules: ENEMY_RULES,
   maxAlive: MAX_ALIVE,
+  // 웨이브 식들도 1~50 웨이브 표로 펼친다 (50 이후는 50 값을 쓴다)
+  waveRoster: Array.from({ length: 50 }, (_, i) => waveRoster(i + 1)),
+  eliteChance: Array.from({ length: 50 }, (_, i) => eliteChance(i + 1)),
+  laneSpawnDist: Array.from({ length: 50 }, (_, i) => laneSpawnDist(i + 1)),
+  bossKit: BOSS_KIT,
+  bossMove: BOSS_MOVE,
+  bossTypes: BOSS_TYPES,
+  elite: ELITE,
+  finalWave: FINAL_WAVE,
+  core: CORE,
+  map: { half: MAP.half, core: MAP.core, playerStart: MAP.playerStart, lanes: MAP.lanes },
 };
 const path = fileURLToPath(new URL('../data/game_data.json', import.meta.url));
 writeFileSync(path, JSON.stringify(out, null, 1) + '\n');

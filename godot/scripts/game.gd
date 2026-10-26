@@ -1,21 +1,30 @@
 extends Node3D
-## The 3D sortie: world, waves, coins, HUD and the death card.
-## Waves follow src/enemies/logic/director.ts in spirit (waveCount, MAX_ALIVE, clear bonus);
-## lanes, base, allies and turrets come in later slices.
+## The 3D sortie: world, lanes, core, waves, coins, HUD and the death card.
+## Waves port src/enemies/logic/director.ts (queue of lane groups, roster, elites, bosses).
+## Buildings, allies and gathering come in later stages.
 
 const ZombieScript := preload("res://scripts/zombie.gd")
 const PlayerScript := preload("res://scripts/player.gd")
 const ShopScript := preload("res://scripts/weapon_shop.gd")
-const PREP_TIME := 8.0 # 웹 게임은 60초(기지 건설 시간). 건설이 없는 첫 슬라이스라 짧게
-const SPAWN_MIN := 26.0
-const SPAWN_MAX := 40.0
+const HazardsScript := preload("res://scripts/hazards.gd")
+const CoreScript := preload("res://scripts/core.gd")
+const PREP_TIME := 15.0 # 웹 게임은 60초(기지 건설 시간). 건설이 아직 없어 짧게. N 으로 바로 시작
 
 var player: CharacterBody3D
 var wave := 0
-var to_spawn := 0
+var phase := "prep" # prep / combat / ended
+var queue: Array = [] # [{type, lane, elite}]
+var boss_pending := {}
+var boss_at := 0.0
+var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
-var prep_left := 3.0
+var prep_left := 5.0
+var core: StaticBody3D
+var core_dead := false
+var hazards: Node3D
+var boss: Node3D
+var lose_reason := "player"
 var kills := 0
 var coins := 0
 var rng := RandomNumberGenerator.new()
@@ -29,6 +38,11 @@ var lbl_gun: Label
 var scope: Control
 var shop: CanvasLayer
 var hp_bar: ProgressBar
+var core_bar: ProgressBar
+var boss_bar: ProgressBar
+var lbl_boss: Label
+var lbl_toast: Label
+var lbl_core: Label
 var crosshair: Control
 var hitmark := 0.0
 var hurt_flash: ColorRect
@@ -36,10 +50,14 @@ var zombies_root: Node3D
 
 func _ready() -> void:
 	rng.randomize()
+	hazards = HazardsScript.new()
+	hazards.game = self
+	add_child(hazards)
 	_build_environment()
 	_build_world()
 	player = PlayerScript.new()
-	player.position = Vector3(0, 0.1, 7)
+	var ps: Dictionary = GameData.map.playerStart
+	player.position = Vector3(float(ps.x), 0.1, float(ps.z) + 3.0)
 	player.rotation.y = PI # 핵을 등지고 바깥을 본다
 	add_child(player)
 	player.fired.connect(_on_fired)
@@ -86,7 +104,8 @@ func _build_environment() -> void:
 	add_child(sun)
 
 func _build_world() -> void:
-	# 땅: 200m × 200m, 잡음 텍스처로 흙/풀 얼룩
+	var half: float = GameData.map.half
+	# 땅: 400m × 400m (MAP.half = 200), 잡음 텍스처로 흙/풀 얼룩
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.03
 	var tex := NoiseTexture2D.new()
@@ -98,9 +117,9 @@ func _build_world() -> void:
 	tex.color_ramp = grad
 	var ground_mat := StandardMaterial3D.new()
 	ground_mat.albedo_texture = tex
-	ground_mat.uv1_scale = Vector3(24, 24, 1)
+	ground_mat.uv1_scale = Vector3(48, 48, 1)
 	ground_mat.roughness = 1.0
-	var ground := _static_box(Vector3(200, 1, 200), Vector3(0, -0.5, 0), ground_mat)
+	var ground := _static_box(Vector3(half * 2, 1, half * 2), Vector3(0, -0.5, 0), ground_mat)
 	ground.get_child(0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# 가운데 핵 (기지 자리 표시). 기지 건설은 다음 슬라이스에서
 	var core_mat := StandardMaterial3D.new()
@@ -109,7 +128,11 @@ func _build_world() -> void:
 	core_mat.emission_enabled = true
 	core_mat.emission = Color(0.18, 0.9, 0.84)
 	core_mat.emission_energy_multiplier = 0.35
-	_static_cylinder(2.2, 4.0, Vector3(0, 2, 0), core_mat)
+	core = CoreScript.new()
+	core.setup(GameData.core)
+	core.destroyed.connect(_on_core_destroyed)
+	_static_cylinder(core.radius, float(GameData.core.height), Vector3(0, float(GameData.core.height) * 0.5, 0), core_mat, core)
+	_build_lanes()
 	var core_light := OmniLight3D.new()
 	core_light.light_color = Color(0.3, 1, 0.9)
 	core_light.omni_range = 14.0
@@ -126,10 +149,14 @@ func _build_world() -> void:
 	rust.metallic = 0.4
 	var layout := RandomNumberGenerator.new()
 	layout.seed = 20240607 # GATHER_LAYOUT.seed 와 같은 씨앗
-	for i in 46:
+	var placed := 0
+	while placed < 150:
 		var a := layout.randf() * TAU
-		var r := layout.randf_range(9.0, 70.0)
+		var r := layout.randf_range(9.0, half - 10.0)
 		var p := Vector3(cos(a) * r, 0, sin(a) * r)
+		if _near_lane(p, 7.0):
+			continue # 레인은 비워 둔다 (MAP 의 nearLane 과 같은 규칙)
+		placed += 1
 		var kind := layout.randi() % 3
 		var node: Node3D
 		match kind:
@@ -146,10 +173,41 @@ func _build_world() -> void:
 	# 맵 가장자리 벽
 	for side in 4:
 		var horiz := side < 2
-		var off := 100.0 * (1 if side % 2 == 0 else -1)
-		var size := Vector3(200, 6, 1) if horiz else Vector3(1, 6, 200)
+		var off := half * (1 if side % 2 == 0 else -1)
+		var size := Vector3(half * 2, 6, 1) if horiz else Vector3(1, 6, half * 2)
 		var pos := Vector3(0, 3, off) if horiz else Vector3(off, 3, 0)
 		_static_box(size, pos, concrete)
+
+## Lanes as darker dirt roads from MAP.lanes, so the player can see where waves come from.
+func _build_lanes() -> void:
+	var road := StandardMaterial3D.new()
+	road.albedo_color = Color(0.12, 0.08, 0.06)
+	road.roughness = 1.0
+	for l in GameData.map.lanes:
+		var pts: Array = l.waypoints
+		for i in range(1, pts.size()):
+			var a := Vector3(float(pts[i - 1].x), 0, float(pts[i - 1].z))
+			var b := Vector3(float(pts[i].x), 0, float(pts[i].z))
+			var mi := MeshInstance3D.new()
+			var m := PlaneMesh.new()
+			m.size = Vector2(6.0, a.distance_to(b) + 6.0)
+			mi.mesh = m
+			mi.material_override = road
+			mi.position = (a + b) * 0.5 + Vector3(0, 0.01, 0)
+			mi.rotation.y = atan2(b.x - a.x, b.z - a.z)
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mi)
+
+func _near_lane(p: Vector3, margin: float) -> bool:
+	for l in GameData.map.lanes:
+		var pts: Array = l.waypoints
+		for i in range(1, pts.size()):
+			var a := Vector2(float(pts[i - 1].x), float(pts[i - 1].z))
+			var b := Vector2(float(pts[i].x), float(pts[i].z))
+			var q := Geometry2D.get_closest_point_to_segment(Vector2(p.x, p.z), a, b)
+			if q.distance_to(Vector2(p.x, p.z)) < margin:
+				return true
+	return false
 
 func _static_box(size: Vector3, pos: Vector3, mat: Material) -> StaticBody3D:
 	var mesh := BoxMesh.new()
@@ -158,7 +216,7 @@ func _static_box(size: Vector3, pos: Vector3, mat: Material) -> StaticBody3D:
 	shape.size = size
 	return _static(mesh, shape, pos, mat)
 
-func _static_cylinder(radius: float, height: float, pos: Vector3, mat: Material) -> StaticBody3D:
+func _static_cylinder(radius: float, height: float, pos: Vector3, mat: Material, body: StaticBody3D = null) -> StaticBody3D:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius * 0.7
 	mesh.bottom_radius = radius
@@ -166,10 +224,11 @@ func _static_cylinder(radius: float, height: float, pos: Vector3, mat: Material)
 	var shape := CylinderShape3D.new()
 	shape.radius = radius
 	shape.height = height
-	return _static(mesh, shape, pos, mat)
+	return _static(mesh, shape, pos, mat, body)
 
-func _static(mesh: Mesh, shape: Shape3D, pos: Vector3, mat: Material) -> StaticBody3D:
-	var body := StaticBody3D.new()
+func _static(mesh: Mesh, shape: Shape3D, pos: Vector3, mat: Material, body: StaticBody3D = null) -> StaticBody3D:
+	if body == null:
+		body = StaticBody3D.new()
 	body.position = pos
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
@@ -184,54 +243,154 @@ func _static(mesh: Mesh, shape: Shape3D, pos: Vector3, mat: Material) -> StaticB
 # ── 웨이브 ───────────────────────────────────────────────────────────
 
 func _process(dt: float) -> void:
-	if player.dead:
+	hitmark = maxf(0.0, hitmark - dt)
+	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
+	if phase == "ended":
 		return
-	if to_spawn == 0 and alive == 0:
+	if phase == "prep":
 		prep_left -= dt
 		if prep_left <= 0.0:
 			_start_wave()
-	elif to_spawn > 0:
-		spawn_timer -= dt
-		if spawn_timer <= 0.0 and alive < GameData.max_alive:
-			_spawn_one()
-			to_spawn -= 1
-			spawn_timer = maxf(0.25, 1.1 - wave * 0.04)
-	hitmark = maxf(0.0, hitmark - dt)
-	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
+	else:
+		_update_combat(dt)
 	_refresh_hud()
 
+func _unhandled_input(event: InputEvent) -> void:
+	# N: 준비 시간을 건너뛰고 다음 웨이브 (웹 게임과 같은 키)
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_N and phase == "prep":
+		prep_left = 0.0
+
+func _roll(w: int) -> Dictionary:
+	var roster := GameData.wave_roster(w)
+	var r := rng.randf()
+	for e in roster:
+		r -= float(e.weight)
+		if r <= 0.0:
+			return e
+	return roster[0]
+
+## startCombat(): 3~5마리씩 같은 레인에서 몰려오고, 떼거리는 한 무리가 통째로. 10의 배수는 보스 웨이브
 func _start_wave() -> void:
 	wave += 1
-	to_spawn = GameData.wave_count(wave)
-	spawn_timer = 0.0
+	phase = "combat"
+	var lanes: int = GameData.map.lanes.size()
+	var count := GameData.wave_count(wave)
+	var is_boss := GameData.is_boss_wave(wave)
+	if is_boss:
+		count = ceili(count * 0.6)
+	queue.clear()
+	var lane := rng.randi() % lanes
+	var left := 0
+	var ec := GameData.elite_chance(wave)
+	while queue.size() < count:
+		left -= 1
+		if left < 0:
+			lane = rng.randi() % lanes
+			left = 2 + rng.randi() % 3
+		var e := _roll(wave)
+		if int(e.pack) > 1:
+			for i in int(e.pack):
+				if queue.size() < count:
+					queue.append({"type": e.type, "lane": lane, "elite": false})
+			left = 0
+			continue
+		queue.append({"type": e.type, "lane": lane, "elite": ec > 0.0 and e.type != "swarmer" and rng.randf() < ec})
+	spawn_gap = (18.0 + minf(30.0, wave * 0.5)) / count
+	spawn_timer = 1.5
+	boss_pending = {}
+	if is_boss:
+		boss_pending = {"type": GameData.boss_type_for(wave), "lane": rng.randi() % lanes}
+		boss_at = 3.0
+		var bt: String = boss_pending.type
+		toast(I18n.t("toast.bossKing") if wave == GameData.final_wave else I18n.t("toast.bossWave", {"n": wave, "name": I18n.zombie_name(bt)}))
 	_banner(I18n.t("hud.wave", {"n": wave}))
+	# 이번 웨이브에 처음 나오는 종류 알림
+	var prev: Array = GameData.wave_roster(wave - 1).map(func(e): return e.type) if wave > 1 else ["normal"]
+	for e in GameData.wave_roster(wave):
+		if not e.type in prev:
+			toast(I18n.t("toast.newEnemy", {"name": I18n.zombie_name(e.type)}))
 
-func _spawn_one() -> void:
+func _update_combat(dt: float) -> void:
+	spawn_timer -= dt
+	if not boss_pending.is_empty():
+		boss_at -= dt
+		if boss_at <= 0.0:
+			boss = spawn_on_lane(boss_pending.type, int(boss_pending.lane), false)
+			boss_pending = {}
+	while spawn_timer <= 0.0 and not queue.is_empty() and alive < GameData.max_alive:
+		var n: Dictionary = queue.pop_front()
+		spawn_on_lane(n.type, int(n.lane), bool(n.elite))
+		spawn_timer += spawn_gap * (0.6 + rng.randf() * 0.8)
+	spawn_timer = maxf(spawn_timer, 0.0)
+	if queue.is_empty() and boss_pending.is_empty() and alive == 0:
+		_wave_cleared()
+
+func remaining() -> int:
+	return alive + queue.size() + (0 if boss_pending.is_empty() else 1)
+
+## spawnOnLane(): 핵에서 레인 경로로 laneSpawnDist(wave) 만큼 거슬러 올라간 곳
+func spawn_on_lane(type: String, lane: int, elite: bool) -> Node3D:
+	var pts: Array = GameData.map.lanes[lane % GameData.map.lanes.size()].waypoints
+	var i := pts.size() - 1
+	var p := Vector2(float(pts[i].x), float(pts[i].z))
+	var c := Vector2(float(GameData.map.core.x), float(GameData.map.core.z))
+	var left := GameData.lane_spawn_dist(wave) - p.distance_to(c)
+	while left > 0.0 and i > 0:
+		var a := Vector2(float(pts[i - 1].x), float(pts[i - 1].z))
+		var seg := p.distance_to(a)
+		if left < seg:
+			p = p.lerp(a, left / seg)
+			break
+		left -= seg
+		p = a
+		i -= 1
+	var ang := rng.randf() * TAU
+	var r := rng.randf() * 3.0
+	var z := spawn_zombie(type, Vector3(p.x + cos(ang) * r, 0.2, p.y + sin(ang) * r), lane, elite)
+	z.wp = i
+	return z
+
+func spawn_zombie(type: String, pos: Vector3, lane: int, elite: bool) -> Node3D:
 	var z := ZombieScript.new()
-	z.wave = wave
-	# 달리기 좀비: 3웨이브부터 (ROSTER 의 runner 가중치와 같은 식)
-	if wave >= 3 and rng.randf() < minf(0.25, 0.08 + (wave - 3) * 0.02):
-		z.type = "runner"
-	z.target = player
-	var a := rng.randf() * TAU
-	var r := rng.randf_range(SPAWN_MIN, SPAWN_MAX)
-	var p := player.global_position + Vector3(cos(a) * r, 0.2, sin(a) * r)
-	p.x = clampf(p.x, -96, 96)
-	p.z = clampf(p.z, -96, 96)
-	z.position = p
+	z.type = type
+	z.wave = maxi(1, wave)
+	z.elite = elite
+	z.lane = lane
+	z.game = self
+	z.position = pos
 	z.killed.connect(_on_zombie_killed)
 	zombies_root.add_child(z)
 	alive += 1
+	return z
 
-func _on_zombie_killed(_z: Node, gold: int) -> void:
+func _on_zombie_killed(z: Node, gold: int) -> void:
 	alive -= 1
 	kills += 1
 	coins += gold
-	if to_spawn == 0 and alive == 0:
-		var bonus: int = int(GameData.enemy_rules.waveClearGold) + wave * 2
-		coins += bonus
-		prep_left = PREP_TIME
-		_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
+	if z == boss:
+		boss = null
+		if z.type == "king":
+			toast(I18n.t("toast.kingDown"))
+
+func _wave_cleared() -> void:
+	var bonus: int = int(GameData.enemy_rules.waveClearGold) + wave * 2
+	coins += bonus
+	core.heal_pct(GameData.enemy_rules.waveClearCorePct)
+	phase = "prep"
+	prep_left = PREP_TIME
+	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
+
+func _on_core_destroyed() -> void:
+	core_dead = true
+	lose_reason = "core"
+	player.die()
+
+func toast(text: String) -> void:
+	lbl_toast.text = text
+	lbl_toast.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(2.6)
+	tw.tween_property(lbl_toast, "modulate:a", 0.0, 0.6)
 
 # ── 사격 연출 ─────────────────────────────────────────────────────────
 
@@ -348,7 +507,33 @@ func _build_hud() -> void:
 	hp_bar.add_theme_stylebox_override("fill", fill)
 	hp_bar.add_theme_stylebox_override("background", bg)
 	hud.add_child(hp_bar)
+	# 위치는 화면 크기에 맞춰 _refresh_hud 에서 정한다
+	core_bar = _bar(Vector2.ZERO, Vector2(280, 12), Color(0.2, 0.85, 0.8))
+	boss_bar = _bar(Vector2.ZERO, Vector2(560, 18), Color(0.85, 0.15, 0.15))
+	lbl_core = _label(hud, 13, Control.PRESET_TOP_LEFT, Vector2.ZERO)
+	lbl_boss = _label(hud, 18, Control.PRESET_CENTER_TOP, Vector2(-280, 52))
+	lbl_boss.size.x = 560
+	lbl_boss.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_toast = _label(hud, 22, Control.PRESET_CENTER_TOP, Vector2(-450, 150))
+	lbl_toast.size.x = 900
+	lbl_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_toast.add_theme_color_override("font_color", Color(1, 0.8, 0.4))
 	_refresh_hud()
+
+func _bar(pos: Vector2, size: Vector2, col: Color) -> ProgressBar:
+	var b := ProgressBar.new()
+	b.position = pos
+	b.size = size
+	b.show_percentage = false
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = col
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0, 0, 0, 0.55)
+	b.add_theme_stylebox_override("fill", fill)
+	b.add_theme_stylebox_override("background", bg)
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(b)
+	return b
 
 func _label(parent: Control, font_size: int, preset: int, pos: Vector2) -> Label:
 	var l := Label.new()
@@ -373,8 +558,23 @@ func _refresh_hud() -> void:
 	if hud == null:
 		return
 	lbl_top.text = "%s    %s    %s" % [I18n.t("hud.wave", {"n": maxi(wave, 1)}), I18n.t("hud.kills", {"n": kills}), I18n.t("hud.coins", {"n": coins})]
-	if to_spawn == 0 and alive == 0 and not player.dead:
+	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
+	elif phase == "combat":
+		lbl_top.text += "    " + I18n.t("hud.left", {"n": remaining()})
+	core_bar.position = Vector2(24, hud.size.y - 92)
+	lbl_core.position = Vector2(312, hud.size.y - 90)
+	lbl_core.text = I18n.t("hud.core")
+	boss_bar.position = Vector2((hud.size.x - boss_bar.size.x) * 0.5, 80)
+	core_bar.max_value = core.max_hp
+	core_bar.value = core.hp
+	var show_boss: bool = is_instance_valid(boss) and not boss.dead
+	boss_bar.visible = show_boss
+	lbl_boss.visible = show_boss
+	if show_boss:
+		boss_bar.max_value = boss.max_hp
+		boss_bar.value = maxf(0.0, boss.hp)
+		lbl_boss.text = I18n.zombie_name(boss.type)
 	lbl_ammo.text = I18n.t("hud.reloading") if player.is_reloading() else "%d / %d" % [player.ammo, player.mag_size(player.gun_id)]
 	lbl_gun.text = "%s  Lv %d" % [I18n.gun_name(player.gun_id), player.lv[player.gun_id]]
 	var scoped: bool = player.aiming and bool(player.gun.scope)
@@ -431,6 +631,7 @@ func _draw_scope() -> void:
 # ── 사망 카드 ─────────────────────────────────────────────────────────
 
 func _on_died() -> void:
+	phase = "ended"
 	await get_tree().create_timer(1.0).timeout
 	var layer := CanvasLayer.new()
 	layer.layer = 5
@@ -459,7 +660,7 @@ func _on_died() -> void:
 	box.add_theme_constant_override("separation", 16)
 	root.add_child(box)
 	var title := Label.new()
-	title.text = I18n.t("death.title")
+	title.text = I18n.t("death.coreTitle" if lose_reason == "core" else "death.title")
 	title.add_theme_font_size_override("font_size", 56)
 	title.add_theme_color_override("font_color", Color(1, 0.3, 0.25))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

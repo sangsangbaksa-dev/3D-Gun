@@ -317,12 +317,18 @@ func take_damage(dmg: float) -> void:
 	iframes = P.hurtIframes
 	hurt.emit(hp)
 	if hp <= 0.0:
-		dead = true
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		var tw := create_tween()
-		tw.tween_property(camera, "position:y", 0.35, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.parallel().tween_property(camera, "rotation:z", 0.6, 0.8)
-		died.emit()
+		die()
+
+## Ends the sortie: player killed, or the core fell (game.gd calls this then).
+func die() -> void:
+	if dead:
+		return
+	dead = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var tw := create_tween()
+	tw.tween_property(camera, "position:y", 0.35, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(camera, "rotation:z", 0.6, 0.8)
+	died.emit()
 
 func _animate(dt: float) -> void:
 	_kick = maxf(0.0, _kick - dt * 9.0)
