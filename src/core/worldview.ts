@@ -141,9 +141,8 @@ export function buildWorldView(scene: THREE.Scene) {
     m.receiveShadow = !(emissive > 0);
     scene.add(m);
   };
-  addFlatRing(13.2, 16.8, 48, 0, 0, 0.03, 0x283038);
-  addFlatRing(13.85, 14.12, 64, 0, 0, 0.048, 0x269e94, 0x166862, 0.35);
-  addFlatRing(4.05, 4.26, 40, 0, 0, 0.048, 0x269e94, 0x166862, 0.3);
+  // 콘크리트 에이프런만 3D로 두고, 청록 전술 링은 scenery 지형색으로 표시한다 (스폰 r≈4m 에서 링 메시가 1인칭 시야를 가림).
+  addFlatRing(13.2, 16.8, 48, 0, 0, 0.02, 0x283038);
 
   // 2) 건물: 외벽 텍스처 3종 x (벽, 지붕, 옥상 구조물) 별로 합친 메시
   const facades = [0, 1, 2].map((v) => canvasTex(128, 128, (g) => {

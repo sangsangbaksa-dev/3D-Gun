@@ -85,15 +85,13 @@ function groundTone(x: number, z: number, y: number): [number, number, number] {
       col = mix3(col, zCol, w);
       light += ((ZONE_LIGHT[q.kind] ?? 1) - light) * w;
     }
-    // 외곽 구역 경계 링 (기지는 worldview.ts 의 정밀 원형 디스크 지오메트리가 담당)
-    if (q.kind !== 'base') {
-      const rimDist = Math.abs(dist - q.r);
-      const rimW = (1 - sstep(0.8, 4.5, rimDist)) * (q.kind === 'boss' ? 0.42 : 0.26);
-      if (rimW > 0) col = mix3(col, rgb(ZONE_RIM[q.kind] ?? GROUND), rimW);
-    }
+    // 구역 경계 링 (기지 청록 링은 지형색만 — worldview 3D 링은 1인칭 시야를 가린다)
+    const rimDist = Math.abs(dist - q.r);
+    const rimW = (1 - sstep(0.8, 4.5, rimDist)) * (q.kind === 'boss' ? 0.42 : q.kind === 'base' ? 0.3 : 0.26);
+    if (rimW > 0) col = mix3(col, rgb(ZONE_RIM[q.kind] ?? GROUND), rimW);
   }
 
-  // 기지 바닥 바탕 톤 (정밀 라인 마킹은 worldview.ts 의 3D 링이 담당)
+  // 기지 바닥 바탕 톤
   const r0 = Math.hypot(x, z);
   if (r0 < 16.5) {
     const pad = 1 - sstep(13.5, 16.0, r0);
