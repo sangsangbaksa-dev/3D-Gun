@@ -197,17 +197,17 @@ export function createBase(deps: BaseDeps) {
   }
 
   function checkPlace(kind: BuildingId, x: number, z: number, player?: { x: number; z: number }): PlaceCheck {
-    if (state.phase !== 'prep') return { ok: false, reason: '준비 단계에만 건설할 수 있어요' };
+    if (state.phase !== 'prep') return { ok: false, reason: 'prepOnly' };
     const spot = checkSpot(kind, x, z, circles(), player);
     if (!spot.ok) return spot;
-    if (!canAfford(BUILDINGS[kind].cost)) return { ok: false, reason: '자원이 부족해요' };
+    if (!canAfford(BUILDINGS[kind].cost)) return { ok: false, reason: 'noResources' };
     return { ok: true };
   }
 
   function place(kind: BuildingId, x: number, z: number, player?: { x: number; z: number }): PlaceCheck {
     const r = checkPlace(kind, x, z, player);
     if (!r.ok) return r;
-    if (!spend(BUILDINGS[kind].cost)) return { ok: false, reason: '자원이 부족해요' };
+    if (!spend(BUILDINGS[kind].cost)) return { ok: false, reason: 'noResources' };
     const b = makeBuilding(kind, x, z);
     buildings.push(b);
     structures.push(b);

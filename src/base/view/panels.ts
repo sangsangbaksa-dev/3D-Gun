@@ -1,8 +1,9 @@
 // DOM 창: 상점 창, 건설 HUD. 스타일은 이 파일이 직접 주입한다 (index.html 은 W7 소유).
-import { BUILDINGS, BUILDING_ORDER, RES_BUY_PRICE, RES_KEYS, RES_LABEL, RES_PRICE, exchangeSellUnit, type BuildingId } from '../../data';
+import { BUILDINGS, BUILDING_ORDER, RES_BUY_PRICE, RES_KEYS, exchangeSellUnit, type BuildingId } from '../../data';
 import { state } from '../../core/state';
 import { costText, canAfford, type Building, type Cost } from '../logic/base';
 import { buy, sell, sellAll, sellValue } from '../logic/shop';
+import { bldDesc, bldName, onLocaleChange, placeReason, resLabel, t } from '../../i18n';
 
 const CSS = `
 .bz-root{position:fixed;inset:0;pointer-events:none;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#eef3f6;z-index:4}
@@ -60,6 +61,7 @@ export class BasePanels {
   private last = new Map<HTMLElement, string>();
   shopOpen = false;
   onShopClose: () => void = () => {};
+  private buildHudCache: { active: boolean; sel: number; phase: string; tip: { text: string; ok: boolean } | null; hover: Building | null; hoverLines: string; nearGateMsg: string | null } | null = null;
 
   constructor() {
     const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
@@ -70,14 +72,20 @@ export class BasePanels {
     this.tip = el('div', 'bz-tip', this.root);
     this.hover = el('div', 'bz-hover', this.root);
     BUILDING_ORDER.forEach((id, i) => {
-      const d = BUILDINGS[id];
-      const s = el('div', 'bz-slot', this.pal, `<div class="bz-key">${i + 1}</div><div class="bz-ico">${ICON[id]}</div><div class="bz-nm">${d.name}</div><div class="bz-cost"></div>`);
+      const s = el('div', 'bz-slot', this.pal, `<div class="bz-key">${i + 1}</div><div class="bz-ico">${ICON[id]}</div><div class="bz-nm"></div><div class="bz-cost"></div>`);
       this.slots.push(s);
     });
     this.ov = el('div', 'bz-ov', document.body);
     this.card = el('div', 'bz-card', this.ov);
     addEventListener('keydown', (e) => { if (this.shopOpen && (e.code === 'Escape' || e.code === 'KeyE')) this.closeShop(); });
     this.ov.addEventListener('mousedown', (e) => { if (e.target === this.ov) this.closeShop(); });
+    onLocaleChange(() => {
+      if (this.shopOpen) this.renderShop();
+      if (this.buildHudCache?.active) {
+        const c = this.buildHudCache;
+        this.buildHud(c.active, c.sel, c.phase, c.tip, c.hover, c.hoverLines, c.nearGateMsg);
+      }
+    });
   }
 
   private set(e: HTMLElement, html: string) { if (this.last.get(e) !== html) { this.last.set(e, html); e.innerHTML = html; } }
@@ -85,30 +93,36 @@ export class BasePanels {
 
   // ---- 건설 HUD ----
   buildHud(active: boolean, sel: number, phase: string, tip: { text: string; ok: boolean } | null, hover: Building | null, hoverLines: string, nearGateMsg: string | null) {
+    this.buildHudCache = { active, sel, phase, tip, hover, hoverLines, nearGateMsg };
     this.show(this.banner, active, 'block');
     this.show(this.pal, active, 'flex');
     this.show(this.info, active, 'block');
     this.show(this.tip, active && !!tip && !hover, 'block');
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
-    this.set(this.banner, phase === 'prep'
-      ? '🏗 <b>건설</b> · 준비 시간 멈춤 · <b>1</b> 감시탑 <b>2</b> 기관포탑 · <b>5</b> 연구소 · <b>B</b> 종료'
-      : '⚔ 전투 중에는 건설할 수 없어요 (수리·보충은 E)');
+    this.set(this.banner, phase === 'prep' ? t('build.banner.prep') : t('build.noCombat'));
     BUILDING_ORDER.forEach((id, i) => {
       const d = BUILDINGS[id];
       const ok = canAfford(d.cost);
       const parts = RES_KEYS.filter((k) => (d.cost[k] ?? 0) > 0).map((k) => {
         const lack = state.res[k] < (d.cost[k] as number);
-        return lack ? `<i>${RES_LABEL[k]} ${d.cost[k]}</i>` : `${RES_LABEL[k]} ${d.cost[k]}`;
+        const label = resLabel(k);
+        return lack ? `<i>${label} ${d.cost[k]}</i>` : `${label} ${d.cost[k]}`;
       });
       this.slots[i].className = 'bz-slot' + (i === sel ? ' sel' : '') + (ok ? '' : ' off');
+      this.set(this.slots[i].querySelector('.bz-nm') as HTMLElement, bldName(id, d.name));
       this.set(this.slots[i].querySelector('.bz-cost') as HTMLElement, parts.join('<br>'));
     });
-    const d = BUILDINGS[BUILDING_ORDER[sel]];
+    const kind = BUILDING_ORDER[sel];
+    const d = BUILDINGS[kind];
     let stat = '';
-    if (d.turret) { const l = d.turret.levels[0]; stat = ` · 피해 ${l.dmg} · 연사 ${(1 / l.rate).toFixed(1)}/s · 사거리 ${l.range}m · 내구도 ${d.turret.ammo}발 · 영구`; }
-    if (d.trap) stat = ` · 반경 ${d.trap.radius}m · 감속 ${Math.round((1 - d.trap.slow) * 100)}% · 초당 ${d.trap.dps}`;
-    this.set(this.info, `<b>${d.name}</b> — ${d.desc}<br><span style="color:#9fb3c0">체력 ${d.hp}${stat}</span>` + (nearGateMsg ? `<br><em>${nearGateMsg}</em>` : ''));
+    if (d.turret) {
+      const l = d.turret.levels[0];
+      stat = t('build.info.turret', { dmg: l.dmg, rate: (1 / l.rate).toFixed(1), range: l.range, ammo: d.turret.ammo });
+    }
+    if (d.trap) stat = t('build.info.trap', { radius: d.trap.radius, slow: Math.round((1 - d.trap.slow) * 100), dps: d.trap.dps });
+    const hpLine = t('build.info.hp', { hp: d.hp });
+    this.set(this.info, `<b>${bldName(kind, d.name)}</b> — ${bldDesc(kind, d.desc)}<br><span style="color:#9fb3c0">${hpLine}${stat}</span>` + (nearGateMsg ? `<br><em>${nearGateMsg}</em>` : ''));
     if (tip) { this.set(this.tip, tip.text); this.tip.className = 'bz-tip ' + (tip.ok ? 'good' : 'bad'); }
     if (hover) this.set(this.hover, hoverLines);
   }
@@ -133,18 +147,19 @@ export class BasePanels {
     const c = this.card;
     c.innerHTML = '';
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
-    el('h2', '', c, '교환소');
-    el('div', 'bz-sub', c, '전투에서 얻은 코인으로 자원을 사고, 가진 자원은 코인으로 팔아요. (E / Esc 로 닫기)');
+    el('h2', '', c, t('hub.exchange.title'));
+    el('div', 'bz-sub', c, t('hub.exchange.sub') + ' (E / Esc)');
     const sellBonus = state.start.exchangeSellBonus ?? 0;
     for (const k of RES_KEYS) {
       const sellP = exchangeSellUnit(k, sellBonus), buyP = RES_BUY_PRICE[k];
       const row = el('div', 'bz-xrow', c);
-      el('div', 'n', row, `${RES_LABEL[k]} <small>보유 ${state.res[k]} · 판매 ${sellP} · 구매 ${buyP}</small>`);
+      const label = resLabel(k);
+      el('div', 'n', row, `${label} <small>${t('hub.exchange.sellPx', { n: sellP })} · ${t('hub.exchange.buyPx', { n: buyP })} · ${state.res[k]}</small>`);
       const btns = el('div', 'btns', row);
-      const s1 = el('button', 'bz-btn', btns, '팔기 1');
-      const sa = el('button', 'bz-btn', btns, '팔기 전부');
-      const b1 = el('button', 'bz-btn gold', btns, '사기 1');
-      const b10 = el('button', 'bz-btn gold', btns, '사기 10');
+      const s1 = el('button', 'bz-btn', btns, t('hub.exchange.sell1'));
+      const sa = el('button', 'bz-btn', btns, t('hub.exchange.sellAll'));
+      const b1 = el('button', 'bz-btn gold', btns, t('hub.exchange.buy1'));
+      const b10 = el('button', 'bz-btn gold', btns, t('hub.exchange.buy10'));
       s1.disabled = state.res[k] < 1;
       sa.disabled = state.res[k] < 1;
       b1.disabled = state.gold < buyP;
@@ -155,19 +170,19 @@ export class BasePanels {
       b10.onclick = () => buy(k, 10);
     }
     const foot = el('div', 'bz-foot', c);
-    const all = el('button', 'bz-btn', foot, `전부 팔기 +${sellValue()}G`); all.disabled = sellValue() <= 0; all.onclick = () => sellAll();
-    const close = el('button', 'bz-btn sec', foot, '닫기'); close.onclick = () => this.closeShop();
+    const all = el('button', 'bz-btn', foot, `${t('hub.exchange.sellAll')} +${sellValue()}G`); all.disabled = sellValue() <= 0; all.onclick = () => sellAll();
+    const close = el('button', 'bz-btn sec', foot, t('settings.close')); close.onclick = () => this.closeShop();
   }
 }
 
 export const hoverText = (b: Building, repair: Cost | null, up: { cost: Cost; gold: number } | null, refund: string): string => {
   const d = BUILDINGS[b.kind];
-  const lines = [`<b>${d.name}</b>${d.turret ? ` Lv${b.level}` : ''} · 체력 ${Math.ceil(b.hp)}/${b.maxHp}`];
-  if (d.turret) lines.push(`내구도 ${b.ammo}/${d.turret.ammo} · 다 쓰면 파괴`);
+  const lines = [`<b>${bldName(b.kind, d.name)}</b>${d.turret ? ` Lv${b.level}` : ''} · ${t('build.hover.hp', { cur: Math.ceil(b.hp), max: b.maxHp })}`];
+  if (d.turret) lines.push(t('build.hover.ammo', { ammo: b.ammo, max: d.turret.ammo }));
   const keys: string[] = [];
-  if (repair) keys.push(`<kbd>F</kbd> 수리 (${costText(repair)})`);
-  if (up) keys.push(`<kbd>U</kbd> 강화 (${costText(up.cost, up.gold)})`);
-  keys.push(`<kbd>우클릭/X</kbd> 철거 (${refund})`);
+  if (repair) keys.push(t('build.hover.repair', { cost: costText(repair) }));
+  if (up) keys.push(t('build.hover.upgrade', { cost: costText(up.cost, up.gold) }));
+  keys.push(t('build.hover.demolish', { refund }));
   lines.push(keys.join('<br>'));
   return lines.join('<br>');
 };

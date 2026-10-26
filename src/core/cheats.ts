@@ -1,5 +1,6 @@
 // 히든 치트: `#kk960398` 입력 시 인런 자원·골드 무제한.
 import { RES_KEYS } from '../data';
+import { t } from '../i18n';
 import { events } from './events';
 import { changed, state } from './state';
 
@@ -15,7 +16,7 @@ function activateUnlimited() {
   state.samples = CHEAT_FILL;
   state.samplesSp = CHEAT_FILL;
   changed();
-  events.emit('toast', { text: '치트 활성: 자원·코인 무제한', kind: 'cheat' });
+  events.emit('toast', { text: t('cheat.active'), kind: 'cheat' });
   buf = '';
 }
 

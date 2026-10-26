@@ -13,6 +13,7 @@ import { BuildController } from './view/build';
 import { BasePanels } from './view/panels';
 import { MAP } from '../data/map';
 import { CORE } from '../data';
+import { t } from '../i18n';
 
 let model: BaseModel;
 let view: BaseView;
@@ -72,7 +73,7 @@ export const BaseSystem: System = {
       model.reset();
     });
     events.on('state:changed', () => panels.refreshShop());
-    events.on('building:placed', ({ kind }) => { if (kind === 'barracks') events.emit('toast', { text: '숙소 완공! 아군 상한 +3' }); });
+    events.on('building:placed', ({ kind }) => { if (kind === 'barracks') events.emit('toast', { text: t('toast.barracksDone') }); });
   },
 
   update(dt, ctx) {

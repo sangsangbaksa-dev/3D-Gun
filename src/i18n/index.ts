@@ -61,5 +61,7 @@ export function prodName(id: string, fb: string) { return t(`prod.${id}.name`, u
 export function prodDesc(id: string, fb: string) { return t(`prod.${id}.desc`, undefined, fb); }
 export function bldName(id: string, fb: string) { return t(`bld.${id}.name`, undefined, fb); }
 export function bldDesc(id: string, fb: string) { return t(`bld.${id}.desc`, undefined, fb); }
+export function gunName(id: string, fb: string) { return t(`gun.${id}.name`, undefined, fb); }
+export function placeReason(key: string, fb?: string) { return t(`build.reason.${key}`, undefined, fb ?? key); }
 export function zombieName(z: string, fb: string) { return t(`zombie.${z}`, undefined, fb); }
 export function nodeVerb(k: string, fb: string) { return t(`node.${k}.verb`, undefined, fb); }

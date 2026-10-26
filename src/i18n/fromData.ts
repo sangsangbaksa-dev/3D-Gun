@@ -1,5 +1,5 @@
 /** Korean player-facing strings derived from game data (with sortie terminology). */
-import { RES_KEYS, RES_LABEL, BUILDINGS, BUILDING_ORDER, GATHER_NODES, NODE_KINDS, SKILLS, ZOMBIE_TUNING, type ResKey, type ZType } from '../data';
+import { RES_KEYS, RES_LABEL, BUILDINGS, BUILDING_ORDER, GATHER_NODES, NODE_KINDS, SKILLS, ZOMBIE_TUNING, GUNS, GUN_ORDER, type GunId, type ResKey, type ZType } from '../data';
 import { UPGRADES, PRODUCERS, CAT_LABEL, CAT_ORDER, WALLET_LABEL, WALLET_KEYS, type UpgradeCat, type WalletKey } from '../data/tycoon2d';
 
 const fixKo = (s: string) =>
@@ -27,6 +27,10 @@ export function buildKoDataMessages(): Record<string, string> {
     const b = BUILDINGS[id];
     m[`bld.${id}.name`] = fixKo(b.name);
     m[`bld.${id}.desc`] = fixKo(b.desc);
+  }
+  for (const id of GUN_ORDER) {
+    m[`gun.${id}.name`] = fixKo(GUNS[id as GunId].name);
+    m[`gun.${id}.desc`] = fixKo(GUNS[id as GunId].desc ?? '');
   }
   for (const k of NODE_KINDS) {
     const n = GATHER_NODES[k];

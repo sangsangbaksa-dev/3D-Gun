@@ -2,6 +2,7 @@
 // 입력은 FrameIntent, 월드 정보는 FrameEnv 로 받고, 결과는 FrameOut 으로 돌려준다 (view 는 이것만 읽는다).
 import { GUNS, GUN_ORDER, PLAYER, type GunId } from '../../data';
 import { MAP } from '../../data/map';
+import { gunName, t } from '../../i18n';
 import { events } from '../../core/events';
 import { state } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
@@ -65,7 +66,7 @@ export class PlayerController {
     events.on('weapon:unlock', ({ weapon }) => {
       if (!(weapon in GUNS) || state.weapons.includes(weapon)) return;
       state.weapons.push(weapon);
-      events.emit('toast', { text: `${GUNS[weapon as GunId].name} 획득!` });
+      events.emit('toast', { text: t('toast.weaponUnlock', { name: gunName(weapon, GUNS[weapon as GunId].name) }) });
       this.emitAmmo();
     });
     // 새 런: 무기 보유·강화·탄약·체력을 초기화한다 (스탯 보정이 먼저 반영되도록 다음 프레임에 채운다)
@@ -78,7 +79,7 @@ export class PlayerController {
 
   /** 총기 강화: 골드+부품을 내고 레벨을 올린다. 성공하면 true */
   upgrade(_id: GunId): boolean {
-    events.emit('toast', { text: '무기는 이 판에서 강화할 수 없다' });
+    events.emit('toast', { text: t('toast.weaponNoUpgrade') });
     return false;
   }
 
@@ -152,7 +153,7 @@ export class PlayerController {
           events.emit('weapon:sound', { weapon: id, kind: 'switch' });
           this.emitAmmo();
         } else if (id && !state.weapons.includes(id)) {
-          events.emit('toast', { text: `${GUNS[id].name}은(는) 아직 없다` });
+          events.emit('toast', { text: t('toast.weaponMissing', { name: gunName(id, GUNS[id].name) }) });
         }
       }
       if (it.reload && startReload(w, stats)) this.beginReload(out);

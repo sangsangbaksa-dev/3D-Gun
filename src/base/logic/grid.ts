@@ -37,17 +37,19 @@ export function turnToward(a: number, b: number, maxStep: number): number {
 }
 
 export type PlaceCheck = { ok: true } | { ok: false; reason: string };
+/** i18n key under build.reason.* (not a full sentence). */
+export type PlaceFailKey = 'outside' | 'tooCloseCore' | 'overlap' | 'onPlayer';
 
 /** 배치 가능한 위치인가 (자원·단계 검사는 하지 않는다). */
 export function checkSpot(kind: BuildingId, x: number, z: number, others: Circle[], player?: { x: number; z: number }): PlaceCheck {
   const def = BUILDINGS[kind];
   const d = Math.hypot(x - MAP.core.x, z - MAP.core.z);
-  if (d + def.radius > MAP.buildRadius) return { ok: false, reason: '기지 구역 밖이에요' };
-  if (d < CORE.radius + def.radius + 0.8) return { ok: false, reason: '핵에 너무 가까워요' };
+  if (d + def.radius > MAP.buildRadius) return { ok: false, reason: 'outside' };
+  if (d < CORE.radius + def.radius + 0.8) return { ok: false, reason: 'tooCloseCore' };
   for (const o of others) {
-    if (Math.hypot(x - o.x, z - o.z) < o.r + def.radius - 0.05) return { ok: false, reason: '다른 물체와 겹쳐요' };
+    if (Math.hypot(x - o.x, z - o.z) < o.r + def.radius - 0.05) return { ok: false, reason: 'overlap' };
   }
-  if (player && kind !== 'trap' && Math.hypot(x - player.x, z - player.z) < def.radius + 0.6) return { ok: false, reason: '내가 서 있는 자리예요' };
+  if (player && kind !== 'trap' && Math.hypot(x - player.x, z - player.z) < def.radius + 0.6) return { ok: false, reason: 'onPlayer' };
   return { ok: true };
 }
 

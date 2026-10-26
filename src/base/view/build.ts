@@ -1,6 +1,6 @@
 // 건설 모드 입력과 배치 미리보기. 배치 규칙 자체는 logic 에 있다.
 import * as THREE from 'three';
-import { BUILDINGS, BUILDING_ORDER, DEMOLISH_REFUND, RES_KEYS, RES_LABEL, type BuildingId } from '../../data';
+import { BUILDINGS, BUILDING_ORDER, DEMOLISH_REFUND, RES_KEYS, type BuildingId } from '../../data';
 import { MAP } from '../../data/map';
 import { input } from '../../core/input';
 import { events } from '../../core/events';
@@ -12,7 +12,7 @@ import { buildModel, type Model } from './models';
 import { groundPose, groundY } from './ground';
 import { BasePanels, hoverText } from './panels';
 import type { BuildOverlay } from './overlay';
-import { t as tr } from '../../i18n';
+import { bldName, placeReason, resLabel, t as tr } from '../../i18n';
 
 const DIGITS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'];
 
@@ -42,7 +42,7 @@ export class BuildController {
     this.range.add(new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x2ee6d6, transparent: true, opacity: 0.8, depthWrite: false })));
     this.range.visible = false;
     scene.add(this.range);
-    events.on('wave:start', () => { if (this.active) this.exit('전투가 시작돼 건설 모드를 종료했어요'); });
+    events.on('wave:start', () => { if (this.active) this.exit(tr('build.waveExit')); });
     events.on('ui:modal', ({ open }) => { if (open && this.active) this.exit(); });
   }
 
@@ -132,12 +132,12 @@ export class BuildController {
     if (hit && !hover && (left && (!this.prevLeft || (kind === 'barricade' && cell !== this.lastCell)))) {
       this.lastCell = cell;
       const r = this.model.place(kind, sx, sz, ctx.player);
-      if (!r.ok) this.flashTip(r.reason, false);
+      if (!r.ok) this.flashTip(placeReason(r.reason), false);
     }
     if (right && !this.prevRight && hover) {
       const refund = this.refundText(hover);
-      const name = BUILDINGS[hover.kind].name;
-      if (this.model.demolish(hover)) this.toast(`${name} 철거 (환급 ${refund})`);
+      const name = bldName(hover.kind, BUILDINGS[hover.kind].name);
+      if (this.model.demolish(hover)) this.toast(tr('build.demolish', { name, refund }));
     }
     if (hover) {
       if (input.pressed.has('KeyF')) this.model.repair(hover);
@@ -147,14 +147,14 @@ export class BuildController {
 
     // HUD
     this.tipT -= dt;
-    if (this.tipT <= 0) this.tipText = hit && !hover ? (check.ok ? { text: '클릭해서 배치', ok: true } : { text: check.reason, ok: false }) : null;
+    if (this.tipT <= 0) this.tipText = hit && !hover ? (check.ok ? { text: tr('build.place.click'), ok: true } : { text: placeReason(check.reason), ok: false }) : null;
     let hoverHtml = '';
     if (hover) {
       const hp = hover.hp < hover.maxHp - 0.5;
       hoverHtml = hoverText(hover, hp ? this.model.repairCost(hover) : null, state.phase === 'prep' ? this.model.upgradeInfo(hover) : null, this.refundText(hover));
     }
     const gate = hit ? this.overlay.nearGate(sx, sz) : null;
-    const gateMsg = gate && (def.turret || def.trap || kind === 'barricade') ? '📍 레인 입구 근처 — 좀비가 몰리는 길목이에요' : null;
+    const gateMsg = gate && (def.turret || def.trap || kind === 'barricade') ? tr('build.gate.lane') : null;
     this.panels.buildHud(true, this.sel, state.phase, this.tipText, hover, hoverHtml, gateMsg);
   }
 
@@ -163,7 +163,7 @@ export class BuildController {
   private refundText(b: Building): string {
     const def = BUILDINGS[b.kind];
     const f = DEMOLISH_REFUND * (b.hp / b.maxHp);
-    const parts = RES_KEYS.map((k) => ({ k, n: Math.floor((def.cost[k] ?? 0) * f) })).filter((p) => p.n > 0).map((p) => `${RES_LABEL[p.k]} ${p.n}`);
-    return parts.join(' ') || '없음';
+    const parts = RES_KEYS.map((k) => ({ k, n: Math.floor((def.cost[k] ?? 0) * f) })).filter((p) => p.n > 0).map((p) => `${resLabel(p.k)} ${p.n}`);
+    return parts.join(' ') || tr('build.refund.none');
   }
 }

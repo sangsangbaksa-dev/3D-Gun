@@ -1,8 +1,9 @@
 // 전투 전용 DOM 오버레이: 조준선(퍼짐 반영), 히트마커, 피격 화면 효과, 탄약/무기 슬롯, 재장전 바.
 // 모든 요소는 코드로 만들어 붙인다 (index.html 은 W7 소유). 탄약 표시는 W7 HUD 가 생기면 SHOW_AMMO_PANEL 만 끄면 된다.
-import { GUNS, GUN_ORDER, GUN_UNLOCK_GOLD, RES_LABEL, type GunId } from '../../data';
+import { GUNS, GUN_ORDER, GUN_UNLOCK_GOLD, type GunId } from '../../data';
 import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
+import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
 
 export const SHOW_AMMO_PANEL = true;
@@ -80,6 +81,10 @@ export class CombatHud {
   private dash = el('pv-dash', '<div></div>');
   private nm: HTMLElement; private n: HTMLElement; private rl: HTMLElement; private rlFill: HTMLElement; private slots: HTMLElement;
   private slotEls: Record<string, HTMLElement> = {};
+  private lastWeapon: GunId = 'pistol';
+  private lastAmmo = 0;
+  private lastMag = 0;
+  private lastOwned: readonly string[] = ['pistol'];
   private hitAnim?: Animation;
   private crossHitTimer?: ReturnType<typeof setTimeout>;
   private vigAnim?: Animation;
@@ -99,9 +104,15 @@ export class CombatHud {
     this.rlFill = this.rl.firstElementChild as HTMLElement;
     this.slots = this.ammo.querySelector('.pv-slots')!;
     GUN_ORDER.forEach((id, i) => {
-      const s = el('pv-slot', `<b>${i + 1}</b>${GUNS[id].name}`);
+      const s = el('pv-slot', `<b>${i + 1}</b>${gunName(id, GUNS[id].name)}`);
       this.slots.appendChild(s);
       this.slotEls[id] = s;
+    });
+    onLocaleChange(() => {
+      GUN_ORDER.forEach((id, i) => {
+        this.slotEls[id].innerHTML = `<b>${i + 1}</b>${gunName(id, GUNS[id].name)}`;
+      });
+      this.setWeapon(this.lastWeapon, this.lastAmmo, this.lastMag, this.lastOwned);
     });
     // index.html 의 임시 정적 조준선은 동적 조준선으로 대체한다
     this.oldCross = document.getElementById('cross');
@@ -145,8 +156,10 @@ export class CombatHud {
   }
 
   setWeapon(id: GunId, ammo: number, mag: number, owned: readonly string[]) {
+    this.lastWeapon = id; this.lastAmmo = ammo; this.lastMag = mag; this.lastOwned = owned;
     const lv = state.weaponLv[id] ?? 0;
-    this.nm.innerHTML = `${GUNS[id].name}${lv ? `<span class="pv-lv">Lv${lv}</span>` : ''}`;
+    const name = gunName(id, GUNS[id].name);
+    this.nm.innerHTML = `${name}${lv ? `<span class="pv-lv">Lv${lv}</span>` : ''}`;
     this.n.innerHTML = `${ammo}<small> / ${mag}</small>`;
     this.n.classList.toggle('low', ammo <= Math.ceil(mag * 0.25));
     for (const w of GUN_ORDER) {
@@ -181,6 +194,7 @@ export class UpgradePanel {
     document.body.appendChild(this.el);
     this.el.addEventListener('mousedown', (e) => e.stopPropagation());
     this.el.addEventListener('click', (e) => { if (e.target === this.el) onClose(); });
+    onLocaleChange(() => { if (this.open) this.refresh(); });
   }
 
   show(on: boolean) { this.open = on; this.el.style.display = on ? 'flex' : 'none'; if (on) this.refresh(); }
@@ -190,21 +204,24 @@ export class UpgradePanel {
     const fmt = (id: GunId, lv: number) => {
       const a = gunStats(id, lv, state.stats), d = GUNS[id];
       const dps = (a.dmg * d.pellets / d.rate).toFixed(0);
-      return `피해 ${a.dmg.toFixed(0)}${d.pellets > 1 ? '×' + d.pellets : ''} · 탄창 ${a.mag} · 재장전 ${a.reload.toFixed(1)}초 · 초당 ${dps}`;
+      const pellets = d.pellets > 1 ? t('weapon.panel.pellets', { n: d.pellets }) : '';
+      return t('weapon.panel.stats', { dmg: a.dmg.toFixed(0), pellets, mag: a.mag, reload: a.reload.toFixed(1), dps });
     };
-    let html = `<h2>무기 <small style="font-weight:normal;opacity:.7">(V 로 닫기)</small></h2><div class="sub">코인 ${state.gold} · ${RES_LABEL.parts} ${state.res.parts}</div>`;
+    let html = `<h2>${t('weapon.panel.title')} <small style="font-weight:normal;opacity:.7">${t('weapon.panel.closeHint')}</small></h2>`
+      + `<div class="sub">${t('weapon.panel.sub', { gold: state.gold, partsCount: state.res.parts })}</div>`;
     for (const id of GUN_ORDER) {
       const d = GUNS[id], own = state.weapons.includes(id), lv = (state.weaponLv[id] ?? 0) + (state.weaponLvBonus[id] ?? 0);
       const price = GUN_UNLOCK_GOLD[id];
       const canBuy = !own && price != null && (state.cheatUnlimited || state.gold >= price);
-      const detail = own ? fmt(id, lv) : (price != null ? `코인 ${price}에 구매` : '기본 지급');
+      const detail = own ? fmt(id, lv) : (price != null ? t('weapon.panel.buyFor', { price }) : t('weapon.panel.starter'));
       const button = own
-        ? `<button disabled>이 판에선 강화 불가</button>`
-        : (price != null ? `<button data-buy="${id}"${canBuy ? '' : ' disabled'}>구매 ${price}G</button>` : '');
-      html += `<div class="g${own || price != null ? '' : ' lock'}"><div class="n">${d.name}<b>${own ? '보유' : '미보유'}</b></div>`
-        + `<div class="d">${d.desc}</div><div class="s">${detail}</div>${button}</div>`;
+        ? `<button disabled>${t('weapon.panel.noUpgrade')}</button>`
+        : (price != null ? `<button data-buy="${id}"${canBuy ? '' : ' disabled'}>${t('weapon.panel.buyBtn', { price })}</button>` : '');
+      const gName = gunName(id, d.name);
+      html += `<div class="g${own || price != null ? '' : ' lock'}"><div class="n">${gName}<b>${own ? t('weapon.panel.owned') : t('weapon.panel.notOwned')}</b></div>`
+        + `<div class="d">${t(`gun.${id}.desc`, undefined, d.desc)}</div><div class="s">${detail}</div>${button}</div>`;
     }
-    html += '<div class="x"><button data-close>닫기</button></div>';
+    html += `<div class="x"><button data-close>${t('weapon.panel.close')}</button></div>`;
     this.box.innerHTML = html;
     this.box.querySelectorAll<HTMLButtonElement>('button[data-id]').forEach((b) => b.addEventListener('click', () => this.onUpgrade(b.dataset.id as GunId)));
     this.box.querySelectorAll<HTMLButtonElement>('button[data-buy]').forEach((b) => b.addEventListener('click', () => this.buyGun(b.dataset.buy as GunId)));
