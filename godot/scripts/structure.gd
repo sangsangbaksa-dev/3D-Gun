@@ -26,10 +26,10 @@ static var _flash_mat: StandardMaterial3D
 func _ready() -> void:
 	def = GameData.buildings[kind]
 	radius = def.radius
-	max_hp = def.hp
+	max_hp = roundf(float(def.hp) * (1.0 + float(game.meta.get("turretHpMul", 0.0))) if def.has("turret") else float(def.hp))
 	hp = max_hp
 	if def.has("turret"):
-		ammo = int(def.turret.ammo)
+		ammo = maxi(1, roundi(float(def.turret.ammo) * (1.0 + float(game.meta.get("turretAmmoMul", 0.0)))))
 	collision_layer = 1 if kind != "trap" else 0 # 함정은 밟고 지나간다
 	collision_mask = 0
 	if kind != "trap":
@@ -184,11 +184,11 @@ func _trap(dt: float) -> void:
 		z.slow_mul = minf(z.slow_mul, float(t.slow))
 		z.slow_t = 0.2
 		if now:
-			z.take_hit(float(t.dps) * 0.5, Vector3.ZERO)
+			z.take_hit(float(t.dps) * 0.5 * (1.0 + float(game.meta.get("trapDpsMul", 0.0))), Vector3.ZERO)
 
 func _turret(dt: float) -> void:
 	var lv: Dictionary = levels()[level - 1]
-	var range_m: float = lv.range
+	var range_m: float = float(lv.range) * (1.0 + float(game.meta.get("turretRangeMul", 0.0)))
 	var target: Node3D = null
 	var bd := range_m
 	for z in game.zombies_root.get_children():
@@ -209,10 +209,10 @@ func _turret(dt: float) -> void:
 		return
 	var crit: bool = game.rng.randf() < 0.1
 	var aim_pt: Vector3 = target.global_position + Vector3(game.rng.randf_range(-0.2, 0.2), target.height * (0.45 + game.rng.randf() * 0.3), game.rng.randf_range(-0.2, 0.2))
-	target.take_hit(float(lv.dmg) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
+	target.take_hit(float(lv.dmg) * (1.0 + float(game.meta.get("turretDmgMul", 0.0))) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
 	game.tracer(head.global_position + Vector3(-sin(aim_yaw), 0.1, -cos(aim_yaw)) * 0.9, aim_pt, Color(1, 0.85, 0.5))
 	ammo -= 1
-	cooldown = lv.rate
+	cooldown = float(lv.rate) * maxf(0.55, 1.0 - float(game.meta.get("turretRateMul", 0.0)))
 	if ammo <= 0:
 		game.toast(I18n.t("build.ammoOut", {"name": I18n.bld_name(kind)}))
 		destroy()

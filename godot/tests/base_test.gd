@@ -12,6 +12,7 @@ var reasons_ok := false
 var place_ok := false
 var upgrade_ok := false
 var core_ok := false
+var meta_ok := false
 var barricade: Node
 var barricade_hit := false
 var turret_kills := 0
@@ -66,6 +67,12 @@ func _process(_dt: float) -> bool:
 		core_ok = game.base.upgrade_core() and game.base.core_level == 1 and is_equal_approx(game.core.max_hp, float(gd.core.hp[1]))
 		if core_ok:
 			game.set_core_level(game.base.core_level)
+		# 영구 업그레이드: 내구도·체력 보너스가 새 포탑에 붙는다
+		game.meta = {"turretAmmoMul": 0.5, "turretHpMul": 0.18}
+		var t2: Node = game.base.spawn("tower", Vector3(-8, game.world.ground_y(-8, 0), 0))
+		meta_ok = t2.ammo == roundi(float(gd.buildings.tower.turret.ammo) * 1.5) and t2.max_hp == roundf(float(gd.buildings.tower.hp) * 1.18)
+		game.meta = {}
+		game.base.demolish(t2)
 		# 동쪽 레인(1)으로 좀비 무리
 		game.wave = 3
 		for i in 8:
@@ -80,7 +87,7 @@ func _process(_dt: float) -> bool:
 			barricade_hit = true
 		turret_kills = game.kills
 		if (barricade_hit and turret_kills >= 3) or frames - start > 60 * 90:
-			var ok := gather_ok and reasons_ok and place_ok and upgrade_ok and core_ok and barricade_hit and turret_kills >= 3
-			print("BASE gather=%s place=%s reasons=%s upgrade=%s core=%s barricade_hit=%s turret_kills=%d res=%s -> %s" % [gather_ok, place_ok, reasons_ok, upgrade_ok, core_ok, barricade_hit, turret_kills, game.res, "PASS" if ok else "FAIL"])
+			var ok := gather_ok and reasons_ok and place_ok and upgrade_ok and core_ok and meta_ok and barricade_hit and turret_kills >= 3
+			print("BASE gather=%s place=%s reasons=%s upgrade=%s core=%s meta=%s barricade_hit=%s turret_kills=%d res=%s -> %s" % [gather_ok, place_ok, reasons_ok, upgrade_ok, core_ok, meta_ok, barricade_hit, turret_kills, game.res, "PASS" if ok else "FAIL"])
 			quit(0 if ok else 1)
 	return false

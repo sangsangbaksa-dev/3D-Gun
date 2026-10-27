@@ -9,6 +9,7 @@ var nodes: Array = [] # {id, kind, res, pos, yaw, scale, r, state, progress, idl
 var _mm := {}         # "kind_vi" -> [ready MultiMesh or null, always MultiMesh or null]
 var _slot := {}       # node index -> [group key, instance index]
 var _body: StaticBody3D
+var _active: Array = [] # 채집 중이거나 다시 자라는 노드
 const VARIANTS := 8
 
 func _ready() -> void:
@@ -76,8 +77,9 @@ func nearest_ready(p: Vector3) -> Dictionary:
 	var best := {}
 	var bd := INF
 	var reach: float = GameData.gather.reach
+	var box := reach + 3.0 # 975 개 중 가까운 것만 거리 계산
 	for n in nodes:
-		if n.state != "ready":
+		if n.state != "ready" or absf(p.x - n.pos.x) > box or absf(p.z - n.pos.z) > box:
 			continue
 		var d := Vector2(p.x - n.pos.x, p.z - n.pos.z).length() - float(n.r)
 		if d < reach and d < bd:
@@ -91,6 +93,8 @@ func harvest(n: Dictionary, dt: float) -> bool:
 		return false
 	var def: Dictionary = GameData.gather.nodes[n.kind]
 	n.idle = 0.0
+	if not _active.has(n):
+		_active.append(n)
 	n.progress += dt / float(def.work)
 	if n.progress < 1.0:
 		return false
@@ -102,11 +106,11 @@ func harvest(n: Dictionary, dt: float) -> bool:
 	gathered.emit(n.res, amount, n.pos)
 	return true
 
-## tick(): progress decays when not gathered, depleted nodes grow back.
+## tick(): progress decays when not gathered, depleted nodes grow back. Only nodes that were touched are visited.
 func _process(dt: float) -> void:
 	var grace: float = GameData.gather.idleGrace
 	var decay: float = GameData.gather.decay
-	for n in nodes:
+	for n in _active.duplicate():
 		n.idle += dt
 		if n.state == "depleted":
 			n.respawn_t -= dt
@@ -114,5 +118,8 @@ func _process(dt: float) -> void:
 				n.state = "ready"
 				n.progress = 0.0
 				_refresh(n.i)
-		elif n.progress > 0.0 and n.idle > grace:
+				_active.erase(n)
+		elif n.idle > grace:
 			n.progress = maxf(0.0, n.progress - decay * dt)
+			if n.progress <= 0.0:
+				_active.erase(n)
