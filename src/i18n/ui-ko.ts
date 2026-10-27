@@ -6,6 +6,7 @@ export const KO_UI: Record<string, string> = {
   'controls.title': '조작키', 'controls.hint': '게임 중에는 H 또는 F1 로 언제든 이 목록을 볼 수 있어요.',
   'title.sub': '좀비 타이쿤 3D', 'title.launch': '출격', 'title.launchHint': 'Enter 또는 클릭',
   'title.menu.settings': '설정', 'title.menu.controls': '조작키',
+  'title.godot': 'Godot 전투 슬라이스 → /',
   'title.splash': '클릭하거나 아무 키나 누르세요', 'title.skip': '아무 키나 눌러 건너뛰기',
   'story.0': '2031년, 제약사 헬릭스는 불사 백신 V-0을 발표한다.',
   'story.1': '임상 47일째, 투여자 전원의 심장이 멈춘다.',

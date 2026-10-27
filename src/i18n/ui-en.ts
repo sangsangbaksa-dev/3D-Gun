@@ -6,6 +6,7 @@ export const EN_UI: Record<string, string> = {
   'controls.title': 'Controls', 'controls.hint': 'Press H or F1 in-game anytime for this list.',
   'title.sub': 'Zombie Tycoon 3D', 'title.launch': 'Deploy', 'title.launchHint': 'Enter or click',
   'title.menu.settings': 'Settings', 'title.menu.controls': 'Controls',
+  'title.godot': 'Godot combat slice → /',
   'title.splash': 'Click or press any key', 'title.skip': 'Press any key to skip',
   'story.0': '2031 — Helix Pharma announces the immortality vaccine V-0.',
   'story.1': 'On clinical day 47, every subject’s heart stops.',

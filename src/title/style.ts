@@ -30,6 +30,8 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
 @keyframes tbGlow{50%{filter:drop-shadow(0 0 26px ${TEAL}bb) drop-shadow(0 0 6px ${TEAL}55)}}
 @keyframes tbPulseBtn{50%{box-shadow:0 0 8px ${ORANGE}66}}
 
+#ztTitle .godotLink{position:absolute;left:28px;bottom:28px;z-index:2;padding:8px 14px;font:600 14px ${FONT};color:#2ee6d6cc;background:#121A20b3;border:1px solid #2EE6D644;border-radius:6px;text-decoration:none;transition:background .25s ease-out,box-shadow .25s ease-out}
+#ztTitle .godotLink:hover{background:#2EE6D61f;box-shadow:0 0 12px #2EE6D655;color:${TEAL}}
 #ztTitle .tmenu{position:absolute;right:28px;bottom:28px;display:flex;gap:10px;z-index:2}
 #ztTitle .tmenu button,#ztTitle .tpanel .x{padding:8px 18px;font:600 15px ${FONT};color:${TEAL};background:#121A20b3;border:1px solid ${TEAL};border-radius:6px;cursor:pointer;transition:background .25s ease-out,box-shadow .25s ease-out}
 #ztTitle .tmenu button:hover,#ztTitle .tmenu button[aria-expanded=true],#ztTitle .tpanel .x:hover{background:#2EE6D61f;box-shadow:0 0 12px #2EE6D655}
