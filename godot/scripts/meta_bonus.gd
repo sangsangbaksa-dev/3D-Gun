@@ -1,13 +1,13 @@
 extends RefCounted
 ## Permanent upgrades (src/data/tycoon2d.ts UPGRADES) → this run, like bonuses() in tycoon2d/logic/economy.ts.
-## Applied now: start gold, max HP, core HP, starting guns, gun quality, prep time. Allies read their own
-## upgrades (allies.gd). Turret, gathering and start-resource upgrades apply once those systems are ported.
+## Applied now: start gold and resources, max HP, core HP, starting guns, gun quality, prep time. Allies read their own
+## upgrades (allies.gd). Turret and gather-speed upgrades are for the base/gathering code to read from bonuses().
 
 static func data() -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string("res://data/meta_data.json"))
 
 static func bonuses(save: Node) -> Dictionary:
-	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}}
+	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}, "startRes": {}}
 	for u in data().upgrades:
 		var lv: int = save.upgrade_lv(u.id)
 		if lv <= 0:
@@ -16,6 +16,8 @@ static func bonuses(save: Node) -> Dictionary:
 		match e.kind:
 			"startGold", "maxHp", "coreHp", "prepBonus":
 				b[e.kind] += float(e.per) * lv
+			"startRes":
+				b.startRes[e.res] = int(b.startRes.get(e.res, 0)) + int(e.per) * lv
 			"weapon":
 				if not e.id in b.weapons:
 					b.weapons.append(e.id)
@@ -34,6 +36,8 @@ static func apply(game: Node) -> void:
 	game.core.hp = game.core.max_hp
 	game.coins += int(b.startGold)
 	game.prep_left += b.prepBonus
+	for r in b.startRes:
+		game.res[r] = int(game.res.get(r, 0)) + int(b.startRes[r])
 	for id in b.weapons:
 		p.owned[id] = true
 	var all := int(b.weaponLv.get("*", 0))
