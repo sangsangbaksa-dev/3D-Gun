@@ -16,6 +16,7 @@ const StationScript := preload("res://scripts/station_panel.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
 const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
+const BuildOverlay := preload("res://scripts/build_overlay.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -101,6 +102,7 @@ func _ready() -> void:
 	gathering.gathered.connect(_on_gathered)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
+	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
 	I18n.locale_changed.connect(_refresh_hud)
 	shop = ShopScript.new()
 	shop.game = self
