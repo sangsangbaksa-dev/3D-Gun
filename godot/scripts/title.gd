@@ -8,6 +8,7 @@ var slice: Label
 var btn: Button
 var hint: Label
 var lang: Button
+var classic: Button
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -59,6 +60,15 @@ func _ready() -> void:
 	lang.custom_minimum_size = Vector2(120, 40)
 	lang.pressed.connect(I18n.toggle)
 	add_child(lang)
+	classic = Button.new()
+	classic.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	classic.position = Vector2(-360, -28)
+	classic.custom_minimum_size = Vector2(340, 36)
+	classic.add_theme_font_size_override("font_size", 15)
+	classic.flat = true
+	classic.add_theme_color_override("font_color", Color(0.75, 0.95, 0.92, 0.9))
+	classic.pressed.connect(_open_classic)
+	add_child(classic)
 	I18n.locale_changed.connect(_refresh)
 	_refresh()
 	btn.grab_focus()
@@ -78,6 +88,13 @@ func _refresh() -> void:
 	hint.text = I18n.t("title.launchHint")
 	lang.text = I18n.t("title.lang")
 	slice.text = I18n.t("title.slice")
+	classic.text = I18n.t("title.classic")
+
+func _open_classic() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.location.href='/classic'", true)
+	else:
+		OS.shell_open("/classic")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):

@@ -189,7 +189,8 @@ export function mountTitle(onStart: () => void): TitleHandle {
     `<i class="ember" style="left:${(i * 37) % 100}%;animation-duration:${6 + (i % 7)}s;animation-delay:-${((i * 1.3) % 9).toFixed(1)}s;opacity:.8"></i>`).join('');
   root.innerHTML = `${embers}<div class="vig"></div><div class="scan"></div>
 <div class="ui"><img src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/><div class="sub" data-i18n-sub></div></div>
-<div class="go"><button type="button" data-i18n-launch></button><div class="hint" data-i18n-hint></div></div>`;
+<div class="go"><button type="button" data-i18n-launch></button><div class="hint" data-i18n-hint></div></div>
+<a class="godotLink" href="/" data-i18n-godot></a>`;
   document.body.appendChild(root);
   const menu = mountMenu(root);
   const go = root.querySelector<HTMLButtonElement>('.go button')!;
@@ -197,6 +198,8 @@ export function mountTitle(onStart: () => void): TitleHandle {
     root.querySelector('[data-i18n-sub]')!.textContent = t('title.sub');
     go.textContent = t('title.launch');
     root.querySelector('[data-i18n-hint]')!.textContent = t('title.launchHint');
+    const gl = root.querySelector<HTMLAnchorElement>('[data-i18n-godot]');
+    if (gl) gl.textContent = t('title.godot');
   };
   paintTitle();
   onLocaleChange(paintTitle);

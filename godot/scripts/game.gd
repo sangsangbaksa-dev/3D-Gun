@@ -21,6 +21,7 @@ var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
 var prep_left := 5.0
+var prep_total := 5.0
 var core: StaticBody3D
 var core_dead := false
 var hazards: Node3D
@@ -47,6 +48,9 @@ var lbl_core: Label
 var crosshair: Control
 var hitmark := 0.0
 var hurt_flash: ColorRect
+var core_low_vignette: ColorRect
+var prep_bar: ProgressBar
+var wave_clear_panel: Label
 var zombies_root: Node3D
 var world: Node3D
 var core_visual: Node3D
@@ -194,6 +198,11 @@ func _process(dt: float) -> void:
 	_process_core_visual(_t)
 	hitmark = maxf(0.0, hitmark - dt)
 	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
+	if core_low_vignette:
+		var core_pct := core.hp / core.max_hp if core.max_hp > 0.0 else 1.0
+		var want := phase == "combat" and core_pct > 0.0 and core_pct < 0.28
+		var tgt := 0.42 if want else 0.0
+		core_low_vignette.color.a = lerpf(core_low_vignette.color.a, tgt, minf(1.0, dt * 5.0))
 	if phase == "ended":
 		return
 	if phase == "prep":
@@ -324,10 +333,13 @@ func _on_zombie_killed(z: Node, gold: int) -> void:
 func _wave_cleared() -> void:
 	var bonus: int = int(GameData.enemy_rules.waveClearGold) + wave * 2
 	coins += bonus
+	var core_pct := int(round(GameData.enemy_rules.waveClearCorePct * 100.0))
+	var struct_pct := int(round(GameData.enemy_rules.waveClearStructPct * 100.0))
 	core.heal_pct(GameData.enemy_rules.waveClearCorePct)
 	phase = "prep"
 	prep_left = PREP_TIME
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
+	prep_total = PREP_TIME
+	_show_wave_clear(wave, bonus, core_pct, struct_pct)
 
 func _on_core_destroyed() -> void:
 	core_dead = true
@@ -418,6 +430,11 @@ func _build_hud() -> void:
 	hurt_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hurt_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(hurt_flash)
+	core_low_vignette = ColorRect.new()
+	core_low_vignette.color = Color(0.05, 0.35, 0.42, 0.0)
+	core_low_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	core_low_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(core_low_vignette)
 	scope = Control.new()
 	scope.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scope.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -456,6 +473,8 @@ func _build_hud() -> void:
 	hp_bar.add_theme_stylebox_override("fill", fill)
 	hp_bar.add_theme_stylebox_override("background", bg)
 	hud.add_child(hp_bar)
+	prep_bar = _bar(Vector2.ZERO, Vector2(360, 10), Color(0.25, 0.9, 0.82))
+	prep_bar.visible = false
 	# 위치는 화면 크기에 맞춰 _refresh_hud 에서 정한다
 	core_bar = _bar(Vector2.ZERO, Vector2(280, 12), Color(0.2, 0.85, 0.8))
 	boss_bar = _bar(Vector2.ZERO, Vector2(560, 18), Color(0.85, 0.15, 0.15))
@@ -467,6 +486,12 @@ func _build_hud() -> void:
 	lbl_toast.size.x = 900
 	lbl_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl_toast.add_theme_color_override("font_color", Color(1, 0.8, 0.4))
+	wave_clear_panel = _label(hud, 20, Control.PRESET_CENTER_TOP, Vector2(-360, 118))
+	wave_clear_panel.size = Vector2(720, 120)
+	wave_clear_panel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	wave_clear_panel.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	wave_clear_panel.visible = false
+	wave_clear_panel.add_theme_color_override("font_color", Color(0.18, 0.9, 0.86))
 	_refresh_hud()
 
 func _bar(pos: Vector2, size: Vector2, col: Color) -> ProgressBar:
@@ -503,6 +528,21 @@ func _banner(text: String) -> void:
 	tw.tween_interval(1.6)
 	tw.tween_property(lbl_center, "modulate:a", 0.0, 0.6)
 
+func _show_wave_clear(w: int, gold: int, core_pct: int, struct_pct: int) -> void:
+	if wave_clear_panel == null:
+		return
+	var heal := I18n.t("waveClear.heal", {"corePct": core_pct, "structPct": struct_pct})
+	var sub := I18n.t("waveClear.rewards", {"gold": gold, "heal": heal})
+	if GameData.is_boss_wave(w + 1) and w + 1 <= GameData.final_wave:
+		sub += I18n.t("waveClear.nextBoss")
+	wave_clear_panel.text = "%s\n%s" % [I18n.t("waveClear.title", {"n": w}), sub]
+	wave_clear_panel.visible = true
+	wave_clear_panel.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(2.35)
+	tw.tween_property(wave_clear_panel, "modulate:a", 0.0, 0.55)
+	tw.tween_callback(func(): wave_clear_panel.visible = false)
+
 func _refresh_hud() -> void:
 	if hud == null:
 		return
@@ -514,6 +554,14 @@ func _refresh_hud() -> void:
 	core_bar.position = Vector2(24, hud.size.y - 92)
 	lbl_core.position = Vector2(312, hud.size.y - 90)
 	lbl_core.text = I18n.t("hud.core")
+	var core_pct_hud := core.hp / core.max_hp if core.max_hp > 0.0 else 1.0
+	core_bar.get_theme_stylebox("fill").bg_color = Color(0.95, 0.35, 0.2) if core_pct_hud > 0.0 and core_pct_hud < 0.28 else Color(0.2, 0.85, 0.8)
+	prep_bar.position = Vector2((hud.size.x - prep_bar.size.x) * 0.5, 46)
+	var in_prep := phase == "prep" and prep_total > 0.0
+	prep_bar.visible = in_prep
+	if in_prep:
+		prep_bar.max_value = prep_total
+		prep_bar.value = maxf(0.0, prep_left)
 	boss_bar.position = Vector2((hud.size.x - boss_bar.size.x) * 0.5, 80)
 	core_bar.max_value = core.max_hp
 	core_bar.value = core.hp
@@ -523,6 +571,8 @@ func _refresh_hud() -> void:
 	if show_boss:
 		boss_bar.max_value = boss.max_hp
 		boss_bar.value = maxf(0.0, boss.hp)
+		var boss_pct := boss.hp / boss.max_hp if boss.max_hp > 0.0 else 1.0
+		boss_bar.get_theme_stylebox("fill").bg_color = Color(1.0, 0.45, 0.1) if boss_pct > 0.0 and boss_pct < 0.5 else Color(0.85, 0.15, 0.15)
 		lbl_boss.text = I18n.zombie_name(boss.type)
 	lbl_ammo.text = I18n.t("hud.reloading") if player.is_reloading() else "%d / %d" % [player.ammo, player.mag_size(player.gun_id)]
 	lbl_gun.text = "%s  Lv %d" % [I18n.gun_name(player.gun_id), player.lv[player.gun_id]]

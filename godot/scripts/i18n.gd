@@ -25,6 +25,11 @@ const STRINGS := {
 		"gun.smg.desc": "Fast fire, low spread", "gun.magnum.desc": "Heavy hits with pierce",
 		"gun.rifle.desc": "Accurate automatic rifle", "gun.sniper.desc": "Scoped long-range pierce",
 		"help": "WASD move · Mouse look · LMB fire · RMB aim · R reload · Shift dash · Space jump · 1–6 guns · V weapons · N next wave · Esc release mouse",
+		"waveClear.title": "Wave {n} cleared!",
+		"waveClear.rewards": "Gold +{gold} · {heal}",
+		"waveClear.heal": "Core +{corePct}% · Structures +{structPct}%",
+		"waveClear.nextBoss": " · Next wave is a boss",
+		"title.classic": "Full game (hub & tycoon) → /classic",
 	},
 	"ko": {
 		"title.sub": "좀비 타이쿤 3D", "title.launch": "출격", "title.launchHint": "Enter 또는 클릭",
@@ -37,6 +42,11 @@ const STRINGS := {
 		"shop.title": "무기", "shop.buy": "구매 · {n}", "shop.upgrade": "강화 · {n}", "shop.max": "최대",
 		"shop.equip": "장착", "shop.dmg": "피해", "shop.mag": "탄창", "shop.hint": "V 또는 Esc 로 닫기 · 전투 중 1~6 으로 총 교체",
 		"help": "WASD 이동 · 마우스 시점 · 좌클릭 사격 · 우클릭 조준 · R 재장전 · Shift 구르기 · Space 점프 · 1~6 총 · V 무기 · N 다음 웨이브 · Esc 마우스 풀기",
+		"waveClear.title": "웨이브 {n} 클리어!",
+		"waveClear.rewards": "골드 +{gold} · {heal}",
+		"waveClear.heal": "핵 +{corePct}% · 시설 +{structPct}%",
+		"waveClear.nextBoss": " · 다음 웨이브는 보스",
+		"title.classic": "본부·타이쿤 전체 버전 → /classic",
 	},
 }
 
