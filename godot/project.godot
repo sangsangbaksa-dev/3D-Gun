@@ -24,6 +24,10 @@ window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[gui]
+
+theme/custom_font="res://assets/fonts/ui_font.tres"
+
 [input]
 
 move_forward={

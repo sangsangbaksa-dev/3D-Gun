@@ -83,6 +83,7 @@ func _ready() -> void:
 	var audio := AudioDirectorScript.new()
 	audio.game = self
 	add_child(audio)
+	preload("res://scripts/meta_bonus.gd").apply(self) # 본부 영구 업그레이드
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
@@ -637,10 +638,10 @@ func _on_died() -> void:
 	bank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(bank)
 	var btn := Button.new()
-	btn.text = I18n.t("death.back")
+	btn.text = I18n.t("death.hub")
 	btn.custom_minimum_size = Vector2(260, 54)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn.add_theme_font_size_override("font_size", 22)
-	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
 	box.add_child(btn)
 	btn.grab_focus()

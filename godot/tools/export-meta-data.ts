@@ -6,12 +6,18 @@ import { ALLY, ALLY_ROLES, ALLY_ROLE_ORDER, INJECT, VACCINES, ALLY_HARD_CAP } fr
 import {
   UPGRADES, CAT_ORDER, CAT_LABEL, CAT_ICON, WALLET_KEYS, WALLET_LABEL, WALLET_ICON, BASE_START, KEEP_BASE, WAVE_BONUS_GOLD, KILL_BONUS_GOLD,
 } from '../../src/data/tycoon2d';
+import { EN_DATA } from '../../src/i18n/data-en';
+import { buildKoDataMessages } from '../../src/i18n/fromData';
+
+// 본부 화면 글자: 업그레이드·지갑·분류 이름 (웹 게임 i18n 과 같은 키)
+const pick = (m: Record<string, string>) => Object.fromEntries(Object.entries(m).filter(([k]) => /^(upg|wallet|cat)\./.test(k)));
 
 const out = {
   source: 'src/data/index.ts, src/data/tycoon2d.ts',
   ally: ALLY, allyRoles: ALLY_ROLES, allyRoleOrder: ALLY_ROLE_ORDER, allyHardCap: ALLY_HARD_CAP, inject: INJECT, vaccines: VACCINES,
   upgrades: UPGRADES, catOrder: CAT_ORDER, catLabel: CAT_LABEL, catIcon: CAT_ICON,
   walletKeys: WALLET_KEYS, walletLabel: WALLET_LABEL, walletIcon: WALLET_ICON,
+  text: { en: pick(EN_DATA), ko: pick(buildKoDataMessages()) },
   baseStart: BASE_START, keepBase: KEEP_BASE, waveBonusGold: WAVE_BONUS_GOLD, killBonusGold: KILL_BONUS_GOLD,
 };
 const path = fileURLToPath(new URL('../data/meta_data.json', import.meta.url));

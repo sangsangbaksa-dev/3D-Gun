@@ -8,9 +8,12 @@ var slice: Label
 var btn: Button
 var hint: Label
 var lang: Button
+var hub: Button
+var vol_lbl: Label
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	I18n.locale = Save.settings.locale
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var art := TextureRect.new()
 	art.texture = load("res://assets/art/splash.webp")
@@ -33,7 +36,7 @@ func _ready() -> void:
 	add_child(shade)
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	box.position = Vector2(-320, -330)
+	box.position = Vector2(-320, -360)
 	box.size = Vector2(640, 290)
 	box.alignment = BoxContainer.ALIGNMENT_END
 	box.add_theme_constant_override("separation", 10)
@@ -48,8 +51,43 @@ func _ready() -> void:
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn.add_theme_font_size_override("font_size", 30)
 	btn.pressed.connect(_launch)
+	# 원본 타이틀(src/title/style.ts)처럼 주황 버튼에 어두운 글자, 은은히 깜빡이는 빛
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("ff8a2a") if st != "hover" else Color("ffa04d")
+		sb.set_corner_radius_all(6)
+		sb.shadow_color = Color(1, 0.54, 0.16, 0.6)
+		sb.shadow_size = 14
+		btn.add_theme_stylebox_override(st, sb)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(c, Color("07090d"))
+	var pulse := create_tween().set_loops()
+	pulse.tween_property(btn, "modulate", Color(1.12, 1.05, 1.0), 0.9)
+	pulse.tween_property(btn, "modulate", Color(1, 1, 1), 0.9)
 	box.add_child(btn)
+	hub = Button.new()
+	hub.custom_minimum_size = Vector2(200, 44)
+	hub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hub.add_theme_font_size_override("font_size", 20)
+	hub.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
+	box.add_child(hub)
 	hint = _label(box, 16, Color(1, 1, 1, 0.7))
+	# 음량 (설정의 volume, 원본과 같은 저장소)
+	var vol := HBoxContainer.new()
+	vol.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	vol.position = Vector2(20, 24)
+	add_child(vol)
+	vol_lbl = _label(vol, 16, Color(1, 1, 1, 0.8))
+	var slider := HSlider.new()
+	slider.custom_minimum_size = Vector2(160, 24)
+	slider.max_value = 1.0
+	slider.step = 0.05
+	slider.value = float(Save.settings.volume)
+	slider.value_changed.connect(func(v: float):
+		Save.settings.volume = v
+		Sfx.set_volume(v)
+		Save.save_settings())
+	vol.add_child(slider)
 	slice = _label(self, 14, Color(1, 1, 1, 0.55))
 	slice.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	slice.position = Vector2(20, -34)
@@ -57,7 +95,10 @@ func _ready() -> void:
 	lang.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	lang.position = Vector2(-140, 20)
 	lang.custom_minimum_size = Vector2(120, 40)
-	lang.pressed.connect(I18n.toggle)
+	lang.pressed.connect(func():
+		I18n.toggle()
+		Save.settings.locale = I18n.locale
+		Save.save_settings())
 	add_child(lang)
 	I18n.locale_changed.connect(_refresh)
 	_refresh()
@@ -78,6 +119,8 @@ func _refresh() -> void:
 	hint.text = I18n.t("title.launchHint")
 	lang.text = I18n.t("title.lang")
 	slice.text = I18n.t("title.slice")
+	hub.text = I18n.t("title.hub")
+	vol_lbl.text = I18n.t("title.volume")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
