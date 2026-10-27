@@ -191,7 +191,7 @@ func upgrade(s: Node) -> bool:
 	if u.is_empty() or not game.spend(u.upCost, int(u.upGold)):
 		return false
 	s.set_level(s.level + 1)
-	s.max_hp = roundf(float(s.def.hp) * (1.0 + 0.25 * (s.level - 1)))
+	s.max_hp = roundf(float(s.def.hp) * (1.0 + float(game.meta.get("turretHpMul", 0.0))) * (1.0 + 0.25 * (s.level - 1)))
 	s.hp = s.max_hp
 	return true
 
