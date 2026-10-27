@@ -1,0 +1,23 @@
+import { chromium } from 'playwright-core';
+const out = process.argv[2] || '/tmp/claude-0/shots/classic';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+page.on('pageerror', (e) => console.log('ERR', String(e)));
+await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle', timeout: 90000 });
+await page.waitForTimeout(1500);
+await page.evaluate(() => window.__t2d.launch());
+await page.waitForTimeout(6000);
+await page.screenshot({ path: `${out}/spawn.png` });
+// 화살표키로 시점 회전
+await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft');
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/turn1.png` });
+await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft');
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/turn2.png` });
+await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft');
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/turn3.png` });
+const st = await page.evaluate(() => ({ phase: window.__state?.phase }));
+console.log(JSON.stringify(st));
+await browser.close();

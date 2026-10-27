@@ -20,48 +20,29 @@ func _ready() -> void:
 	_load_terrain()
 	var vis: Node3D = (load("res://assets/models/world.glb") as PackedScene).instantiate()
 	add_child(vis)
-	# 지형은 빛 반사(스페큘러)를 끈다: 낮은 해에서 기지 둘레가 주황 띠로 번쩍이던 문제
+	# 재질은 look.gd 가 웹의 람베르트처럼 바꾼다. 지형 정점색은 glb 에 선형값으로 들어 있는데
+	# Compatibility 렌더러는 색을 sRGB 공간에서 계산하므로 sRGB 로 되돌려야 웹과 같은 밝기가 된다
 	for mi in vis.find_children("*", "MeshInstance3D", true, false):
-		var m := (mi as MeshInstance3D).mesh.surface_get_material(0)
-		if m is StandardMaterial3D:
-			(m as StandardMaterial3D).metallic = 0.0
-			(m as StandardMaterial3D).metallic_specular = 0.0
-			(m as StandardMaterial3D).roughness = 1.0
-			if (m as StandardMaterial3D).vertex_color_use_as_albedo:
-				(m as StandardMaterial3D).albedo_color = Color(0.36, 0.42, 0.46) # 웹은 ACES 라 지형색을 2.2배 키워 둔 값. Godot 에서는 그대로면 흙길이 주황으로 번쩍인다
-	for mi in vis.find_children("m0", "MeshInstance3D", true, false):
-		_clean_base_pad(mi as MeshInstance3D)
+		_vertex_colors_to_srgb(mi)
 	_build_collision()
 
-## 기지 바닥의 꼭짓점 색에 흙길·어깨 색이 번져 주황 띠로 보이던 것을, 기지 한가운데 색으로 덮는다.
-## (웹은 청록 하늘빛 조명이 가려 주지만 Godot 의 붉은 하늘빛에서는 그대로 드러난다)
-func _clean_base_pad(mi: MeshInstance3D) -> void:
-	var mesh := mi.mesh as ArrayMesh
-	var arrays := mesh.surface_get_arrays(0)
-	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
-	if cols.is_empty():
+func _vertex_colors_to_srgb(mi: MeshInstance3D) -> void:
+	var src := mi.mesh as ArrayMesh
+	if src == null or not (src.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR):
 		return
-	var sum := Color(0, 0, 0, 0)
-	var n := 0
-	for i in verts.size():
-		if Vector2(verts[i].x, verts[i].z).length() < 6.0:
-			sum += cols[i]
-			n += 1
-	if n == 0:
-		return
-	var pad := sum / float(n)
-	pad = Color(minf(pad.r * 2.4, 0.9), minf(pad.g * 2.4, 0.9), minf(pad.b * 2.4, 0.9), 1.0)
-	for i in verts.size():
-		var r := Vector2(verts[i].x, verts[i].z).length()
-		var w := 1.0 - smoothstep(11.0, 16.0, r)
-		if w > 0.0:
-			cols[i] = cols[i].lerp(pad, w)
-	arrays[Mesh.ARRAY_COLOR] = cols
-	var mat := mesh.surface_get_material(0)
-	mesh.clear_surfaces()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh.surface_set_material(0, mat)
+	var out := ArrayMesh.new()
+	for i in src.get_surface_count():
+		var arr := src.surface_get_arrays(i)
+		var mat := src.surface_get_material(i)
+		var cols = arr[Mesh.ARRAY_COLOR]
+		if cols is PackedColorArray and not (cols as PackedColorArray).is_empty():
+			var pc := cols as PackedColorArray
+			for k in pc.size():
+				pc[k] = pc[k].linear_to_srgb()
+			arr[Mesh.ARRAY_COLOR] = pc
+		out.add_surface_from_arrays(src.surface_get_primitive_type(i), arr)
+		out.surface_set_material(i, mat)
+	mi.mesh = out
 
 # ── 높이 ─────────────────────────────────────────────────────────────
 
