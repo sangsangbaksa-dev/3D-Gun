@@ -60,6 +60,7 @@ func _ready() -> void:
 	add_child(root)
 	# 위: 제목 + 지갑
 	var top := HBoxContainer.new()
+	top.alignment = BoxContainer.ALIGNMENT_CENTER
 	top.add_theme_constant_override("separation", 18)
 	root.add_child(top)
 	title = _label(top, 40, Color(0.95, 0.25, 0.2))
@@ -68,9 +69,11 @@ func _ready() -> void:
 	wallet_box = HBoxContainer.new()
 	wallet_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wallet_box.alignment = BoxContainer.ALIGNMENT_END
+	wallet_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	wallet_box.add_theme_constant_override("separation", 10)
 	top.add_child(wallet_box)
 	lang = _button(top, 16, Vector2(110, 40))
+	lang.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	lang.pressed.connect(I18n.toggle)
 	stats = _label(root, 16, Color(1, 0.9, 0.8, 0.8))
 	tabs = HBoxContainer.new()
@@ -192,7 +195,10 @@ func _refresh() -> void:
 			continue
 		var chip := PanelContainer.new()
 		chip.add_theme_stylebox_override("panel", _box(PANEL, Color(0.45, 0.2, 0.12)))
+		chip.custom_minimum_size = Vector2(0, 40)
 		var l := Label.new()
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		l.text = "%s %s" % [_wallet_name(k), _num(v)]
 		l.add_theme_font_size_override("font_size", 16)
 		l.add_theme_color_override("font_color", Color(1, 0.85, 0.45) if k == "gold" else Color(0.95, 0.9, 0.85))

@@ -2,6 +2,8 @@ extends CanvasLayer
 ## E at a research lab (craft vaccines) or a shop (exchange resources), like the web game's lab panel
 ## (src/allies/view/labPanel.ts) and exchange. The game pauses while it is open; Esc / E closes it.
 
+const UiKit := preload("res://scripts/ui_kit.gd")
+
 var game: Node
 var kind := ""
 var root: Control
@@ -12,38 +14,24 @@ var foot: Label
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 4
-	root = Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(root)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(dim)
-	var panel := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.08, 0.08, 0.96)
-	sb.border_color = Color("2ee6d6")
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(8)
-	sb.set_content_margin_all(18)
-	panel.add_theme_stylebox_override("panel", sb)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-340, -240)
-	panel.custom_minimum_size = Vector2(680, 460)
-	root.add_child(panel)
+	var center := UiKit.modal(self)
+	root = center.get_parent()
+	var panel := UiKit.panel(UiKit.TEAL)
+	panel.custom_minimum_size = Vector2(680, 0)
+	center.add_child(panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
+	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
-	title = Label.new()
-	title.add_theme_font_size_override("font_size", 28)
+	title = UiKit.label("", 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	col.add_child(title)
+	var line := ColorRect.new()
+	line.color = Color(UiKit.TEAL, 0.25)
+	line.custom_minimum_size = Vector2(0, 1)
+	col.add_child(line)
 	body = VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(body)
-	foot = Label.new()
-	foot.add_theme_font_size_override("font_size", 14)
-	foot.modulate.a = 0.7
+	foot = UiKit.label("", 14, Color(UiKit.TEXT, 0.75), HORIZONTAL_ALIGNMENT_CENTER)
 	col.add_child(foot)
 	visible = false
 	I18n.locale_changed.connect(_rebuild)
@@ -66,29 +54,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _btn(text: String, enabled: bool, cb: Callable) -> Button:
-	var b := Button.new()
-	b.text = text
+	var b := UiKit.button(text, Vector2(110, 40))
 	b.disabled = not enabled
-	b.custom_minimum_size = Vector2(110, 38)
 	b.pressed.connect(cb)
 	return b
 
 func _row(left: String, sub: String) -> HBoxContainer:
-	var r := HBoxContainer.new()
-	r.add_theme_constant_override("separation", 12)
+	var r := UiKit.row_card(body)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var a := Label.new()
-	a.text = left
-	a.add_theme_font_size_override("font_size", 20)
-	v.add_child(a)
-	var b := Label.new()
-	b.text = sub
-	b.add_theme_font_size_override("font_size", 14)
-	b.modulate.a = 0.75
-	v.add_child(b)
+	v.add_theme_constant_override("separation", 2)
+	v.add_child(UiKit.label(left, 20, Color.WHITE))
+	v.add_child(UiKit.label(sub, 14, Color(UiKit.TEXT, 0.75)))
 	r.add_child(v)
-	body.add_child(r)
 	return r
 
 func _rebuild() -> void:

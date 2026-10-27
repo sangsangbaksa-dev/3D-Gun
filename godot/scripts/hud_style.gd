@@ -24,8 +24,12 @@ static func apply(g: Node) -> void:
 	s.name = "HudStyle"
 	g.add_child(s)
 
-static func box(bg: Color, edge: Color, radius := 10, border := 1) -> StyleBoxFlat:
+static func box(bg: Color, edge: Color, radius := 10, border := 1, margin := Vector4.ZERO) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
+	sb.content_margin_left = margin.x
+	sb.content_margin_top = margin.y
+	sb.content_margin_right = margin.z
+	sb.content_margin_bottom = margin.w
 	sb.bg_color = bg
 	sb.border_color = edge
 	sb.set_border_width_all(border)
@@ -182,15 +186,23 @@ func _process(_dt: float) -> void:
 	lr.position = Vector2((w - 900) * 0.5, 54)
 	# 아래 왼쪽 HP 패널: HP 글자, 체력 막대, 핵 막대와 이름
 	_hp_label.text = "HP %d / %d" % [ceili(maxf(0.0, game.player.hp)), int(game.player.max_hp)]
+	_hp_label.size.x = 260
+	_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hp_label.position = Vector2(26, h - 112)
 	game.hp_bar.position = Vector2(26, h - 88)
+	game.lbl_core.size.x = 260
+	game.lbl_core.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game.lbl_core.position = Vector2(26, h - 70)
 	game.core_bar.position = Vector2(26, h - 50)
 	_hp_panel.position = Vector2(14, h - 120)
 	_hp_panel.size = Vector2(284, 86)
 	# 아래 오른쪽 총 패널
-	game.lbl_gun.position = Vector2(w - 320, h - 128)
-	game.lbl_ammo.position = Vector2(w - 220, h - 104)
+	game.lbl_gun.size.x = 234
+	game.lbl_gun.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game.lbl_gun.position = Vector2(w - 250, h - 120)
+	game.lbl_ammo.size.x = 234
+	game.lbl_ammo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game.lbl_ammo.position = Vector2(w - 250, h - 94)
 	_gun_panel.position = Vector2(w - 250, h - 134)
 	_gun_panel.size = Vector2(234, 100)
 	game.lbl_hint.size.x = minf(w - 40.0, 1100.0)
