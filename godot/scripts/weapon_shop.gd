@@ -2,6 +2,8 @@ extends CanvasLayer
 ## V weapon panel: buy guns and upgrade them with coins (src/player/view/hud.ts weapon panel).
 ## The game pauses while it is open. Upgrade parts cost comes with gathering; for now only coins are charged.
 
+const UiKit := preload("res://scripts/ui_kit.gd")
+
 var game: Node
 var root: Control
 var list: VBoxContainer
@@ -11,40 +13,24 @@ var lbl_title: Label
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 4
-	root = Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(root)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(dim)
-	var panel := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.05, 0.05, 0.95)
-	sb.border_color = Color(0.85, 0.25, 0.2)
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(8)
-	sb.set_content_margin_all(18)
-	panel.add_theme_stylebox_override("panel", sb)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-380, -260)
-	panel.custom_minimum_size = Vector2(760, 520)
-	root.add_child(panel)
+	var center := UiKit.modal(self)
+	root = center.get_parent()
+	var panel := UiKit.panel(UiKit.RED)
+	panel.custom_minimum_size = Vector2(760, 0)
+	center.add_child(panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
+	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
-	var head := HBoxContainer.new()
-	col.add_child(head)
-	lbl_title = Label.new()
-	lbl_title.add_theme_font_size_override("font_size", 28)
-	lbl_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(lbl_title)
-	lbl_coins = Label.new()
-	lbl_coins.add_theme_font_size_override("font_size", 22)
-	lbl_coins.add_theme_color_override("font_color", Color(1, 0.85, 0.3))
-	head.add_child(lbl_coins)
+	lbl_title = UiKit.label("", 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	col.add_child(lbl_title)
+	lbl_coins = UiKit.label("", 20, Color(1, 0.85, 0.3), HORIZONTAL_ALIGNMENT_CENTER)
+	col.add_child(lbl_coins)
+	var line := ColorRect.new()
+	line.color = Color(UiKit.RED, 0.35)
+	line.custom_minimum_size = Vector2(0, 1)
+	col.add_child(line)
 	list = VBoxContainer.new()
-	list.add_theme_constant_override("separation", 8)
+	list.add_theme_constant_override("separation", 6)
 	col.add_child(list)
 	visible = false
 	I18n.locale_changed.connect(_rebuild)
@@ -76,10 +62,9 @@ func _rebuild() -> void:
 	var max_lv: int = int(GameData.gun_upgrade.maxLv)
 	for i in GameData.gun_order.size():
 		var id: String = GameData.gun_order[i]
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		list.add_child(row)
+		var row := UiKit.row_card(list)
 		var info := VBoxContainer.new()
+		info.add_theme_constant_override("separation", 2)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		var name := Label.new()
@@ -96,8 +81,7 @@ func _rebuild() -> void:
 		desc.add_theme_font_size_override("font_size", 14)
 		desc.modulate.a = 0.75
 		info.add_child(desc)
-		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(170, 44)
+		var btn := UiKit.button("", Vector2(170, 40))
 		if not owned:
 			var price: int = int(GameData.gun_unlock_gold.get(id, 0))
 			btn.text = I18n.t("shop.buy", {"n": price})
@@ -112,17 +96,13 @@ func _rebuild() -> void:
 			btn.disabled = game.coins < cost
 			btn.pressed.connect(_upgrade.bind(id, cost))
 		row.add_child(btn)
-		var eq := Button.new()
-		eq.custom_minimum_size = Vector2(110, 44)
-		eq.text = I18n.t("shop.equip")
+		var eq := UiKit.button(I18n.t("shop.equip"), Vector2(110, 40))
 		eq.disabled = not owned or id == p.gun_id
 		eq.pressed.connect(func():
 			p.switch_weapon(id)
 			_rebuild())
 		row.add_child(eq)
-	var hint := Label.new()
-	hint.text = I18n.t("shop.hint")
-	hint.modulate.a = 0.6
+	var hint := UiKit.label(I18n.t("shop.hint"), 14, Color(UiKit.TEXT, 0.6), HORIZONTAL_ALIGNMENT_CENTER)
 	list.add_child(hint)
 
 func _buy(id: String, price: int) -> void:
