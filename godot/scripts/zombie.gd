@@ -43,6 +43,7 @@ var charge_dir := Vector3.ZERO
 var hit_once := false
 var exploded := false
 var stunned := false
+var converted := false
 var stun_t := 0.0
 var rage := false
 
@@ -260,6 +261,7 @@ func _wake() -> void:
 func convert_to_ally() -> void:
 	dead = true
 	stunned = false
+	converted = true
 	collision_layer = 0
 	collision_mask = 0
 	killed.emit(self, 0)

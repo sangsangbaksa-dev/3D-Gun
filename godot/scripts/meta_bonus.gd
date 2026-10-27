@@ -7,7 +7,7 @@ static func data() -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string("res://data/meta_data.json"))
 
 static func bonuses(save: Node) -> Dictionary:
-	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}, "startRes": {},
+	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}, "startRes": {}, "startSamples": 0, "startSamplesSp": 0,
 		"turretDmgMul": 0.0, "turretRangeMul": 0.0, "turretRateMul": 0.0, "turretAmmoMul": 0.0, "turretHpMul": 0.0, "trapDpsMul": 0.0, "gatherSpeed": 0.0}
 	for u in data().upgrades:
 		var lv: int = save.upgrade_lv(u.id)
@@ -17,6 +17,8 @@ static func bonuses(save: Node) -> Dictionary:
 		match e.kind:
 			"startGold", "maxHp", "coreHp", "prepBonus", "turretDmgMul", "turretRangeMul", "turretRateMul", "turretAmmoMul", "turretHpMul", "trapDpsMul", "gatherSpeed":
 				b[e.kind] += float(e.per) * lv
+			"startSamples", "startSamplesSp":
+				b[e.kind] += int(e.per) * lv
 			"startRes":
 				b.startRes[e.res] = int(b.startRes.get(e.res, 0)) + int(e.per) * lv
 			"weapon":
@@ -38,6 +40,8 @@ static func apply(game: Node) -> void:
 	game.core.hp = game.core.max_hp
 	game.coins += int(b.startGold)
 	game.prep_left += b.prepBonus
+	game.samples += 2 + int(b.startSamples) # 기본 샘플 2개 (bonuses().startSamples)
+	game.samples_sp += int(b.startSamplesSp)
 	for r in b.startRes:
 		game.res[r] = int(game.res.get(r, 0)) + int(b.startRes[r])
 	for id in b.weapons:

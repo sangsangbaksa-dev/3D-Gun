@@ -30,7 +30,7 @@ const TEXT := {
 		"hub.later": "이 버전에는 아직 적용되지 않아요"},
 }
 ## Upgrades whose effect this port already applies (meta_bonus.gd, allies.gd, save.gd bank_run).
-const LIVE := ["startGold", "maxHp", "coreHp", "prepBonus", "startRes", "weapon", "weaponLv", "allyCap", "allyDmgMul", "allyHpMul", "vacBonus", "keepRatio"]
+const LIVE := ["startGold", "maxHp", "coreHp", "prepBonus", "startRes", "startSamples", "startSamplesSp", "turretDmgMul", "turretRangeMul", "turretRateMul", "turretAmmoMul", "turretHpMul", "trapDpsMul", "gatherSpeed", "weapon", "weaponLv", "allyCap", "allyDmgMul", "allyHpMul", "vacBonus", "keepRatio"]
 
 func _t(key: String, args := {}) -> String:
 	var dt: Dictionary = data.text.get(I18n.locale, {}) if data else {}
