@@ -124,7 +124,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if dead:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sens: float = P.sens * (0.6 if aiming else 1.0)
+		var sens: float = P.sens * float(Save.settings.sensitivity) * (0.6 if aiming else 1.0)
 		rotate_y(-event.relative.x * sens)
 		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * sens, -1.45, 1.45)
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
