@@ -22,6 +22,7 @@ func _process(_dt: float) -> bool:
 	var p = game.player
 	if frames == 2:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		game.prep_left = 5.0 # 건설 시간 60초는 건너뛴다
 		p.hurt.connect(func(_hp): hurt_seen = true)
 		p.fired.connect(func(_f, _t, hit, _h, _k, _a): if hit: hits_by_gun[p.gun_id] = hits_by_gun.get(p.gun_id, 0) + 1)
 	if hurt_seen and p.hp < 60:

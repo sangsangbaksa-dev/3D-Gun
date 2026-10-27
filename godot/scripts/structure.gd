@@ -17,9 +17,11 @@ var cooldown := 0.0
 var aim_yaw := 0.0
 var pulse := 0.0
 var head: Node3D
+var yaw := 0.0
+var model: Node3D
 var _flash := 0.0
-var _mats: Array[StandardMaterial3D] = []
-var _cols: Array[Color] = []
+var _meshes: Array = []
+static var _flash_mat: StandardMaterial3D
 
 func _ready() -> void:
 	def = GameData.buildings[kind]
@@ -38,82 +40,64 @@ func _ready() -> void:
 		cs.shape = c
 		cs.position.y = float(def.height) * 0.5
 		add_child(cs)
+	# 건물은 핵을 바라본다 (yawTo(core - b))
+	var c: Vector3 = game.core.global_position
+	yaw = atan2(-(c.x - position.x), -(c.z - position.z))
 	_build_model()
-	aim_yaw = game.rng.randf() * TAU
+	aim_yaw = yaw
 
-func _m(c: Color, metal := 0.0) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.metallic = metal
-	m.roughness = 0.8
-	_mats.append(m)
-	_cols.append(c)
+static var _lib: Node
+
+static func library() -> Node:
+	if _lib == null:
+		_lib = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
+	return _lib
+
+## The web game's buildModel(kind, level) (buildings.glb: b_<kind>_<level>), facing the core like baseView.ts.
+static func make_model(kind: String, level: int) -> Node3D:
+	var lib := library()
+	var name := "b_%s_%d" % [kind, level]
+	if not lib.has_node(name):
+		name = "b_%s_1" % kind
+	var m: Node3D = lib.get_node(name).duplicate()
+	m.name = "model"
 	return m
 
-func _box(parent: Node3D, size: Vector3, pos: Vector3, m: Material) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var b := BoxMesh.new()
-	b.size = size
-	mi.mesh = b
-	mi.position = pos
-	mi.material_override = m
-	parent.add_child(mi)
-	return mi
-
-## Stand-ins for src/base/view/models.ts.
 func _build_model() -> void:
-	var wood := _m(Color(0.42, 0.3, 0.17))
-	var metal := _m(Color(0.32, 0.34, 0.36), 0.6)
-	match kind:
-		"tower":
-			for sx in [-0.6, 0.6]:
-				for sz in [-0.6, 0.6]:
-					_box(self, Vector3(0.18, 4.0, 0.18), Vector3(sx, 2.0, sz), wood)
-			_box(self, Vector3(1.8, 0.25, 1.8), Vector3(0, 4.0, 0), wood)
-			head = Node3D.new()
-			head.position = Vector3(0, 4.45, 0)
-			add_child(head)
-			_box(head, Vector3(0.5, 0.5, 0.7), Vector3.ZERO, metal)
-			_box(head, Vector3(0.1, 0.1, 0.9), Vector3(0, 0.05, -0.7), metal)
-		"mgtower":
-			_box(self, Vector3(1.6, 1.4, 1.6), Vector3(0, 0.7, 0), _m(Color(0.35, 0.36, 0.33)))
-			head = Node3D.new()
-			head.position = Vector3(0, 1.75, 0)
-			add_child(head)
-			_box(head, Vector3(0.8, 0.6, 0.9), Vector3.ZERO, metal)
-			_box(head, Vector3(0.09, 0.09, 1.0), Vector3(-0.15, 0.05, -0.85), metal)
-			_box(head, Vector3(0.09, 0.09, 1.0), Vector3(0.15, 0.05, -0.85), metal)
-		"barricade":
-			for i in 3:
-				var plank := _box(self, Vector3(2.0, 0.3, 0.25), Vector3(0, 0.35 + i * 0.45, 0), wood)
-				plank.rotation.z = 0.12 * (i - 1)
-			_box(self, Vector3(0.2, 1.5, 0.3), Vector3(-0.8, 0.75, 0.05), wood)
-			_box(self, Vector3(0.2, 1.5, 0.3), Vector3(0.8, 0.75, 0.05), wood)
-		"trap":
-			var plate := MeshInstance3D.new()
-			var c := CylinderMesh.new()
-			c.top_radius = float(def.trap.radius)
-			c.bottom_radius = float(def.trap.radius)
-			c.height = 0.06
-			plate.mesh = c
-			var g := _m(Color(0.25, 0.55, 0.9))
-			g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			g.albedo_color.a = 0.28
-			_cols[-1].a = 0.28
-			plate.material_override = g
-			plate.position.y = 0.04
-			add_child(plate)
-			_box(self, Vector3(0.9, 0.3, 0.9), Vector3(0, 0.15, 0), metal)
-		_:
-			_box(self, Vector3(radius * 1.8, def.height, radius * 1.8), Vector3(0, float(def.height) * 0.5, 0), wood)
+	if model:
+		model.queue_free()
+	model = make_model(kind, level)
+	model.rotation.y = yaw
+	add_child(model)
+	head = model.find_child("head-*", true, false)
+	_meshes.clear()
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		_meshes.append(mi)
+		if kind == "trap":
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+func set_level(lv: int) -> void:
+	level = lv
+	_build_model()
 
 func take_damage(dmg: float) -> void:
 	if dead or dmg <= 0.0:
 		return
 	hp = maxf(0.0, hp - dmg)
 	_flash = 0.12
+	_set_flash(true)
 	if hp <= 0.0:
 		destroy()
+
+## Hit flash: a red overlay on every mesh (the glb materials are shared, so they are not touched).
+func _set_flash(on: bool) -> void:
+	if _flash_mat == null:
+		_flash_mat = StandardMaterial3D.new()
+		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_flash_mat.albedo_color = Color(1, 0.3, 0.2, 0.45)
+	for mi in _meshes:
+		mi.material_overlay = _flash_mat if on else null
 
 func destroy() -> void:
 	if dead:
@@ -131,8 +115,7 @@ func _physics_process(dt: float) -> void:
 		return
 	if _flash > 0.0:
 		_flash -= dt
-		for i in _mats.size():
-			_mats[i].albedo_color = _cols[i].lerp(Color(1, 0.4, 0.3, _cols[i].a), 0.6 if _flash > 0.0 else 0.0)
+		_set_flash(_flash > 0.0)
 	cooldown = maxf(0.0, cooldown - dt)
 	if def.has("trap"):
 		_trap(dt)
@@ -174,13 +157,13 @@ func _turret(dt: float) -> void:
 	var want := atan2(-to.x, -to.z) # yaw 0 = -z
 	var diff := wrapf(want - aim_yaw, -PI, PI)
 	aim_yaw += clampf(diff, -dt * 9.0, dt * 9.0)
-	head.rotation.y = aim_yaw
+	head.rotation.y = aim_yaw - yaw
 	if cooldown > 0.0 or ammo <= 0 or absf(wrapf(want - aim_yaw, -PI, PI)) > 0.12:
 		return
-	var crit := game.rng.randf() < 0.1
+	var crit: bool = game.rng.randf() < 0.1
 	var aim_pt: Vector3 = target.global_position + Vector3(game.rng.randf_range(-0.2, 0.2), target.height * (0.45 + game.rng.randf() * 0.3), game.rng.randf_range(-0.2, 0.2))
 	target.take_hit(float(lv.dmg) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
-	game.tracer(head.global_position + Vector3(-sin(aim_yaw), 0, -cos(aim_yaw)) * 0.7, aim_pt, Color(1, 0.85, 0.5))
+	game.tracer(head.global_position + Vector3(-sin(aim_yaw), 0.1, -cos(aim_yaw)) * 0.9, aim_pt, Color(1, 0.85, 0.5))
 	ammo -= 1
 	cooldown = lv.rate
 	if ammo <= 0:

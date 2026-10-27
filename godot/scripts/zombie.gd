@@ -1,7 +1,7 @@
 extends CharacterBody3D
 ## One zombie of any type (normal … king): lane walking, target choice, melee, special moves, boss patterns.
 ## Port of src/enemies/logic/sim.ts (updateZombie / abilityThink / runAct / bossThink / runBossAct).
-## Stun and vaccines come with the allies stage; structures other than the core with the base stage.
+## Stun and vaccines come with the allies stage.
 
 signal killed(zombie: Node, gold: int)
 
@@ -300,9 +300,26 @@ func _pick_target() -> void:
 	var r: Dictionary = GameData.enemy_rules
 	var p: Node3D = game.player
 	target = null
-	if not p.dead and _flat_dist(p.global_position) * 0.9 <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
+	var bd := INF
+	var dp := _flat_dist(p.global_position) * 0.9
+	if not p.dead and dp <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
 		target = p
-	elif wp >= _lane_points().size() and not game.core_dead:
+		bd = dp
+	# 웨이브 좀비는 길목의 방어 건물을 부순다 (핵 제외, 가장 가까운 건물 하나)
+	var sb: Node3D = null
+	var sd: float = r.aggroStructure
+	for s in game.base.structures:
+		if s.dead:
+			continue
+		var d: float = _flat_dist(s.global_position) - s.radius
+		if d < sd:
+			sd = d
+			sb = s
+	if sb:
+		var d2 := _flat_dist(sb.global_position)
+		if d2 <= float(r.aggroStructure) + sb.radius and d2 < bd:
+			target = sb
+	if target == null and wp >= _lane_points().size() and not game.core_dead:
 		target = game.core
 
 func _lane_points() -> Array:

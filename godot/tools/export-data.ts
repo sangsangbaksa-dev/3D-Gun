@@ -11,6 +11,7 @@ import {
   BUILDINGS, BUILDING_ORDER, GRID, CORE_CLEARANCE, DEMOLISH_REFUND, CORE_REPAIR, CORE_UPGRADES,
 } from '../../src/data';
 import { MAP, LANDMARKS, SCATTER_ROCKS, ZONE_DECOR } from '../../src/data/map';
+import { BASE_START } from '../../src/data/tycoon2d';
 import { terrainY } from '../../src/core/terrain';
 import { generateLayout } from '../../src/gathering/logic/nodes';
 import { mulberry32 } from '../../src/gathering/logic/rng';
@@ -56,6 +57,7 @@ const out = {
   })),
   buildings: BUILDINGS,
   buildingOrder: BUILDING_ORDER,
+  baseStart: { wood: 0, stone: 0, iron: 0, herb: 0, parts: 0, ...BASE_START },
   base: { grid: GRID, coreClearance: CORE_CLEARANCE, demolishRefund: DEMOLISH_REFUND, coreRepair: CORE_REPAIR, coreUpgrades: CORE_UPGRADES },
 };
 const path = fileURLToPath(new URL('../data/game_data.json', import.meta.url));
