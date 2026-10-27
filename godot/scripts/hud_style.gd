@@ -93,6 +93,19 @@ func _ready() -> void:
 	game.lbl_gun.add_theme_font_size_override("font_size", 15)
 	game.lbl_gun.add_theme_color_override("font_color", TEXT)
 	game.lbl_gun.modulate.a = 1.0
+	_late.call_deferred()
+
+## Labels other systems add to the HUD later (allies.gd's vaccine line) get the same pill.
+func _late() -> void:
+	var a = game.get("allies")
+	if a != null and a.get("_lbl_vac") is Label:
+		var l: Label = a._lbl_vac
+		_text_style(l)
+		l.position = Vector2(26, 82)
+		_pill(l, box(PANEL, Color(TEAL, 0.2), 8), Vector2(10, 3))
+		var pill: Panel = _pills[-1][1]
+		pill.reparent(l.get_parent(), false)
+		l.get_parent().move_child(pill, l.get_index())
 
 ## Index just after the full-screen layers (hurt flash, scope, crosshair) so panels sit under the text.
 func _first_label_index() -> int:
@@ -183,6 +196,7 @@ func _process(_dt: float) -> void:
 	game.lbl_hint.size.x = minf(w - 40.0, 1100.0)
 	game.lbl_hint.position = Vector2((w - game.lbl_hint.size.x) * 0.5, h - 30)
 	game.lbl_center.position.y = 124
+	game.build_panel.position.y = 96 # 위쪽 웨이브·자원 알약 아래로
 	for e in _pills:
 		var l: Label = e[0]
 		var p: Panel = e[1]

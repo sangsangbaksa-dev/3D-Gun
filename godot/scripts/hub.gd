@@ -219,7 +219,9 @@ func _card(u: Dictionary) -> Control:
 	var lv := _upgrade_lv(u.id)
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("panel", _box(PANEL, Color(0.35, 0.16, 0.1)))
+	var can_buy := lv < int(u.max) and _locked(u) == "" and _afford(_cost(u))
+	card.add_theme_stylebox_override("panel", _box(PANEL, Color(EMBER, 0.75) if can_buy else Color(0.35, 0.16, 0.1)))
+	card.custom_minimum_size.y = 118
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	card.add_child(v)
@@ -233,6 +235,8 @@ func _card(u: Dictionary) -> Control:
 	var desc := _label(v, 14, Color(0.9, 0.85, 0.8, 0.85))
 	desc.text = _t("upg.%s.desc" % u.id)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if not u.effect.kind in LIVE:
 		var later := _label(v, 12, Color(0.75, 0.7, 0.65, 0.7))
 		later.text = _t("hub.later")
