@@ -371,7 +371,7 @@ func _build_hud() -> void:
 	_hud.add_child(_bar)
 	_lbl_vac = Label.new()
 	_lbl_vac.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_lbl_vac.position = Vector2(24, 48)
+	_lbl_vac.position = Vector2(24, 76)
 	_lbl_vac.add_theme_font_size_override("font_size", 16)
 	_lbl_vac.add_theme_color_override("font_color", Color("8ff5e9"))
 	_lbl_vac.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
