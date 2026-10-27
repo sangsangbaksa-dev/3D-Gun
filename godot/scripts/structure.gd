@@ -53,15 +53,62 @@ static func library() -> Node:
 		_lib = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
 	return _lib
 
-## The web game's buildModel(kind, level) (buildings.glb: b_<kind>_<level>), facing the core like baseView.ts.
+## The web game's buildModel(kind, level) (buildings.glb: b_<kind>_<level>). The glb has ~90 loose meshes per tower,
+## so each model is merged once into one mesh per material (the turret head stays separate so it can turn).
+static var _merged := {}
+
 static func make_model(kind: String, level: int) -> Node3D:
 	var lib := library()
 	var name := "b_%s_%d" % [kind, level]
 	if not lib.has_node(name):
 		name = "b_%s_1" % kind
-	var m: Node3D = lib.get_node(name).duplicate()
+	if not _merged.has(name):
+		_merged[name] = _merge(lib.get_node(name))
+	var m: Node3D = _merged[name].duplicate()
 	m.name = "model"
 	return m
+
+static func _merge(src: Node3D) -> Node3D:
+	var out := Node3D.new()
+	var head := src.find_child("head-*", true, false) as Node3D
+	var tools := {} # material id -> SurfaceTool
+	var mats := {}
+	for mi in src.find_children("*", "MeshInstance3D", true, false):
+		if head and (head == mi or head.is_ancestor_of(mi)):
+			continue
+		var xf := Transform3D.IDENTITY
+		var n: Node = mi
+		while n != src:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		var mesh := (mi as MeshInstance3D).mesh
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i)
+			var key := mat.get_instance_id() if mat else 0
+			if not tools.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				tools[key] = st
+				mats[key] = mat
+			(tools[key] as SurfaceTool).append_from(mesh, i, xf)
+	var merged := ArrayMesh.new()
+	for key in tools:
+		(tools[key] as SurfaceTool).commit(merged)
+		merged.surface_set_material(merged.get_surface_count() - 1, mats[key])
+	var body := MeshInstance3D.new()
+	body.name = "body"
+	body.mesh = merged
+	out.add_child(body)
+	if head:
+		var h: Node3D = head.duplicate()
+		var xf := Transform3D.IDENTITY
+		var n: Node = head
+		while n != src:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		h.transform = xf
+		out.add_child(h)
+	return out
 
 func _build_model() -> void:
 	if model:
