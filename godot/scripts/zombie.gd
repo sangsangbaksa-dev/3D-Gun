@@ -1,7 +1,7 @@
 extends CharacterBody3D
 ## One zombie of any type (normal … king): lane walking, target choice, melee, special moves, boss patterns.
 ## Port of src/enemies/logic/sim.ts (updateZombie / abilityThink / runAct / bossThink / runBossAct).
-## Stun and vaccines come with the allies stage; structures other than the core with the base stage.
+## Stun (for vaccines, allies.gd) as in sim.ts damaged()/stun()/wake(); structures other than the core with the base stage.
 
 signal killed(zombie: Node, gold: int)
 
@@ -42,6 +42,9 @@ var leap_from := Vector3.ZERO
 var charge_dir := Vector3.ZERO
 var hit_once := false
 var exploded := false
+var stunned := false
+var stun_t := 0.0
+var rage := false
 
 var _walk := 0.0
 var _flash := 0.0
@@ -194,12 +197,20 @@ func _part(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> void:
 func is_head_hit(p: Vector3) -> bool:
 	return p.y - global_position.y >= height * 0.78
 
-## Returns true when this hit killed the zombie.
-func take_hit(amount: float, dir: Vector3) -> bool:
+## Returns true when this hit killed the zombie. by_ally: allies never stun, they finish.
+func take_hit(amount: float, dir: Vector3, by_ally := false) -> bool:
 	if dead:
 		return false
-	hp -= amount * (1.0 - float(tune.get("armor", 0.0)))
+	var r: Dictionary = GameData.enemy_rules
+	var left := hp - amount * (1.0 if stunned else 1.0 - float(tune.get("armor", 0.0))) # 기절하면 장갑 약점이 드러난다
 	_flash = 0.1
+	# 체력이 기절 구간이 되는 타격은 확률적으로 죽이지 않고 기절시킨다 (아군 타격, 보스, 자폭 중 제외)
+	if not by_ally and not is_boss and not stunned and state != "spawn" and move != "fuse" \
+			and left <= max_hp * float(r.stunHpRatio) and _rand() < float(r.stunBase):
+		hp = maxf(1.0, left)
+		_stun()
+		return false
+	hp = left
 	if not is_boss:
 		global_position += Vector3(dir.x, 0, dir.z).normalized() * 0.08 # 작은 넉백
 	if hp <= 0.0:
@@ -229,6 +240,31 @@ func _die(dir: Vector3) -> void:
 	tw.tween_property(_body, "position:y", -0.6 * scale_k, 0.8)
 	tw.tween_callback(queue_free)
 
+func _stun() -> void:
+	stunned = true
+	stun_t = float(GameData.enemy_rules.stunTime)
+	state = "stunned"
+	move = "none"
+	target = null
+	velocity = Vector3.ZERO
+	Sfx.play("stun", global_position)
+
+func _wake() -> void:
+	stunned = false
+	state = "chase"
+	rage = true
+	atk_t = 0.6
+	_body.rotation.x = 0.0
+
+## Vaccine worked: leave the wave quietly (no gold) so allies.gd can stand an ally here.
+func convert_to_ally() -> void:
+	dead = true
+	stunned = false
+	collision_layer = 0
+	collision_mask = 0
+	killed.emit(self, 0)
+	queue_free()
+
 func _self_destruct() -> void:
 	exploded = true
 	var b: Dictionary = tune.bomb
@@ -245,6 +281,17 @@ func _physics_process(dt: float) -> void:
 		for i in _mats.size():
 			_mats[i].emission = _base_cols[i].lerp(Color(0.9, 0.7, 0.6), k)
 	if dead:
+		return
+	if stunned:
+		# 기절: 휘청이며 서 있다가 stunTime 뒤 분노해서 깬다
+		stun_t -= dt
+		_body.rotation.x = lerpf(_body.rotation.x, 0.35 + sin(stun_t * 5.0) * 0.06, dt * 6.0)
+		for a in _arms:
+			a.rotation.x = lerpf(a.rotation.x, 0.15, dt * 6.0)
+		velocity = Vector3(0, velocity.y - 20.0 * dt if not is_on_floor() else 0.0, 0)
+		move_and_slide()
+		if stun_t <= 0.0:
+			_wake()
 		return
 	atk_t -= dt
 	ability_cd -= dt
@@ -302,7 +349,13 @@ func _pick_target() -> void:
 	target = null
 	if not p.dead and _flat_dist(p.global_position) * 0.9 <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
 		target = p
-	elif wp >= _lane_points().size() and not game.core_dead:
+	# 아군도 노린다 (sim.ts pickTarget: aggroAlly 안의 가장 가까운 아군, 플레이어보다 가까우면)
+	var boss_k := 1.6 if is_boss else 1.0
+	for a in get_tree().get_nodes_in_group("allies"):
+		var d := _flat_dist(a.global_position)
+		if not a.dead and d <= float(r.aggroAlly) * boss_k and (target == null or d < _flat_dist(target.global_position) * 0.9):
+			target = a
+	if target == null and wp >= _lane_points().size() and not game.core_dead:
 		target = game.core
 
 func _lane_points() -> Array:
@@ -354,7 +407,7 @@ func _think(dt: float) -> Vector3:
 			return Vector3.ZERO
 	elif dist < 1.2:
 		return Vector3.ZERO
-	var sp := speed * (1.4 if frenzy > 0.0 else 1.0) * absf(sign)
+	var sp := speed * (float(GameData.enemy_rules.rageSpeed) if rage else 1.0) * (1.4 if frenzy > 0.0 else 1.0) * absf(sign)
 	var v := dir * sign * sp
 	if sign > 0.0:
 		_face(goal)
