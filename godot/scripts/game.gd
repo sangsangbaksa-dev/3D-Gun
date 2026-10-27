@@ -15,6 +15,7 @@ const BaseScript := preload("res://scripts/base.gd")
 const StationScript := preload("res://scripts/station_panel.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
 const LookScript := preload("res://scripts/look.gd")
+const HudStyle := preload("res://scripts/hud_style.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -99,6 +100,7 @@ func _ready() -> void:
 	add_child(gathering)
 	gathering.gathered.connect(_on_gathered)
 	_build_hud()
+	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
 	I18n.locale_changed.connect(_refresh_hud)
 	shop = ShopScript.new()
 	shop.game = self
@@ -789,11 +791,20 @@ func _on_died() -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.modulate = Color(1, 1, 1, 0.85)
 	root.add_child(art)
-	var panel := ColorRect.new()
-	panel.color = Color(0.04, 0.01, 0.01, 0.72)
+	hud.visible = false
+	# 웹 사망 카드(src/ui/deathScreen.ts): 어두운 유리 패널에 붉은 테두리, 큰 붉은 제목, 주황 버튼
+	var shade := ColorRect.new()
+	shade.color = Color(0.02, 0.0, 0.0, 0.45)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(shade)
+	var panel := Panel.new()
+	var card := HudStyle.box(Color8(0x12, 0x1a, 0x20, 0xf0), Color8(0xe0, 0x30, 0x3a, 0x88), 12)
+	card.shadow_color = Color8(0xe0, 0x30, 0x3a, 0x33)
+	card.shadow_size = 32
+	panel.add_theme_stylebox_override("panel", card)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-330, -130)
-	panel.size = Vector2(660, 260)
+	panel.position = Vector2(-330, -120)
+	panel.size = Vector2(660, 250)
 	root.add_child(panel)
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_CENTER)
@@ -804,19 +815,23 @@ func _on_died() -> void:
 	root.add_child(box)
 	var title := Label.new()
 	title.text = I18n.t("death.coreTitle" if lose_reason == "core" else "death.title")
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Color(1, 0.3, 0.25))
+	title.add_theme_font_size_override("font_size", 64)
+	title.add_theme_color_override("font_color", Color8(0xff, 0x3a, 0x44))
+	title.add_theme_color_override("font_shadow_color", Color8(0xe0, 0x30, 0x3a, 0x99))
+	title.add_theme_constant_override("shadow_outline_size", 18)
+	title.add_theme_constant_override("shadow_offset_y", 0)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 	var sub := Label.new()
 	sub.text = I18n.t("death.sub", {"w": wave, "k": kills, "c": coins})
-	sub.add_theme_font_size_override("font_size", 22)
+	sub.add_theme_font_size_override("font_size", 20)
+	sub.add_theme_color_override("font_color", Color8(0xd6, 0xe4, 0xe8))
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(sub)
 	var bank := Label.new()
 	bank.text = I18n.t("death.bank", {"g": int(report.gold), "best": I18n.t("death.best") if report.newBest else ""})
 	bank.add_theme_font_size_override("font_size", 18)
-	bank.add_theme_color_override("font_color", Color(1, 0.82, 0.4))
+	bank.add_theme_color_override("font_color", Color8(0xff, 0xb3, 0x47))
 	bank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(bank)
 	var btn := Button.new()
@@ -824,6 +839,13 @@ func _on_died() -> void:
 	btn.custom_minimum_size = Vector2(260, 54)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn.add_theme_font_size_override("font_size", 22)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var b := HudStyle.box(Color8(0xff, 0x8a, 0x2a) if st != "hover" else Color8(0xff, 0xa2, 0x50), Color(1, 1, 1, 0.0 if st != "focus" else 0.6), 6, 0 if st != "focus" else 2)
+		btn.add_theme_stylebox_override(st, b)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(c, Color8(0x07, 0x09, 0x0d))
 	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
 	box.add_child(btn)
 	btn.grab_focus()
+	root.modulate.a = 0.0
+	create_tween().tween_property(root, "modulate:a", 1.0, 0.6)

@@ -57,6 +57,18 @@ godot --headless --path godot --fixed-fps 60 -s res://tests/enemies_test.gd
 좀비 15종이 하나씩 나와 플레이어에게 피해를 주는지, 처치 코인이 맞는지, 레인 좀비가 핵까지 와서 때리는지,
 10웨이브에 보스가 나오는지 확인합니다 (`ENEMIES ... -> PASS`).
 
+### 화면 확인 (디자인)
+
+```bash
+xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 --resolution 1280x720 -s res://tests/shots.gd     # 출격 장면 5장
+xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 --resolution 1280x720 -s res://tests/shots_ui.gd  # 타이틀·본부·사망 카드
+```
+
+`OUT=폴더` 로 저장 위치, `SHOTS=spawn,base` 로 장면을 고릅니다. 브라우저에서 실제 웹 빌드로 찍으려면
+`godot --headless --path godot --export-release WebShots build/shots/index.html` 후 `node tools/godot-shots.mjs 출력폴더 spawn,base`,
+원본 웹 게임은 `npx vite` 를 띄우고 `node tools/classic-shots.mjs 출력폴더` 로 같은 자리를 찍어 비교합니다.
+분위기(하늘·조명·안개·불씨)는 `scripts/look.gd`, HUD 모양은 `scripts/hud_style.gd` 에 있습니다.
+
 ## 폴더
 
 | 경로 | 내용 |
