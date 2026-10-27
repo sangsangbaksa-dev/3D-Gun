@@ -26,10 +26,10 @@ static var _flash_mat: StandardMaterial3D
 func _ready() -> void:
 	def = GameData.buildings[kind]
 	radius = def.radius
-	max_hp = def.hp
+	max_hp = roundf(float(def.hp) * (1.0 + float(game.meta.get("turretHpMul", 0.0))) if def.has("turret") else float(def.hp))
 	hp = max_hp
 	if def.has("turret"):
-		ammo = int(def.turret.ammo)
+		ammo = maxi(1, roundi(float(def.turret.ammo) * (1.0 + float(game.meta.get("turretAmmoMul", 0.0)))))
 	collision_layer = 1 if kind != "trap" else 0 # 함정은 밟고 지나간다
 	collision_mask = 0
 	if kind != "trap":
@@ -53,15 +53,62 @@ static func library() -> Node:
 		_lib = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
 	return _lib
 
-## The web game's buildModel(kind, level) (buildings.glb: b_<kind>_<level>), facing the core like baseView.ts.
+## The web game's buildModel(kind, level) (buildings.glb: b_<kind>_<level>). The glb has ~90 loose meshes per tower,
+## so each model is merged once into one mesh per material (the turret head stays separate so it can turn).
+static var _merged := {}
+
 static func make_model(kind: String, level: int) -> Node3D:
 	var lib := library()
 	var name := "b_%s_%d" % [kind, level]
 	if not lib.has_node(name):
 		name = "b_%s_1" % kind
-	var m: Node3D = lib.get_node(name).duplicate()
+	if not _merged.has(name):
+		_merged[name] = _merge(lib.get_node(name))
+	var m: Node3D = _merged[name].duplicate()
 	m.name = "model"
 	return m
+
+static func _merge(src: Node3D) -> Node3D:
+	var out := Node3D.new()
+	var head := src.find_child("head-*", true, false) as Node3D
+	var tools := {} # material id -> SurfaceTool
+	var mats := {}
+	for mi in src.find_children("*", "MeshInstance3D", true, false):
+		if head and (head == mi or head.is_ancestor_of(mi)):
+			continue
+		var xf := Transform3D.IDENTITY
+		var n: Node = mi
+		while n != src:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		var mesh := (mi as MeshInstance3D).mesh
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i)
+			var key := mat.get_instance_id() if mat else 0
+			if not tools.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				tools[key] = st
+				mats[key] = mat
+			(tools[key] as SurfaceTool).append_from(mesh, i, xf)
+	var merged := ArrayMesh.new()
+	for key in tools:
+		(tools[key] as SurfaceTool).commit(merged)
+		merged.surface_set_material(merged.get_surface_count() - 1, mats[key])
+	var body := MeshInstance3D.new()
+	body.name = "body"
+	body.mesh = merged
+	out.add_child(body)
+	if head:
+		var h: Node3D = head.duplicate()
+		var xf := Transform3D.IDENTITY
+		var n: Node = head
+		while n != src:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		h.transform = xf
+		out.add_child(h)
+	return out
 
 func _build_model() -> void:
 	if model:
@@ -137,11 +184,11 @@ func _trap(dt: float) -> void:
 		z.slow_mul = minf(z.slow_mul, float(t.slow))
 		z.slow_t = 0.2
 		if now:
-			z.take_hit(float(t.dps) * 0.5, Vector3.ZERO)
+			z.take_hit(float(t.dps) * 0.5 * (1.0 + float(game.meta.get("trapDpsMul", 0.0))), Vector3.ZERO)
 
 func _turret(dt: float) -> void:
 	var lv: Dictionary = levels()[level - 1]
-	var range_m: float = lv.range
+	var range_m: float = float(lv.range) * (1.0 + float(game.meta.get("turretRangeMul", 0.0)))
 	var target: Node3D = null
 	var bd := range_m
 	for z in game.zombies_root.get_children():
@@ -162,10 +209,10 @@ func _turret(dt: float) -> void:
 		return
 	var crit: bool = game.rng.randf() < 0.1
 	var aim_pt: Vector3 = target.global_position + Vector3(game.rng.randf_range(-0.2, 0.2), target.height * (0.45 + game.rng.randf() * 0.3), game.rng.randf_range(-0.2, 0.2))
-	target.take_hit(float(lv.dmg) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
+	target.take_hit(float(lv.dmg) * (1.0 + float(game.meta.get("turretDmgMul", 0.0))) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
 	game.tracer(head.global_position + Vector3(-sin(aim_yaw), 0.1, -cos(aim_yaw)) * 0.9, aim_pt, Color(1, 0.85, 0.5))
 	ammo -= 1
-	cooldown = lv.rate
+	cooldown = float(lv.rate) * maxf(0.55, 1.0 - float(game.meta.get("turretRateMul", 0.0)))
 	if ammo <= 0:
 		game.toast(I18n.t("build.ammoOut", {"name": I18n.bld_name(kind)}))
 		destroy()

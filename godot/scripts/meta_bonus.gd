@@ -1,20 +1,21 @@
 extends RefCounted
 ## Permanent upgrades (src/data/tycoon2d.ts UPGRADES) → this run, like bonuses() in tycoon2d/logic/economy.ts.
 ## Applied now: start gold and resources, max HP, core HP, starting guns, gun quality, prep time. Allies read their own
-## upgrades (allies.gd). Turret and gather-speed upgrades are for the base/gathering code to read from bonuses().
+## upgrades (allies.gd). Turret, trap and gather-speed bonuses are kept in game.meta for structure.gd / gathering.gd.
 
 static func data() -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string("res://data/meta_data.json"))
 
 static func bonuses(save: Node) -> Dictionary:
-	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}, "startRes": {}, "startSamples": 0, "startSamplesSp": 0}
+	var b := {"startGold": 0.0, "maxHp": 0.0, "coreHp": 0.0, "prepBonus": 0.0, "weapons": ["pistol"], "weaponLv": {}, "startRes": {}, "startSamples": 0, "startSamplesSp": 0,
+		"turretDmgMul": 0.0, "turretRangeMul": 0.0, "turretRateMul": 0.0, "turretAmmoMul": 0.0, "turretHpMul": 0.0, "trapDpsMul": 0.0, "gatherSpeed": 0.0}
 	for u in data().upgrades:
 		var lv: int = save.upgrade_lv(u.id)
 		if lv <= 0:
 			continue
 		var e: Dictionary = u.effect
 		match e.kind:
-			"startGold", "maxHp", "coreHp", "prepBonus":
+			"startGold", "maxHp", "coreHp", "prepBonus", "turretDmgMul", "turretRangeMul", "turretRateMul", "turretAmmoMul", "turretHpMul", "trapDpsMul", "gatherSpeed":
 				b[e.kind] += float(e.per) * lv
 			"startSamples", "startSamplesSp":
 				b[e.kind] += int(e.per) * lv
@@ -31,6 +32,7 @@ static func apply(game: Node) -> void:
 	var save: Node = game.get_node("/root/Save")
 	var gd: Node = game.get_node("/root/GameData")
 	var b := bonuses(save)
+	game.meta = b
 	var p: Node = game.player
 	p.max_hp += b.maxHp
 	p.hp = p.max_hp

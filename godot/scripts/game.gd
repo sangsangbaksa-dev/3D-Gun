@@ -27,6 +27,7 @@ var alive := 0
 var spawn_timer := 0.0
 var prep_left := PREP_TIME
 var res := {}
+var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
 var gathering: Node3D
 var gather_focus := {}
@@ -265,7 +266,7 @@ func _update_interact(dt: float) -> void:
 	gather_focus = {} if player.dead or base.building else gathering.nearest_ready(p)
 	var holding := Input.is_physical_key_pressed(KEY_E) and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	if not gather_focus.is_empty() and holding:
-		gathering.harvest(gather_focus, dt)
+		gathering.harvest(gather_focus, dt * (1.0 + float(meta.get("gatherSpeed", 0.0))))
 
 func core_action() -> Dictionary:
 	if core_dead or base.building:
