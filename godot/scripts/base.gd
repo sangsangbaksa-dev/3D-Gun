@@ -3,8 +3,8 @@ extends Node3D
 ## and the core's own repair / upgrade. Port of src/base/logic/base.ts + grid.ts.
 
 const StructureScript := preload("res://scripts/structure.gd")
-## 이번 단계에서 지을 수 있는 건물. 연구소·숙소·상점은 아군 단계에서
-const BUILDABLE := ["tower", "mgtower", "barricade", "trap"]
+## 지을 수 있는 건물 (1~7 키). 연구소·숙소·상점의 동작은 allies.gd / station_panel.gd
+const BUILDABLE := ["tower", "mgtower", "barricade", "trap", "lab", "barracks", "shop"]
 
 var game: Node
 var building := false

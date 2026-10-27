@@ -12,6 +12,7 @@ const WorldScript := preload("res://scripts/world.gd")
 const AlliesScript := preload("res://scripts/allies.gd")
 const AudioDirectorScript := preload("res://scripts/audio_director.gd")
 const BaseScript := preload("res://scripts/base.gd")
+const StationScript := preload("res://scripts/station_panel.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
@@ -64,6 +65,9 @@ var zombies_root: Node3D
 var world: Node3D
 var core_visual: Node3D
 var allies: Node3D
+var station: CanvasLayer
+var samples := 0
+var samples_sp := 0
 var _t := 0.0
 
 func _ready() -> void:
@@ -100,6 +104,9 @@ func _ready() -> void:
 	allies = AlliesScript.new()
 	allies.game = self
 	add_child(allies)
+	station = StationScript.new()
+	station.game = self
+	add_child(station)
 	var audio := AudioDirectorScript.new()
 	audio.game = self
 	add_child(audio)
@@ -306,7 +313,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_B:
 				base.toggle()
 			KEY_E:
-				if _near_core() and gathering.nearest_ready(player.global_position).is_empty():
+				var st: String = allies.station_near(player.global_position)
+				if st != "" and not base.building:
+					station.open(st)
+				elif _near_core() and gathering.nearest_ready(player.global_position).is_empty():
 					var a := core_action()
 					if a.get("kind") == "repair":
 						base.repair_core()
@@ -322,7 +332,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if base.building and base.hover:
 					base.upgrade(base.hover)
 			_:
-				if base.building and event.keycode >= KEY_1 and event.keycode <= KEY_4:
+				if base.building and event.keycode >= KEY_1 and event.keycode <= KEY_7:
 					base.select(event.keycode - KEY_1)
 	elif event is InputEventMouseButton and event.pressed and captured and base.building:
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -446,6 +456,8 @@ func _on_zombie_killed(z: Node, gold: int) -> void:
 	alive -= 1
 	kills += 1
 	coins += gold
+	if not z.converted:
+		allies.roll_sample(z.type)
 	if z == boss:
 		boss = null
 		if z.type == "king":
@@ -687,6 +699,9 @@ func _refresh_base_hud() -> void:
 	var parts := []
 	for r in GameData.res.keys:
 		parts.append("%s %d" % [I18n.res_name(r), int(res[r])])
+	if allies == null: # HUD 는 아군 노드보다 먼저 한 번 그려진다
+		return
+	parts.append(allies.tt("lab.samples", {"s": samples, "sp": samples_sp}))
 	lbl_res.text = "   ".join(parts)
 	# 채집 / 핵 안내
 	var prompt := ""
@@ -698,6 +713,8 @@ func _refresh_base_hud() -> void:
 			gather_bar.max_value = 1.0
 			gather_bar.value = gather_focus.progress
 			gather_bar.position = Vector2((hud.size.x - gather_bar.size.x) * 0.5, hud.size.y * 0.5 + 72)
+	elif allies.station_near(player.global_position) != "" and not base.building:
+		prompt = allies.tt("prompt." + allies.station_near(player.global_position))
 	elif _near_core():
 		prompt = core_action().get("label", "")
 	lbl_prompt.text = prompt
