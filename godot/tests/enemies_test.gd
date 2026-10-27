@@ -53,7 +53,7 @@ func _process(_dt: float) -> bool:
 		p.hp = p.max_hp
 		if hurt_by.get(t, false) or frames - step_start > WINDOW:
 			if is_instance_valid(cur) and not cur.dead:
-				cur.take_hit(1e9, Vector3.FORWARD)
+				cur.take_hit(1e9, Vector3.FORWARD, true) # 아군 타격: 기절 없이 바로 죽인다
 			# 폭탄 좀비는 스스로 터져도 처치 코인을 준다 (웹 게임과 같음)
 			coins_ok[t] = gold_paid == int(gd.zombie_reward[t].gold)
 			cur = null
@@ -90,7 +90,7 @@ func _process(_dt: float) -> bool:
 func _clear() -> void:
 	for z in game.zombies_root.get_children():
 		if not z.dead:
-			z.take_hit(1e9, Vector3.FORWARD)
+			z.take_hit(1e9, Vector3.FORWARD, true) # 아군 타격: 기절 없이 바로 죽인다
 
 func _finish() -> void:
 	var ok := core_hit and boss_ok

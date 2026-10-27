@@ -9,6 +9,8 @@ const ShopScript := preload("res://scripts/weapon_shop.gd")
 const HazardsScript := preload("res://scripts/hazards.gd")
 const CoreScript := preload("res://scripts/core.gd")
 const WorldScript := preload("res://scripts/world.gd")
+const AlliesScript := preload("res://scripts/allies.gd")
+const AudioDirectorScript := preload("res://scripts/audio_director.gd")
 const BaseScript := preload("res://scripts/base.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
@@ -61,6 +63,7 @@ var hurt_flash: ColorRect
 var zombies_root: Node3D
 var world: Node3D
 var core_visual: Node3D
+var allies: Node3D
 var _t := 0.0
 
 func _ready() -> void:
@@ -94,6 +97,13 @@ func _ready() -> void:
 	shop = ShopScript.new()
 	shop.game = self
 	add_child(shop)
+	allies = AlliesScript.new()
+	allies.game = self
+	add_child(allies)
+	var audio := AudioDirectorScript.new()
+	audio.game = self
+	add_child(audio)
+	preload("res://scripts/meta_bonus.gd").apply(self) # 본부 영구 업그레이드
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
@@ -766,6 +776,8 @@ func _draw_scope() -> void:
 
 func _on_died() -> void:
 	phase = "ended"
+	allies.flush()
+	var report := Save.bank_run(wave, kills, coins)
 	await get_tree().create_timer(1.0).timeout
 	var layer := CanvasLayer.new()
 	layer.layer = 5
@@ -804,11 +816,17 @@ func _on_died() -> void:
 	sub.add_theme_font_size_override("font_size", 22)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(sub)
+	var bank := Label.new()
+	bank.text = I18n.t("death.bank", {"g": int(report.gold), "best": I18n.t("death.best") if report.newBest else ""})
+	bank.add_theme_font_size_override("font_size", 18)
+	bank.add_theme_color_override("font_color", Color(1, 0.82, 0.4))
+	bank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(bank)
 	var btn := Button.new()
-	btn.text = I18n.t("death.back")
+	btn.text = I18n.t("death.hub")
 	btn.custom_minimum_size = Vector2(260, 54)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn.add_theme_font_size_override("font_size", 22)
-	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
 	box.add_child(btn)
 	btn.grab_focus()

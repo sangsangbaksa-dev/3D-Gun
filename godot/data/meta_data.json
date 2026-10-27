@@ -1,0 +1,970 @@
+{
+ "source": "src/data/index.ts, src/data/tycoon2d.ts",
+ "ally": {
+  "hp": 60,
+  "speed": 5,
+  "dmg": 9,
+  "atkRate": 0.8,
+  "atkRange": 1.7,
+  "radius": 0.45,
+  "height": 1.9,
+  "regenDelay": 5,
+  "regen": 2,
+  "aggro": 12,
+  "leash": 16
+ },
+ "allyRoles": {
+  "fighter": {
+   "name": "전투병",
+   "desc": "플레이어를 따라다니며 함께 싸운다 (최대 3)",
+   "color": 15026239,
+   "max": 3
+  },
+  "guard": {
+   "name": "경비병",
+   "desc": "핵 주변을 순찰하며 다가오는 좀비를 막는다",
+   "color": 4164581,
+   "max": 99
+  },
+  "gatherer": {
+   "name": "채집병",
+   "desc": "자원을 캐서 기지로 가져온다",
+   "color": 15050047,
+   "max": 99
+  },
+  "researcher": {
+   "name": "연구 보조",
+   "desc": "연구소 백신 제작 속도 증가",
+   "color": 10841061,
+   "max": 99
+  }
+ },
+ "allyRoleOrder": [
+  "fighter",
+  "guard",
+  "gatherer",
+  "researcher"
+ ],
+ "allyHardCap": 30,
+ "inject": {
+  "time": 1.5,
+  "range": 2.2,
+  "lowHpBonus": 0.2,
+  "bossPenalty": 0.3,
+  "minRate": 0.05,
+  "maxRate": 0.95
+ },
+ "vaccines": [
+  {
+   "name": "초급 백신",
+   "herb": 10,
+   "sample": 6,
+   "sampleSp": 0,
+   "parts": 2,
+   "iron": 0,
+   "rate": 0.4,
+   "uses": 4
+  },
+  {
+   "name": "중급 백신",
+   "herb": 16,
+   "sample": 8,
+   "sampleSp": 0,
+   "parts": 4,
+   "iron": 4,
+   "rate": 0.6,
+   "uses": 3
+  },
+  {
+   "name": "고급 백신",
+   "herb": 22,
+   "sample": 0,
+   "sampleSp": 4,
+   "parts": 6,
+   "iron": 8,
+   "rate": 0.8,
+   "uses": 3
+  }
+ ],
+ "upgrades": [
+  {
+   "id": "w_pistol",
+   "cat": "weapon",
+   "name": "권총 품질",
+   "desc": "권총 강화 +1단계",
+   "icon": "🔫",
+   "max": 8,
+   "cost": {
+    "gold": 50,
+    "iron": 1
+   },
+   "costGrowth": 1.55,
+   "effect": {
+    "kind": "weaponLv",
+    "weapon": "pistol",
+    "per": 1
+   }
+  },
+  {
+   "id": "w_shotgun_q",
+   "cat": "weapon",
+   "name": "샷건 품질",
+   "desc": "샷건 강화 +1단계",
+   "icon": "🔫",
+   "max": 8,
+   "cost": {
+    "gold": 180,
+    "iron": 4
+   },
+   "costGrowth": 1.6,
+   "effect": {
+    "kind": "weaponLv",
+    "weapon": "shotgun",
+    "per": 1
+   },
+   "requires": {
+    "id": "w_shotgun",
+    "lv": 1
+   }
+  },
+  {
+   "id": "w_smg_q",
+   "cat": "weapon",
+   "name": "기관총 품질",
+   "desc": "기관총 강화 +1단계",
+   "icon": "🔫",
+   "max": 8,
+   "cost": {
+    "gold": 420,
+    "parts": 3
+   },
+   "costGrowth": 1.65,
+   "effect": {
+    "kind": "weaponLv",
+    "weapon": "smg",
+    "per": 1
+   },
+   "requires": {
+    "id": "w_smg",
+    "lv": 1
+   }
+  },
+  {
+   "id": "w_all",
+   "cat": "weapon",
+   "name": "병기 정비",
+   "desc": "모든 총기 강화 +1단계",
+   "icon": "🛠️",
+   "max": 5,
+   "cost": {
+    "gold": 300,
+    "parts": 4
+   },
+   "costGrowth": 1.8,
+   "effect": {
+    "kind": "weaponLv",
+    "weapon": "*",
+    "per": 1
+   }
+  },
+  {
+   "id": "w_mul",
+   "cat": "weapon",
+   "name": "총열 정밀 가공",
+   "desc": "모든 무기 공격력 +6%",
+   "icon": "🎯",
+   "max": 10,
+   "cost": {
+    "gold": 90,
+    "parts": 1
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "dmgMul",
+    "per": 0.06
+   }
+  },
+  {
+   "id": "w_shotgun",
+   "cat": "weapon",
+   "name": "샷건 시작 보유",
+   "desc": "매 런 샷건을 들고 시작",
+   "icon": "🔫",
+   "max": 1,
+   "cost": {
+    "gold": 400,
+    "iron": 12,
+    "parts": 2
+   },
+   "costGrowth": 1,
+   "effect": {
+    "kind": "weapon",
+    "id": "shotgun"
+   }
+  },
+  {
+   "id": "w_smg",
+   "cat": "weapon",
+   "name": "기관총 시작 보유",
+   "desc": "매 런 기관총을 들고 시작",
+   "icon": "🔫",
+   "max": 1,
+   "cost": {
+    "gold": 1200,
+    "parts": 8,
+    "samples": 6
+   },
+   "costGrowth": 1,
+   "effect": {
+    "kind": "weapon",
+    "id": "smg"
+   },
+   "requires": {
+    "id": "w_shotgun",
+    "lv": 1
+   }
+  },
+  {
+   "id": "b_core",
+   "cat": "base",
+   "name": "핵 장갑 보강",
+   "desc": "핵 최대 체력 +80",
+   "icon": "🛡️",
+   "max": 10,
+   "cost": {
+    "gold": 70,
+    "stone": 8
+   },
+   "costGrowth": 1.45,
+   "effect": {
+    "kind": "coreHp",
+    "per": 80
+   }
+  },
+  {
+   "id": "b_hp",
+   "cat": "base",
+   "name": "단련",
+   "desc": "플레이어 최대 체력 +15",
+   "icon": "❤️",
+   "max": 8,
+   "cost": {
+    "gold": 80,
+    "herb": 6
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "maxHp",
+    "per": 15
+   }
+  },
+  {
+   "id": "b_wood",
+   "cat": "base",
+   "name": "목재 비축",
+   "desc": "런 시작 나무 +10",
+   "icon": "🪵",
+   "max": 8,
+   "cost": {
+    "gold": 40,
+    "wood": 15
+   },
+   "costGrowth": 1.4,
+   "effect": {
+    "kind": "startRes",
+    "res": "wood",
+    "per": 10
+   }
+  },
+  {
+   "id": "b_stone",
+   "cat": "base",
+   "name": "석재 비축",
+   "desc": "런 시작 돌 +8",
+   "icon": "🪨",
+   "max": 8,
+   "cost": {
+    "gold": 45,
+    "stone": 12
+   },
+   "costGrowth": 1.4,
+   "effect": {
+    "kind": "startRes",
+    "res": "stone",
+    "per": 8
+   }
+  },
+  {
+   "id": "t_dmg",
+   "cat": "turret",
+   "name": "포탑 탄두 강화",
+   "desc": "포탑 피해 +20%",
+   "icon": "🗼",
+   "max": 10,
+   "cost": {
+    "gold": 100,
+    "iron": 4
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "turretDmgMul",
+    "per": 0.2
+   }
+  },
+  {
+   "id": "t_iron",
+   "cat": "turret",
+   "name": "철 보급",
+   "desc": "런 시작 철 +3",
+   "icon": "⛓️",
+   "max": 6,
+   "cost": {
+    "gold": 70,
+    "iron": 5
+   },
+   "costGrowth": 1.45,
+   "effect": {
+    "kind": "startRes",
+    "res": "iron",
+    "per": 3
+   },
+   "requires": {
+    "id": "t_dmg",
+    "lv": 1
+   }
+  },
+  {
+   "id": "t_parts",
+   "cat": "turret",
+   "name": "부품 재활용",
+   "desc": "런 시작 부품 +2",
+   "icon": "⚙️",
+   "max": 5,
+   "cost": {
+    "gold": 160,
+    "parts": 3
+   },
+   "costGrowth": 1.6,
+   "effect": {
+    "kind": "startRes",
+    "res": "parts",
+    "per": 2
+   },
+   "requires": {
+    "id": "t_dmg",
+    "lv": 2
+   }
+  },
+  {
+   "id": "t_range",
+   "cat": "turret",
+   "name": "장거리 조준경",
+   "desc": "포탑 사거리 +6%",
+   "icon": "🎯",
+   "max": 8,
+   "cost": {
+    "gold": 120,
+    "stone": 10
+   },
+   "costGrowth": 1.48,
+   "effect": {
+    "kind": "turretRangeMul",
+    "per": 0.06
+   },
+   "requires": {
+    "id": "t_dmg",
+    "lv": 1
+   }
+  },
+  {
+   "id": "t_rate",
+   "cat": "turret",
+   "name": "자동 장전기",
+   "desc": "포탑 연사 간격 -5%",
+   "icon": "⚡",
+   "max": 6,
+   "cost": {
+    "gold": 140,
+    "iron": 6,
+    "parts": 2
+   },
+   "costGrowth": 1.55,
+   "effect": {
+    "kind": "turretRateMul",
+    "per": 0.05
+   },
+   "requires": {
+    "id": "t_range",
+    "lv": 2
+   }
+  },
+  {
+   "id": "t_ammo",
+   "cat": "turret",
+   "name": "대용량 탄통",
+   "desc": "포탑 내구도(탄) +10%",
+   "icon": "📦",
+   "max": 6,
+   "cost": {
+    "gold": 110,
+    "iron": 5
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "turretAmmoMul",
+    "per": 0.1
+   },
+   "requires": {
+    "id": "t_iron",
+    "lv": 2
+   }
+  },
+  {
+   "id": "t_armor",
+   "cat": "turret",
+   "name": "포탑 방호판",
+   "desc": "포탑 건물 체력 +18%",
+   "icon": "🛡️",
+   "max": 5,
+   "cost": {
+    "gold": 130,
+    "stone": 12,
+    "iron": 4
+   },
+   "costGrowth": 1.52,
+   "effect": {
+    "kind": "turretHpMul",
+    "per": 0.18
+   },
+   "requires": {
+    "id": "t_dmg",
+    "lv": 3
+   }
+  },
+  {
+   "id": "t_trap",
+   "cat": "turret",
+   "name": "트랩 강화",
+   "desc": "슬로우 트랩 피해 +15%",
+   "icon": "🕸️",
+   "max": 6,
+   "cost": {
+    "gold": 85,
+    "wood": 15,
+    "iron": 2
+   },
+   "costGrowth": 1.45,
+   "effect": {
+    "kind": "trapDpsMul",
+    "per": 0.15
+   }
+  },
+  {
+   "id": "a_cap",
+   "cat": "ally",
+   "name": "숙소 확장",
+   "desc": "아군 상한 +1",
+   "icon": "🏠",
+   "max": 6,
+   "cost": {
+    "gold": 150,
+    "wood": 20,
+    "samples": 2
+   },
+   "costGrowth": 1.7,
+   "effect": {
+    "kind": "allyCap",
+    "per": 1
+   }
+  },
+  {
+   "id": "a_sample",
+   "cat": "ally",
+   "name": "샘플 냉동고",
+   "desc": "런 시작 샘플 +2",
+   "icon": "🧪",
+   "max": 6,
+   "cost": {
+    "gold": 90,
+    "herb": 8
+   },
+   "costGrowth": 1.45,
+   "effect": {
+    "kind": "startSamples",
+    "per": 2
+   }
+  },
+  {
+   "id": "a_herb",
+   "cat": "ally",
+   "name": "약초 상비",
+   "desc": "런 시작 약초 +4",
+   "icon": "🌿",
+   "max": 6,
+   "cost": {
+    "gold": 50,
+    "herb": 8
+   },
+   "costGrowth": 1.4,
+   "effect": {
+    "kind": "startRes",
+    "res": "herb",
+    "per": 4
+   }
+  },
+  {
+   "id": "a_adm",
+   "cat": "ally",
+   "name": "전투 훈련",
+   "desc": "아군 공격력 +8%",
+   "icon": "⚔️",
+   "max": 6,
+   "cost": {
+    "gold": 120,
+    "samples": 3
+   },
+   "costGrowth": 1.55,
+   "effect": {
+    "kind": "allyDmgMul",
+    "per": 0.08
+   },
+   "requires": {
+    "id": "a_cap",
+    "lv": 1
+   }
+  },
+  {
+   "id": "a_ahp",
+   "cat": "ally",
+   "name": "강화 주사",
+   "desc": "아군 체력 +12%",
+   "icon": "💉",
+   "max": 5,
+   "cost": {
+    "gold": 100,
+    "herb": 10,
+    "samples": 2
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "allyHpMul",
+    "per": 0.12
+   },
+   "requires": {
+    "id": "a_sample",
+    "lv": 2
+   }
+  },
+  {
+   "id": "a_vac",
+   "cat": "ally",
+   "name": "백신 연구",
+   "desc": "아군화 성공률 +5%",
+   "icon": "🧪",
+   "max": 6,
+   "cost": {
+    "gold": 140,
+    "herb": 12,
+    "samples": 4
+   },
+   "costGrowth": 1.58,
+   "effect": {
+    "kind": "vacBonus",
+    "per": 0.05
+   },
+   "requires": {
+    "id": "a_sample",
+    "lv": 1
+   }
+  },
+  {
+   "id": "a_sp",
+   "cat": "ally",
+   "name": "특수 샘플 보관",
+   "desc": "런 시작 특수 샘플 +1",
+   "icon": "☣️",
+   "max": 4,
+   "cost": {
+    "gold": 400,
+    "samplesSp": 2,
+    "parts": 6
+   },
+   "costGrowth": 1.85,
+   "effect": {
+    "kind": "startSamplesSp",
+    "per": 1
+   },
+   "requires": {
+    "id": "a_vac",
+    "lv": 2
+   }
+  },
+  {
+   "id": "e_gold",
+   "cat": "econ",
+   "name": "출격 지원금",
+   "desc": "런 시작 골드 +25",
+   "icon": "🪙",
+   "max": 10,
+   "cost": {
+    "gold": 60
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "startGold",
+    "per": 25
+   }
+  },
+  {
+   "id": "e_click",
+   "cat": "econ",
+   "name": "교환 협상",
+   "desc": "교환소 판매가 +1 골드 (자원당, 구매가 미만)",
+   "icon": "💱",
+   "max": 10,
+   "cost": {
+    "gold": 30
+   },
+   "costGrowth": 1.35,
+   "effect": {
+    "kind": "clickGold",
+    "per": 1
+   }
+  },
+  {
+   "id": "e_income",
+   "cat": "econ",
+   "name": "운영 효율",
+   "desc": "모든 생산 건물 수입 +10%",
+   "icon": "📈",
+   "max": 10,
+   "cost": {
+    "gold": 200,
+    "parts": 2
+   },
+   "costGrowth": 1.6,
+   "effect": {
+    "kind": "incomeMul",
+    "per": 0.1
+   }
+  },
+  {
+   "id": "e_keep",
+   "cat": "econ",
+   "name": "철수 보급",
+   "desc": "사망 시 남은 자원 회수율 +6%",
+   "icon": "🎒",
+   "max": 8,
+   "cost": {
+    "gold": 120,
+    "wood": 20
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "keepRatio",
+    "per": 0.06
+   }
+  },
+  {
+   "id": "e_gather",
+   "cat": "econ",
+   "name": "채집 효율",
+   "desc": "채집 속도 +10%",
+   "icon": "⛏️",
+   "max": 8,
+   "cost": {
+    "gold": 80,
+    "wood": 15
+   },
+   "costGrowth": 1.45,
+   "effect": {
+    "kind": "gatherSpeed",
+    "per": 0.1
+   }
+  },
+  {
+   "id": "e_prep",
+   "cat": "base",
+   "name": "준비 시간 연장",
+   "desc": "웨이브 준비 시간 +3초",
+   "icon": "⏱️",
+   "max": 8,
+   "cost": {
+    "gold": 90,
+    "wood": 10
+   },
+   "costGrowth": 1.5,
+   "effect": {
+    "kind": "prepBonus",
+    "per": 3
+   }
+  },
+  {
+   "id": "e_wave",
+   "cat": "base",
+   "name": "전진 기지",
+   "desc": "출격 시 웨이브 건너뛰기 비용 -8% (레벨당)",
+   "icon": "🚩",
+   "max": 10,
+   "cost": {
+    "gold": 250,
+    "iron": 5
+   },
+   "costGrowth": 1.7,
+   "effect": {
+    "kind": "startWave",
+    "per": 1
+   }
+  },
+  {
+   "id": "e_sp",
+   "cat": "econ",
+   "name": "교범 학습",
+   "desc": "런 경험치 +20% (레벨업마다 스킬 포인트)",
+   "icon": "📘",
+   "max": 5,
+   "cost": {
+    "gold": 300,
+    "samples": 4
+   },
+   "costGrowth": 1.9,
+   "effect": {
+    "kind": "xpMul",
+    "per": 0.2
+   }
+  }
+ ],
+ "catOrder": [
+  "weapon",
+  "base",
+  "turret",
+  "ally",
+  "econ"
+ ],
+ "catLabel": {
+  "weapon": "무기",
+  "base": "기지·핵",
+  "turret": "포탑",
+  "ally": "아군",
+  "econ": "보급·경제"
+ },
+ "catIcon": {
+  "weapon": "🔫",
+  "base": "🏰",
+  "turret": "🗼",
+  "ally": "🧟",
+  "econ": "💱"
+ },
+ "walletKeys": [
+  "gold",
+  "wood",
+  "stone",
+  "iron",
+  "herb",
+  "parts",
+  "samples",
+  "samplesSp",
+  "skillPoints"
+ ],
+ "walletLabel": {
+  "gold": "골드",
+  "wood": "나무",
+  "stone": "돌",
+  "iron": "철",
+  "herb": "약초",
+  "parts": "부품",
+  "samples": "샘플",
+  "samplesSp": "특수 샘플",
+  "skillPoints": "스킬 포인트"
+ },
+ "walletIcon": {
+  "gold": "🪙",
+  "wood": "🪵",
+  "stone": "🪨",
+  "iron": "⛓️",
+  "herb": "🌿",
+  "parts": "⚙️",
+  "samples": "🧪",
+  "samplesSp": "☣️",
+  "skillPoints": "⭐"
+ },
+ "text": {
+  "en": {
+   "wallet.gold": "Gold",
+   "wallet.wood": "Wood",
+   "wallet.stone": "Stone",
+   "wallet.iron": "Iron",
+   "wallet.herb": "Herb",
+   "wallet.parts": "Parts",
+   "wallet.samples": "Samples",
+   "wallet.samplesSp": "Special samples",
+   "wallet.skillPoints": "Skill points",
+   "cat.weapon": "Weapons",
+   "cat.base": "Base & core",
+   "cat.turret": "Turrets",
+   "cat.ally": "Allies",
+   "cat.econ": "Supply & economy",
+   "upg.w_pistol.name": "Pistol quality",
+   "upg.w_pistol.desc": "Pistol upgrade +1 tier",
+   "upg.w_shotgun_q.name": "Shotgun quality",
+   "upg.w_shotgun_q.desc": "Shotgun upgrade +1 tier",
+   "upg.w_smg_q.name": "SMG quality",
+   "upg.w_smg_q.desc": "SMG upgrade +1 tier",
+   "upg.w_all.name": "Arms maintenance",
+   "upg.w_all.desc": "All guns +1 upgrade tier",
+   "upg.w_mul.name": "Barrel machining",
+   "upg.w_mul.desc": "All weapons +6% damage",
+   "upg.w_shotgun.name": "Start with shotgun",
+   "upg.w_shotgun.desc": "Begin each sortie with a shotgun",
+   "upg.w_smg.name": "Start with SMG",
+   "upg.w_smg.desc": "Begin each sortie with an SMG",
+   "upg.b_core.name": "Core armor",
+   "upg.b_core.desc": "Core max HP +80",
+   "upg.b_hp.name": "Conditioning",
+   "upg.b_hp.desc": "Player max HP +15",
+   "upg.b_wood.name": "Wood stockpile",
+   "upg.b_wood.desc": "+10 wood at sortie start",
+   "upg.b_stone.name": "Stone stockpile",
+   "upg.b_stone.desc": "+8 stone at sortie start",
+   "upg.t_dmg.name": "Turret rounds",
+   "upg.t_dmg.desc": "Turret damage +20%",
+   "upg.t_iron.name": "Iron supply",
+   "upg.t_iron.desc": "+3 iron at sortie start",
+   "upg.t_parts.name": "Parts recycling",
+   "upg.t_parts.desc": "+2 parts at sortie start",
+   "upg.t_range.name": "Long-range scopes",
+   "upg.t_range.desc": "Turret range +6%",
+   "upg.t_rate.name": "Autoloader",
+   "upg.t_rate.desc": "Turret fire interval −5%",
+   "upg.t_ammo.name": "Big ammo drums",
+   "upg.t_ammo.desc": "Turret durability (ammo) +10%",
+   "upg.t_armor.name": "Turret plating",
+   "upg.t_armor.desc": "Turret building HP +18%",
+   "upg.t_trap.name": "Trap upgrade",
+   "upg.t_trap.desc": "Slow trap damage +15%",
+   "upg.a_cap.name": "Barracks expansion",
+   "upg.a_cap.desc": "Ally cap +1",
+   "upg.a_sample.name": "Sample freezer",
+   "upg.a_sample.desc": "+2 samples at sortie start",
+   "upg.a_herb.name": "Herb kit",
+   "upg.a_herb.desc": "+4 herb at sortie start",
+   "upg.a_adm.name": "Combat drills",
+   "upg.a_adm.desc": "Ally damage +8%",
+   "upg.a_ahp.name": "Booster shots",
+   "upg.a_ahp.desc": "Ally HP +12%",
+   "upg.a_vac.name": "Vaccine research",
+   "upg.a_vac.desc": "Ally conversion chance +5%",
+   "upg.a_sp.name": "Special sample vault",
+   "upg.a_sp.desc": "+1 special sample at sortie start",
+   "upg.e_gold.name": "Sortie stipend",
+   "upg.e_gold.desc": "+25 gold at sortie start",
+   "upg.e_click.name": "Exchange haggle",
+   "upg.e_click.desc": "Exchange sell price +1 gold per resource (capped below buy price)",
+   "upg.e_income.name": "Operations efficiency",
+   "upg.e_income.desc": "All producer income +10%",
+   "upg.e_keep.name": "Extraction kit",
+   "upg.e_keep.desc": "Resource recovery on defeat +6%",
+   "upg.e_gather.name": "Gathering efficiency",
+   "upg.e_gather.desc": "Gather speed +10%",
+   "upg.e_prep.name": "Extended prep",
+   "upg.e_prep.desc": "Wave prep time +3s",
+   "upg.e_wave.name": "Forward base",
+   "upg.e_wave.desc": "Wave skip cost −8% per level",
+   "upg.e_sp.name": "Drill instructor",
+   "upg.e_sp.desc": "Sortie XP +20% (skill points on level-up)"
+  },
+  "ko": {
+   "wallet.gold": "골드",
+   "wallet.wood": "나무",
+   "wallet.stone": "돌",
+   "wallet.iron": "철",
+   "wallet.herb": "약초",
+   "wallet.parts": "부품",
+   "wallet.samples": "샘플",
+   "wallet.samplesSp": "특수 샘플",
+   "wallet.skillPoints": "스킬 포인트",
+   "cat.weapon": "무기",
+   "cat.base": "기지·핵",
+   "cat.turret": "포탑",
+   "cat.ally": "아군",
+   "cat.econ": "보급·경제",
+   "upg.w_pistol.name": "권총 품질",
+   "upg.w_pistol.desc": "권총 강화 +1단계",
+   "upg.w_shotgun_q.name": "샷건 품질",
+   "upg.w_shotgun_q.desc": "샷건 강화 +1단계",
+   "upg.w_smg_q.name": "기관총 품질",
+   "upg.w_smg_q.desc": "기관총 강화 +1단계",
+   "upg.w_all.name": "병기 정비",
+   "upg.w_all.desc": "모든 총기 강화 +1단계",
+   "upg.w_mul.name": "총열 정밀 가공",
+   "upg.w_mul.desc": "모든 무기 공격력 +6%",
+   "upg.w_shotgun.name": "샷건 시작 보유",
+   "upg.w_shotgun.desc": "매 출격 샷건을 들고 시작",
+   "upg.w_smg.name": "기관총 시작 보유",
+   "upg.w_smg.desc": "매 출격 기관총을 들고 시작",
+   "upg.b_core.name": "핵 장갑 보강",
+   "upg.b_core.desc": "핵 최대 체력 +80",
+   "upg.b_hp.name": "단련",
+   "upg.b_hp.desc": "플레이어 최대 체력 +15",
+   "upg.b_wood.name": "목재 비축",
+   "upg.b_wood.desc": "출격 시작 나무 +10",
+   "upg.b_stone.name": "석재 비축",
+   "upg.b_stone.desc": "출격 시작 돌 +8",
+   "upg.t_dmg.name": "포탑 탄두 강화",
+   "upg.t_dmg.desc": "포탑 피해 +20%",
+   "upg.t_iron.name": "철 보급",
+   "upg.t_iron.desc": "출격 시작 철 +3",
+   "upg.t_parts.name": "부품 재활용",
+   "upg.t_parts.desc": "출격 시작 부품 +2",
+   "upg.t_range.name": "장거리 조준경",
+   "upg.t_range.desc": "포탑 사거리 +6%",
+   "upg.t_rate.name": "자동 장전기",
+   "upg.t_rate.desc": "포탑 연사 간격 -5%",
+   "upg.t_ammo.name": "대용량 탄통",
+   "upg.t_ammo.desc": "포탑 내구도(탄) +10%",
+   "upg.t_armor.name": "포탑 방호판",
+   "upg.t_armor.desc": "포탑 건물 체력 +18%",
+   "upg.t_trap.name": "트랩 강화",
+   "upg.t_trap.desc": "슬로우 트랩 피해 +15%",
+   "upg.a_cap.name": "숙소 확장",
+   "upg.a_cap.desc": "아군 상한 +1",
+   "upg.a_sample.name": "샘플 냉동고",
+   "upg.a_sample.desc": "출격 시작 샘플 +2",
+   "upg.a_herb.name": "약초 상비",
+   "upg.a_herb.desc": "출격 시작 약초 +4",
+   "upg.a_adm.name": "전투 훈련",
+   "upg.a_adm.desc": "아군 공격력 +8%",
+   "upg.a_ahp.name": "강화 주사",
+   "upg.a_ahp.desc": "아군 체력 +12%",
+   "upg.a_vac.name": "백신 연구",
+   "upg.a_vac.desc": "아군화 성공률 +5%",
+   "upg.a_sp.name": "특수 샘플 보관",
+   "upg.a_sp.desc": "출격 시작 특수 샘플 +1",
+   "upg.e_gold.name": "출격 지원금",
+   "upg.e_gold.desc": "출격 시작 골드 +25",
+   "upg.e_click.name": "교환 협상",
+   "upg.e_click.desc": "교환소 판매가 +1 골드 (자원당, 구매가 미만)",
+   "upg.e_income.name": "운영 효율",
+   "upg.e_income.desc": "모든 생산 건물 수입 +10%",
+   "upg.e_keep.name": "철수 보급",
+   "upg.e_keep.desc": "사망 시 남은 자원 회수율 +6%",
+   "upg.e_gather.name": "채집 효율",
+   "upg.e_gather.desc": "채집 속도 +10%",
+   "upg.e_prep.name": "준비 시간 연장",
+   "upg.e_prep.desc": "웨이브 준비 시간 +3초",
+   "upg.e_wave.name": "전진 기지",
+   "upg.e_wave.desc": "출격 시 웨이브 건너뛰기 비용 -8% (레벨당)",
+   "upg.e_sp.name": "교범 학습",
+   "upg.e_sp.desc": "출격 경험치 +20% (레벨업마다 스킬 포인트)"
+  }
+ },
+ "baseStart": {
+  "wood": 24,
+  "stone": 16,
+  "herb": 4,
+  "parts": 4
+ },
+ "keepBase": 0.66,
+ "waveBonusGold": 13,
+ "killBonusGold": 0.45
+}
