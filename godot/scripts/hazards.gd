@@ -1,7 +1,7 @@
 extends Node3D
 ## Area attacks and their effects: warning rings, blasts, acid spit, bomb rain, gas / acid pools.
 ## Port of the aoe / explode / projs / gases part of src/enemies/logic/sim.ts.
-## Targets are the player and the core (allies and buildings join in later stages).
+## Targets are the player, the core and placed buildings (allies join in a later stage).
 
 var game: Node
 var _pools: Array = [] # {pos, r, t, tick, dps, node}
@@ -12,6 +12,10 @@ func targets() -> Array:
 	var out: Array = [game.player]
 	if not game.core_dead:
 		out.append(game.core)
+	if game.base:
+		for b in game.base.structures:
+			if not b.dead and b.kind != "trap":
+				out.append(b)
 	return out
 
 ## Damage everything within r (flat distance + target radius).

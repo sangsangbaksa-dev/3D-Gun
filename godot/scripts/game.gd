@@ -1,7 +1,7 @@
 extends Node3D
 ## The 3D sortie: world, lanes, core, waves, coins, HUD and the death card.
 ## Waves port src/enemies/logic/director.ts (queue of lane groups, roster, elites, bosses).
-## Buildings, allies and gathering come in later stages.
+## Gathering (E), base building (B) and turrets port src/gathering and src/base. Allies come in a later stage.
 
 const ZombieScript := preload("res://scripts/zombie.gd")
 const PlayerScript := preload("res://scripts/player.gd")
@@ -11,7 +11,9 @@ const CoreScript := preload("res://scripts/core.gd")
 const WorldScript := preload("res://scripts/world.gd")
 const AlliesScript := preload("res://scripts/allies.gd")
 const AudioDirectorScript := preload("res://scripts/audio_director.gd")
-const PREP_TIME := 15.0 # 웹 게임은 60초(기지 건설 시간). 건설이 아직 없어 짧게. N 으로 바로 시작
+const BaseScript := preload("res://scripts/base.gd")
+const GatheringScript := preload("res://scripts/gathering.gd")
+const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
 var wave := 0
@@ -22,7 +24,16 @@ var boss_at := 0.0
 var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
-var prep_left := 5.0
+var prep_left := PREP_TIME
+var res := {}
+var base: Node3D
+var gathering: Node3D
+var gather_focus := {}
+var lbl_res: Label
+var lbl_prompt: Label
+var gather_bar: ProgressBar
+var build_panel: Label
+var build_hover: Label
 var core: StaticBody3D
 var core_dead := false
 var hazards: Node3D
@@ -72,6 +83,15 @@ func _ready() -> void:
 	player.died.connect(_on_died)
 	zombies_root = Node3D.new()
 	add_child(zombies_root)
+	for r in GameData.res.keys:
+		res[r] = int(GameData.base_start.get(r, 0))
+	base = BaseScript.new()
+	base.game = self
+	add_child(base)
+	gathering = GatheringScript.new()
+	gathering.game = self
+	add_child(gathering)
+	gathering.gathered.connect(_on_gathered)
 	_build_hud()
 	I18n.locale_changed.connect(_refresh_hud)
 	shop = ShopScript.new()
@@ -111,7 +131,7 @@ func _build_environment() -> void:
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.light_color = Color(1.0, 0.9, 0.8)
-	sun.light_energy = 0.85
+	sun.light_energy = 0.7
 	sun.rotation_degrees = Vector3(-54, 56, 0)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 80.0
@@ -144,6 +164,17 @@ func _build_world() -> void:
 	core_light.light_energy = 1.6
 	core_light.position = Vector3(0, 3.2, 0)
 	core.add_child(core_light)
+
+## Core upgrade swaps in buildCoreModel(level), as baseView.ts does.
+func set_core_level(lv: int) -> void:
+	var lib: Node = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
+	if core_visual:
+		core_visual.queue_free()
+	core_visual = lib.get_node("core_%d" % clampi(lv, 0, 3)).duplicate()
+	core.add_child(core_visual)
+	lib.free()
+	for n in core_visual.find_children("shield*", "MeshInstance3D", true, false):
+		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _process_core_visual(t: float) -> void:
 	if core_visual == null:
@@ -197,6 +228,52 @@ func _static(mesh: Mesh, shape: Shape3D, pos: Vector3, mat: Material, body: Stat
 	add_child(body)
 	return body
 
+# ── 자원 ─────────────────────────────────────────────────────────────
+
+func can_afford(cost: Dictionary, gold: int = 0) -> bool:
+	if coins < gold:
+		return false
+	for r in cost:
+		if int(res.get(r, 0)) < int(cost[r]):
+			return false
+	return true
+
+## Pays cost (+ coins) or toasts what is missing.
+func spend(cost: Dictionary, gold: int = 0) -> bool:
+	if not can_afford(cost, gold):
+		toast(I18n.t("toast.lacking", {"c": I18n.cost_text(cost, gold)}))
+		return false
+	coins -= gold
+	for r in cost:
+		res[r] -= int(cost[r])
+	return true
+
+func _on_gathered(r: String, amount: int, _pos: Vector3) -> void:
+	res[r] += amount
+	toast(I18n.t("toast.gathered", {"n": amount, "res": I18n.res_name(r)}))
+
+## Hold E next to a node to gather it; press E near the core to repair / upgrade it.
+func _update_interact(dt: float) -> void:
+	var p := player.global_position
+	gather_focus = {} if player.dead or base.building else gathering.nearest_ready(p)
+	var holding := Input.is_physical_key_pressed(KEY_E) and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if not gather_focus.is_empty() and holding:
+		gathering.harvest(gather_focus, dt)
+
+func core_action() -> Dictionary:
+	if core_dead or base.building:
+		return {}
+	if core.hp < core.max_hp - 0.5:
+		return {"kind": "repair", "label": I18n.t("core.repair", {"c": I18n.cost_text(GameData.base.coreRepair.cost)})}
+	var u: Dictionary = base.core_upgrade_info() if phase == "prep" else {}
+	if not u.is_empty():
+		return {"kind": "upgrade", "label": I18n.t("core.upgrade", {"lv": base.core_level + 2, "c": I18n.cost_text(u.cost, int(u.gold))})}
+	return {}
+
+func _near_core() -> bool:
+	var p := player.global_position
+	return Vector2(p.x - core.global_position.x, p.z - core.global_position.z).length() < core.radius + 3.0
+
 # ── 웨이브 ───────────────────────────────────────────────────────────
 
 func _process(dt: float) -> void:
@@ -212,12 +289,55 @@ func _process(dt: float) -> void:
 			_start_wave()
 	else:
 		_update_combat(dt)
+	_update_interact(dt)
 	_refresh_hud()
 
 func _unhandled_input(event: InputEvent) -> void:
-	# N: 준비 시간을 건너뛰고 다음 웨이브 (웹 게임과 같은 키)
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_N and phase == "prep":
-		prep_left = 0.0
+	if phase == "ended" or player.dead:
+		return
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_N: # 준비 시간을 건너뛰고 다음 웨이브 (웹 게임과 같은 키)
+				if phase == "prep":
+					if base.building:
+						base.toggle()
+					prep_left = 0.0
+			KEY_B:
+				base.toggle()
+			KEY_E:
+				if _near_core() and gathering.nearest_ready(player.global_position).is_empty():
+					var a := core_action()
+					if a.get("kind") == "repair":
+						base.repair_core()
+					elif a.get("kind") == "upgrade" and base.upgrade_core():
+						set_core_level(base.core_level)
+			KEY_X:
+				if base.building and base.hover:
+					_demolish(base.hover)
+			KEY_F:
+				if base.building and base.hover:
+					base.repair(base.hover)
+			KEY_U:
+				if base.building and base.hover:
+					base.upgrade(base.hover)
+			_:
+				if base.building and event.keycode >= KEY_1 and event.keycode <= KEY_4:
+					base.select(event.keycode - KEY_1)
+	elif event is InputEventMouseButton and event.pressed and captured and base.building:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			base.place()
+		elif event.button_index == MOUSE_BUTTON_RIGHT and base.hover:
+			_demolish(base.hover)
+
+func _demolish(s: Node) -> void:
+	var name := I18n.bld_name(s.kind)
+	var refund := {}
+	var frac: float = float(GameData.base.demolishRefund) * s.hp / s.max_hp
+	for r in s.def.cost:
+		refund[r] = int(floor(float(s.def.cost[r]) * frac))
+	base.demolish(s)
+	toast(I18n.t("build.demolish", {"name": name, "refund": I18n.cost_text(refund)}))
 
 func _roll(w: int) -> Dictionary:
 	var roster := GameData.wave_roster(w)
@@ -335,6 +455,9 @@ func _wave_cleared() -> void:
 	var bonus: int = int(GameData.enemy_rules.waveClearGold) + wave * 2
 	coins += bonus
 	core.heal_pct(GameData.enemy_rules.waveClearCorePct)
+	var sp: float = GameData.enemy_rules.waveClearStructPct
+	for b in base.structures:
+		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME
 	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
@@ -354,7 +477,7 @@ func toast(text: String) -> void:
 # ── 사격 연출 ─────────────────────────────────────────────────────────
 
 func _on_fired(from: Vector3, to: Vector3, hit_zombie: bool, headshot: bool, kill: bool, also: Array) -> void:
-	_tracer(from, to)
+	tracer(from, to)
 	for pt in also:
 		_blood(pt)
 	if hit_zombie:
@@ -364,7 +487,7 @@ func _on_fired(from: Vector3, to: Vector3, hit_zombie: bool, headshot: bool, kil
 	else:
 		_puff(to)
 
-func _tracer(from: Vector3, to: Vector3) -> void:
+func tracer(from: Vector3, to: Vector3, col: Color = Color(0, 0, 0, 0)) -> void:
 	var mesh := ImmediateMesh.new()
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	mesh.surface_add_vertex(from)
@@ -372,7 +495,7 @@ func _tracer(from: Vector3, to: Vector3) -> void:
 	mesh.surface_end()
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color.hex((int(player.gun.tracer) << 8) | 0xff)
+	mat.albedo_color = col if col.a > 0.0 else Color.hex((int(player.gun.tracer) << 8) | 0xff)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
@@ -477,6 +600,18 @@ func _build_hud() -> void:
 	lbl_toast.size.x = 900
 	lbl_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl_toast.add_theme_color_override("font_color", Color(1, 0.8, 0.4))
+	lbl_res = _label(hud, 18, Control.PRESET_TOP_LEFT, Vector2(24, 50))
+	lbl_prompt = _label(hud, 20, Control.PRESET_CENTER, Vector2(-300, 40))
+	lbl_prompt.size.x = 600
+	lbl_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_prompt.add_theme_color_override("font_color", Color(1, 0.95, 0.7))
+	gather_bar = _bar(Vector2.ZERO, Vector2(180, 10), Color(1, 0.82, 0.35))
+	build_panel = _label(hud, 17, Control.PRESET_TOP_RIGHT, Vector2.ZERO)
+	build_panel.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	build_panel.size.x = 520
+	build_hover = _label(hud, 17, Control.PRESET_CENTER, Vector2(-320, 70))
+	build_hover.size.x = 640
+	build_hover.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_refresh_hud()
 
 func _bar(pos: Vector2, size: Vector2, col: Color) -> ProgressBar:
@@ -541,11 +676,61 @@ func _refresh_hud() -> void:
 	crosshair.visible = not scoped
 	hp_bar.max_value = player.max_hp
 	hp_bar.value = player.hp
-	var help := I18n.t("help")
+	_refresh_base_hud()
+	var help := I18n.t("help") + " · " + I18n.t("help.build")
 	lbl_hint.text = help if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else I18n.t("hud.click") + "  ·  " + help
 	crosshair.queue_redraw()
 	if scoped:
 		scope.queue_redraw()
+
+func _refresh_base_hud() -> void:
+	var parts := []
+	for r in GameData.res.keys:
+		parts.append("%s %d" % [I18n.res_name(r), int(res[r])])
+	lbl_res.text = "   ".join(parts)
+	# 채집 / 핵 안내
+	var prompt := ""
+	gather_bar.visible = false
+	if not gather_focus.is_empty():
+		prompt = "E  " + I18n.t("node.%s.verb" % gather_focus.kind)
+		if gather_focus.progress > 0.0:
+			gather_bar.visible = true
+			gather_bar.max_value = 1.0
+			gather_bar.value = gather_focus.progress
+			gather_bar.position = Vector2((hud.size.x - gather_bar.size.x) * 0.5, hud.size.y * 0.5 + 72)
+	elif _near_core():
+		prompt = core_action().get("label", "")
+	lbl_prompt.text = prompt
+	# 건설 패널
+	build_panel.visible = base.building
+	build_hover.visible = base.building
+	if base.building:
+		build_panel.position = Vector2(hud.size.x - 544, 18)
+		var lines := [I18n.t("build.title")]
+		for i in base.BUILDABLE.size():
+			var k: String = base.BUILDABLE[i]
+			var mark := "> " if k == base.pick else "   "
+			lines.append("%s%d  %s  —  %s" % [mark, i + 1, I18n.bld_name(k), I18n.cost_text(GameData.buildings[k].cost)])
+		lines.append(I18n.bld_desc(base.pick))
+		lines.append(I18n.t("build.keys"))
+		build_panel.text = "\n".join(lines)
+		var h: Node = base.hover
+		if h and is_instance_valid(h):
+			var ammo := I18n.t("build.ammo", {"n": h.ammo}) if h.def.has("turret") else ""
+			var t := I18n.t("build.hover", {"name": I18n.bld_name(h.kind), "lv": h.level, "hp": ceili(h.hp), "max": ceili(h.max_hp), "ammo": ammo})
+			if h.hp < h.max_hp - 0.5:
+				t += "\n" + I18n.t("build.repairCost", {"c": I18n.cost_text(base.repair_cost(h))})
+			if h.def.has("turret"):
+				var u: Dictionary = base.upgrade_info(h)
+				t += "\n" + (I18n.t("build.upCost", {"c": I18n.cost_text(u.upCost, int(u.upGold))}) if not u.is_empty() else I18n.t("build.maxLv"))
+			build_hover.text = t
+			build_hover.add_theme_color_override("font_color", Color.WHITE)
+		elif base.ghost_ok:
+			build_hover.text = I18n.t("build.place.click")
+			build_hover.add_theme_color_override("font_color", Color(0.5, 1, 0.6))
+		else:
+			build_hover.text = I18n.t("build.reason." + base.ghost_reason) if base.ghost_reason != "" else ""
+			build_hover.add_theme_color_override("font_color", Color(1, 0.45, 0.4))
 
 ## Crosshair gap follows the real spread, like the web HUD.
 func _draw_crosshair() -> void:

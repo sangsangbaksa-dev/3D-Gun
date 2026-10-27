@@ -28,8 +28,40 @@ func _ready() -> void:
 			(m as StandardMaterial3D).metallic_specular = 0.0
 			(m as StandardMaterial3D).roughness = 1.0
 			if (m as StandardMaterial3D).vertex_color_use_as_albedo:
-				(m as StandardMaterial3D).albedo_color = Color(0.46, 0.44, 0.44) # 웹은 ACES 라 지형색을 2.2배 키워 둔 값. Godot 에서는 그대로면 흙길이 주황으로 번쩍인다
+				(m as StandardMaterial3D).albedo_color = Color(0.36, 0.42, 0.46) # 웹은 ACES 라 지형색을 2.2배 키워 둔 값. Godot 에서는 그대로면 흙길이 주황으로 번쩍인다
+	for mi in vis.find_children("m0", "MeshInstance3D", true, false):
+		_clean_base_pad(mi as MeshInstance3D)
 	_build_collision()
+
+## 기지 바닥의 꼭짓점 색에 흙길·어깨 색이 번져 주황 띠로 보이던 것을, 기지 한가운데 색으로 덮는다.
+## (웹은 청록 하늘빛 조명이 가려 주지만 Godot 의 붉은 하늘빛에서는 그대로 드러난다)
+func _clean_base_pad(mi: MeshInstance3D) -> void:
+	var mesh := mi.mesh as ArrayMesh
+	var arrays := mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	if cols.is_empty():
+		return
+	var sum := Color(0, 0, 0, 0)
+	var n := 0
+	for i in verts.size():
+		if Vector2(verts[i].x, verts[i].z).length() < 6.0:
+			sum += cols[i]
+			n += 1
+	if n == 0:
+		return
+	var pad := sum / float(n)
+	pad = Color(minf(pad.r * 2.4, 0.9), minf(pad.g * 2.4, 0.9), minf(pad.b * 2.4, 0.9), 1.0)
+	for i in verts.size():
+		var r := Vector2(verts[i].x, verts[i].z).length()
+		var w := 1.0 - smoothstep(11.0, 16.0, r)
+		if w > 0.0:
+			cols[i] = cols[i].lerp(pad, w)
+	arrays[Mesh.ARRAY_COLOR] = cols
+	var mat := mesh.surface_get_material(0)
+	mesh.clear_surfaces()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.surface_set_material(0, mat)
 
 # ── 높이 ─────────────────────────────────────────────────────────────
 

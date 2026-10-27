@@ -24,6 +24,23 @@ const STRINGS := {
 		"gun.pistol.desc": "Light, reliable sidearm", "gun.shotgun.desc": "Devastating up close",
 		"gun.smg.desc": "Fast fire, low spread", "gun.magnum.desc": "Heavy hits with pierce",
 		"gun.rifle.desc": "Accurate automatic rifle", "gun.sniper.desc": "Scoped long-range pierce",
+		"res.wood": "Wood", "res.stone": "Stone", "res.iron": "Iron", "res.herb": "Herb", "res.parts": "Parts",
+		"bld.barricade.name": "Barricade", "bld.tower.name": "Watchtower", "bld.mgtower.name": "MG tower", "bld.trap.name": "Slow trap",
+		"bld.lab.name": "Research lab", "bld.barracks.name": "Barracks", "bld.shop.name": "Shop",
+		"bld.barricade.desc": "Zombies break it first", "bld.tower.desc": "Permanent turret; breaks when durability runs out",
+		"bld.mgtower.desc": "Permanent auto turret; breaks when durability runs out", "bld.trap.desc": "Slows and damages zombies in range",
+		"node.tree.verb": "Chop wood", "node.rock.verb": "Break rock", "node.iron.verb": "Mine iron", "node.herb.verb": "Gather herbs", "node.wreck.verb": "Strip parts",
+		"build.waveExit": "Combat started — build mode closed", "build.place.click": "Click to place",
+		"build.demolish": "{name} demolished (refund {refund})", "build.reason.outside": "Outside the base zone",
+		"build.reason.tooCloseCore": "Too close to the core", "build.reason.overlap": "Overlaps something else",
+		"build.reason.onPlayer": "You're standing there", "build.reason.prepOnly": "Build only during prep",
+		"build.reason.noResources": "Not enough resources", "build.upgradePrepOnly": "Upgrades only during prep",
+		"build.ammoOut": "{name} ran out of durability", "build.title": "BUILD  (B to close)",
+		"build.keys": "1–4 pick · LMB place · X / RMB demolish · F repair · U upgrade", "build.hover": "{name} Lv{lv}  HP {hp}/{max}{ammo}",
+		"build.ammo": "  ·  Durability {n}", "build.repairCost": "F repair: {c}", "build.upCost": "U upgrade: {c}", "build.maxLv": "Max level",
+		"core.repair": "E  Repair core ({c})", "core.upgrade": "E  Upgrade core Lv{lv} ({c})", "toast.lacking": "Not enough: {c}",
+		"toast.gathered": "+{n} {res}", "hud.gold": "{n} coins", "toast.structHeal": "Buildings repaired {p}%",
+		"help.build": "B build (prep) · E gather / core",
 		"help": "WASD move · Mouse look · LMB fire · RMB aim · R reload · Shift dash · Space jump · 1–6 guns · V weapons · N next wave · Esc release mouse",
 	},
 	"ko": {
@@ -36,6 +53,18 @@ const STRINGS := {
 		"toast.newEnemy": "새로운 적: {name}", "toast.kingDown": "좀비 왕을 쓰러뜨렸다!", "death.coreTitle": "핵이 파괴됐습니다",
 		"shop.title": "무기", "shop.buy": "구매 · {n}", "shop.upgrade": "강화 · {n}", "shop.max": "최대",
 		"shop.equip": "장착", "shop.dmg": "피해", "shop.mag": "탄창", "shop.hint": "V 또는 Esc 로 닫기 · 전투 중 1~6 으로 총 교체",
+		"build.waveExit": "전투가 시작돼 건설 모드를 종료했어요", "build.place.click": "클릭해서 배치",
+		"build.demolish": "{name} 철거 (환급 {refund})", "build.reason.outside": "기지 구역 밖이에요",
+		"build.reason.tooCloseCore": "핵에 너무 가까워요", "build.reason.overlap": "다른 물체와 겹쳐요",
+		"build.reason.onPlayer": "내가 서 있는 자리예요", "build.reason.prepOnly": "준비 단계에만 건설할 수 있어요",
+		"build.reason.noResources": "자원이 부족해요", "build.upgradePrepOnly": "강화는 준비 단계에만 할 수 있어요",
+		"build.ammoOut": "{name} 내구도를 다 써서 부서졌어요", "build.title": "건설  (B 로 닫기)",
+		"build.keys": "1~4 선택 · 좌클릭 배치 · X/우클릭 철거 · F 수리 · U 강화", "build.hover": "{name} Lv{lv}  체력 {hp}/{max}{ammo}",
+		"build.ammo": "  ·  내구도 {n}", "build.repairCost": "F 수리: {c}", "build.upCost": "U 강화: {c}", "build.maxLv": "최대 레벨",
+		"core.repair": "E  핵 수리 ({c})", "core.upgrade": "E  핵 강화 Lv{lv} ({c})", "toast.lacking": "재료가 부족해요: {c}",
+		"toast.gathered": "+{n} {res}", "hud.gold": "코인 {n}", "toast.structHeal": "건물 체력 {p}% 회복",
+		"help.build": "B 건설(준비 중) · E 채집 / 핵",
+		"node.tree.verb": "나무 베기", "node.rock.verb": "바위 깨기", "node.iron.verb": "철광석 캐기", "node.herb.verb": "약초 뜯기", "node.wreck.verb": "부품 뜯기",
 		"help": "WASD 이동 · 마우스 시점 · 좌클릭 사격 · 우클릭 조준 · R 재장전 · Shift 구르기 · Space 점프 · 1~6 총 · V 무기 · N 다음 웨이브 · Esc 마우스 풀기",
 	},
 }
@@ -58,6 +87,26 @@ func gun_desc(id: String) -> String:
 ## Korean zombie names come from ZOMBIE_TUNING[type].name, English from the table above.
 func zombie_name(type: String) -> String:
 	return GameData.zombie_tuning[type].name if locale == "ko" else t("zombie." + type)
+
+## Korean building / resource names come from src/data (BUILDINGS[k].name, RES_LABEL); English from the table.
+func bld_name(kind: String) -> String:
+	return GameData.buildings[kind].name if locale == "ko" else t("bld.%s.name" % kind)
+
+func bld_desc(kind: String) -> String:
+	return GameData.buildings[kind].desc if locale == "ko" else t("bld.%s.desc" % kind)
+
+func res_name(r: String) -> String:
+	return GameData.res.label[r] if locale == "ko" else t("res." + r)
+
+## "Wood 22 · Stone 14" (+ coins).
+func cost_text(cost: Dictionary, gold: int = 0) -> String:
+	var parts := []
+	for r in GameData.res.keys:
+		if int(cost.get(r, 0)) > 0:
+			parts.append("%s %d" % [res_name(r), int(cost[r])])
+	if gold > 0:
+		parts.append(t("hud.gold", {"n": gold}))
+	return " · ".join(parts)
 
 func toggle() -> void:
 	locale = "ko" if locale == "en" else "en"

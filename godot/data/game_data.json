@@ -21695,6 +21695,13 @@
   "barracks",
   "shop"
  ],
+ "baseStart": {
+  "wood": 24,
+  "stone": 16,
+  "iron": 0,
+  "herb": 4,
+  "parts": 4
+ },
  "base": {
   "grid": 2,
   "coreClearance": 4.2,

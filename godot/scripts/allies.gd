@@ -15,7 +15,6 @@ var vaccines: Array = START_VACCINES.duplicate()
 var tier := -1
 var progress := 0.0
 var target: Node
-var res_delivered := {}
 
 var _dirty := false
 var _save_t := 0.0
@@ -138,12 +137,9 @@ func gather_spot(a: Node) -> Dictionary:
 	var ang := float(i) / keys.size() * TAU + 0.8
 	return {"pos": c + Vector3(cos(ang), 0, sin(ang)) * GATHER_RADIUS, "res": keys[i]}
 
-## Gatherers hand in at the core. The base thread's resources take it when they exist (game.gain_res).
+## Gatherers hand in at the core: the load joins the sortie's resources.
 func deliver(res: String, n: int) -> void:
-	if game.has_method("gain_res"):
-		game.gain_res(res, n)
-	else:
-		res_delivered[res] = int(res_delivered.get(res, 0)) + n
+	game.res[res] = int(game.res.get(res, 0)) + n
 
 # ── 주사 (inject.ts) ─────────────────────────────────────────────────
 

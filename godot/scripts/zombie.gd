@@ -347,14 +347,32 @@ func _pick_target() -> void:
 	var r: Dictionary = GameData.enemy_rules
 	var p: Node3D = game.player
 	target = null
-	if not p.dead and _flat_dist(p.global_position) * 0.9 <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
+	var bd := INF
+	var dp := _flat_dist(p.global_position) * 0.9
+	if not p.dead and dp <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
 		target = p
-	# 아군도 노린다 (sim.ts pickTarget: aggroAlly 안의 가장 가까운 아군, 플레이어보다 가까우면)
+		bd = dp
+	# 아군도 노린다 (sim.ts pickTarget: aggroAlly 안의 가장 가까운 아군, 가까울 때)
 	var boss_k := 1.6 if is_boss else 1.0
 	for a in get_tree().get_nodes_in_group("allies"):
-		var d := _flat_dist(a.global_position)
-		if not a.dead and d <= float(r.aggroAlly) * boss_k and (target == null or d < _flat_dist(target.global_position) * 0.9):
+		var da := _flat_dist(a.global_position)
+		if not a.dead and da <= float(r.aggroAlly) * boss_k and da < bd:
 			target = a
+			bd = da
+	# 웨이브 좀비는 길목의 방어 건물을 부순다 (핵 제외, 가장 가까운 건물 하나)
+	var sb: Node3D = null
+	var sd: float = r.aggroStructure
+	for s in game.base.structures:
+		if s.dead:
+			continue
+		var d: float = _flat_dist(s.global_position) - s.radius
+		if d < sd:
+			sd = d
+			sb = s
+	if sb:
+		var d2 := _flat_dist(sb.global_position)
+		if d2 <= float(r.aggroStructure) + sb.radius and d2 < bd:
+			target = sb
 	if target == null and wp >= _lane_points().size() and not game.core_dead:
 		target = game.core
 
