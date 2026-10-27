@@ -14,6 +14,7 @@ const AudioDirectorScript := preload("res://scripts/audio_director.gd")
 const BaseScript := preload("res://scripts/base.gd")
 const StationScript := preload("res://scripts/station_panel.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
+const LookScript := preload("res://scripts/look.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -115,35 +116,11 @@ func _ready() -> void:
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
-## Red dusk sky like the live "red" build (src/core/atmosphere.ts).
+## Sky, fog, lights, skyline and embers: look.gd (port of src/core/atmosphere.ts).
 func _build_environment() -> void:
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.32, 0.05, 0.06)
-	sky_mat.sky_horizon_color = Color(0.85, 0.32, 0.18)
-	sky_mat.ground_horizon_color = Color(0.4, 0.16, 0.1)
-	sky_mat.ground_bottom_color = Color(0.08, 0.04, 0.03)
-	sky_mat.sun_angle_max = 20.0
-	var sky := Sky.new()
-	sky.sky_material = sky_mat
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 1.0
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.fog_enabled = true
-	env.fog_light_color = Color(0.4, 0.14, 0.1)
-	env.fog_density = 0.0045
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.light_color = Color(1.0, 0.9, 0.8)
-	sun.light_energy = 0.7
-	sun.rotation_degrees = Vector3(-54, 56, 0)
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 80.0
-	add_child(sun)
+	var look := LookScript.new()
+	look.game = self
+	add_child(look)
 
 func _build_world() -> void:
 	world = WorldScript.new()
@@ -166,10 +143,12 @@ func _build_world() -> void:
 	core.add_child(core_visual)
 	for n in core_visual.find_children("shield*", "MeshInstance3D", true, false):
 		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var core_light := OmniLight3D.new()
+	var core_light := OmniLight3D.new() # 웹: PointLight(0x66ccff, 2.2, 22, 감쇠 1.6) — 은은하게
 	core_light.light_color = Color(0.4, 0.8, 1.0)
-	core_light.omni_range = 18.0
-	core_light.light_energy = 1.6
+	core_light.omni_range = 22.0
+	core_light.omni_attenuation = 1.6
+	core_light.light_energy = 0.6
+	core_light.light_specular = 0.0
 	core_light.position = Vector3(0, 3.2, 0)
 	core.add_child(core_light)
 
