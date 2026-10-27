@@ -24,6 +24,7 @@ var gather_layout: Array
 var buildings: Dictionary
 var building_order: Array
 var base: Dictionary
+var base_start: Dictionary
 var models: Dictionary
 var _roster: Array
 var _elite_chance: Array
@@ -56,6 +57,7 @@ func _ready() -> void:
 	buildings = d.buildings
 	building_order = d.buildingOrder
 	base = d.base
+	base_start = d.baseStart
 	var mf := FileAccess.open("res://data/models.json", FileAccess.READ)
 	models = JSON.parse_string(mf.get_as_text())
 	_roster = d.waveRoster

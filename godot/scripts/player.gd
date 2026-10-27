@@ -30,6 +30,7 @@ var dash_dir := Vector3.ZERO
 var iframes := 0.0
 var aiming := false
 var dead := false
+var build_mode := false # 건설 모드: 좌클릭은 배치, 숫자 키는 건물 선택이라 총을 쓰지 않는다
 
 var camera: Camera3D
 var view_model: Node3D
@@ -131,18 +132,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	elif event is InputEventKey and event.pressed and not event.echo and event.keycode >= KEY_1 and event.keycode <= KEY_6:
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode >= KEY_1 and event.keycode <= KEY_6 and not build_mode:
 		switch_weapon(GameData.gun_order[event.keycode - KEY_1])
 
 func _physics_process(dt: float) -> void:
 	if dead:
 		return
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-	aiming = captured and Input.is_action_pressed("aim")
+	aiming = captured and not build_mode and Input.is_action_pressed("aim")
 	iframes = maxf(0.0, iframes - dt)
 	_move(dt)
 	_tick_weapon(dt)
-	var trigger := captured and Input.is_action_pressed("fire")
+	var trigger := captured and not build_mode and Input.is_action_pressed("fire")
 	# 권총은 auto=true (누르고 있으면 연사). auto=false 총은 눌린 순간에만 쏜다
 	if trigger and (bool(gun.auto) or not _trigger_was_down):
 		_try_fire()
@@ -322,7 +323,7 @@ func _animate(dt: float) -> void:
 		_bob += dt * 9.0
 	var bob := Vector3(sin(_bob) * 0.01, absf(cos(_bob)) * 0.012, 0) * float(gun.sway)
 	var rest := _ads_pos() if aiming else _hip_pos()
-	view_model.visible = not (aiming and bool(gun.scope)) # 조준경: 총을 숨기고 HUD 가 스코프를 그린다
+	view_model.visible = not build_mode and not (aiming and bool(gun.scope)) # 조준경: 총을 숨기고 HUD 가 스코프를 그린다. 건설 중에도 숨긴다
 	var reload_dip := 0.0
 	if is_reloading():
 		reload_dip = sin(PI * (1.0 - reload_left / float(stats(gun_id).reload))) * 0.18
