@@ -1,12 +1,13 @@
 extends Control
 ## Title screen: splash key art, 3D-GUN logo, Deploy button, language toggle.
 ## Port of src/title/title.ts + style.ts: logo chip top-left, Deploy button bottom-centre, teal menu buttons
-## bottom-right, drifting embers and a vignette over the art (the story intro and settings panel come later).
+## bottom-right, drifting embers and a vignette over the art (the story intro comes later).
 
 const TEAL := Color("2ee6d6")
 const ORANGE := Color("ff8a2a")
 const RED := Color("e0303a")
 const PANEL := Color("121a20b3")
+const SettingsScript := preload("res://scripts/settings_panel.gd")
 
 var logo: Control
 var sub: Label
@@ -15,7 +16,8 @@ var btn: Button
 var hint: Label
 var lang: Button
 var hub: Button
-var vol_lbl: Label
+var settings_btn: Button
+var controls_btn: Button
 var embers: CPUParticles2D
 
 func _ready() -> void:
@@ -152,7 +154,7 @@ func _launch_block() -> void:
 	box.add_child(btn)
 	hint = _label(box, 13, Color(1, 1, 1, 0.6))
 
-## 오른쪽 아래: 음량, 언어, 본부 버튼 (원본의 청록 테두리 메뉴)
+## 오른쪽 아래: 설정, 조작키, 언어, 본부 버튼 (음량은 설정 창에서) (원본의 청록 테두리 메뉴)
 func _menu_block() -> void:
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 28)
@@ -160,24 +162,10 @@ func _menu_block() -> void:
 	row.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	row.add_theme_constant_override("separation", 10)
 	add_child(row)
-	var vp := PanelContainer.new()
-	vp.add_theme_stylebox_override("panel", _box(PANEL, TEAL, 6, 1, Vector4(14, 6, 14, 6)))
-	row.add_child(vp)
-	var vol := HBoxContainer.new()
-	vol.add_theme_constant_override("separation", 8)
-	vp.add_child(vol)
-	vol_lbl = _label(vol, 15, TEAL)
-	var slider := HSlider.new()
-	slider.custom_minimum_size = Vector2(120, 24)
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slider.max_value = 1.0
-	slider.step = 0.05
-	slider.value = float(Save.settings.volume)
-	slider.value_changed.connect(func(v: float):
-		Save.settings.volume = v
-		Sfx.set_volume(v)
-		Save.save_settings())
-	vol.add_child(slider)
+	settings_btn = _menu_button(row)
+	settings_btn.pressed.connect(_open_settings.bind("settings"))
+	controls_btn = _menu_button(row)
+	controls_btn.pressed.connect(_open_settings.bind("controls"))
 	lang = _menu_button(row)
 	lang.pressed.connect(func():
 		I18n.toggle()
@@ -185,6 +173,12 @@ func _menu_block() -> void:
 		Save.save_settings())
 	hub = _menu_button(row)
 	hub.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
+
+func _open_settings(page: String) -> void:
+	var p := SettingsScript.new()
+	add_child(p)
+	p.show_page(page)
+	p.closed.connect(func(): btn.grab_focus())
 
 func _menu_button(parent: Control) -> Button:
 	var b := Button.new()
@@ -268,7 +262,8 @@ func _refresh() -> void:
 	lang.text = I18n.t("title.lang")
 	slice.text = I18n.t("title.slice")
 	hub.text = I18n.t("title.hub")
-	vol_lbl.text = I18n.t("title.volume")
+	settings_btn.text = I18n.t("title.settings")
+	controls_btn.text = I18n.t("title.controls")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):

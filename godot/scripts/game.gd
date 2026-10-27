@@ -13,6 +13,7 @@ const AlliesScript := preload("res://scripts/allies.gd")
 const AudioDirectorScript := preload("res://scripts/audio_director.gd")
 const BaseScript := preload("res://scripts/base.gd")
 const StationScript := preload("res://scripts/station_panel.gd")
+const PauseScript := preload("res://scripts/pause_menu.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
 const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
@@ -114,6 +115,9 @@ func _ready() -> void:
 	station = StationScript.new()
 	station.game = self
 	add_child(station)
+	var pause_menu := PauseScript.new()
+	pause_menu.game = self
+	add_child(pause_menu)
 	var audio := AudioDirectorScript.new()
 	audio.game = self
 	add_child(audio)
