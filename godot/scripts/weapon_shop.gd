@@ -9,6 +9,7 @@ var root: Control
 var list: VBoxContainer
 var lbl_coins: Label
 var lbl_title: Label
+var panel_ref: Control
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -16,7 +17,8 @@ func _ready() -> void:
 	var center := UiKit.modal(self)
 	root = center.get_parent()
 	var panel := UiKit.panel(UiKit.RED)
-	panel.custom_minimum_size = Vector2(760, 0)
+	UiKit.fit_width(panel, 760)
+	panel_ref = panel
 	center.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
@@ -50,6 +52,7 @@ func toggle() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if visible else Input.MOUSE_MODE_CAPTURED
 	if visible:
 		_rebuild()
+		UiKit.pop_in(panel_ref)
 
 func _rebuild() -> void:
 	if not visible:
@@ -80,6 +83,7 @@ func _rebuild() -> void:
 		desc.text = "%s  ·  %s %.0f%s  ·  %s %d" % [I18n.gun_desc(id), I18n.t("shop.dmg"), s.dmg, " ×%d" % s.pellets if s.pellets > 1 else "", I18n.t("shop.mag"), s.mag]
 		desc.add_theme_font_size_override("font_size", 14)
 		desc.modulate.a = 0.75
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(desc)
 		var btn := UiKit.button("", Vector2(170, 40))
 		if not owned:

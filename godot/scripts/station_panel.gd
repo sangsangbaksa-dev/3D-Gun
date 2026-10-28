@@ -10,6 +10,7 @@ var root: Control
 var title: Label
 var body: VBoxContainer
 var foot: Label
+var panel_ref: Control
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -17,7 +18,8 @@ func _ready() -> void:
 	var center := UiKit.modal(self)
 	root = center.get_parent()
 	var panel := UiKit.panel(UiKit.TEAL)
-	panel.custom_minimum_size = Vector2(680, 0)
+	UiKit.fit_width(panel, 680)
+	panel_ref = panel
 	center.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
@@ -42,6 +44,7 @@ func open(k: String) -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_rebuild()
+	UiKit.pop_in(panel_ref)
 
 func close() -> void:
 	visible = false

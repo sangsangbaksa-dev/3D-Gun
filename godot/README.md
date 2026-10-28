@@ -142,3 +142,8 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
   게임이 첫 화면을 그려 `window.__gdReady()` 를 부를 때까지 로딩 화면을 유지합니다(신호가 없으면 15초 뒤 해제).
   이 셸은 새로 내보낼 때(`build-web.sh`) 적용되므로, `godot-web/` 에 커밋된 예전 빌드를 새로 만들어 올려야 보입니다.
 - 게임 안: 모든 장면 전환은 `Loading.go(경로)`(자동 로드 `scripts/loading.gd`)를 씁니다. 검은 막과 "로딩 중"을 먼저 그린 뒤 전환합니다.
+
+### UI 공용 도구 (`scripts/ui_kit.gd`)
+
+버튼 호버 확대/눌림 축소(`polish`), 패널 등장 페이드(`pop_in`), 화면폭에 맞는 패널(`fit_width`), 모달 여백,
+세로 모바일 화면 확대(`auto_scale`, 본부에서 사용). 본부의 위·탭·하단 바는 줄바꿈 컨테이너라 좁은 창에서 겹치지 않는다.
