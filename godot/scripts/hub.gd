@@ -2,12 +2,16 @@ extends Control
 ## 2D headquarters between runs: the wallet and permanent upgrades (src/tycoon2d, data/tycoon2d.ts UPGRADES).
 ## Same save as the classic game, so upgrades bought in either version show up in both.
 ## Idle production buildings earn while this screen is open (no offline pay); the start wave of the next sortie can be bought.
-## The skill tree and the wallet exchange come later. Rules live in hub_logic.gd (testable without nodes).
+## 교환소 tab: wallet gold <-> resources (hub_logic.gd meta_sell/meta_buy); the skill tree opens from the bottom button (skill_panel.gd).
+## Rules live in hub_logic.gd (testable without nodes).
 
 const MetaBonus := preload("res://scripts/meta_bonus.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
 const HubLogic := preload("res://scripts/hub_logic.gd")
+const Skills := preload("res://scripts/skills.gd")
+const SkillPanel := preload("res://scripts/skill_panel.gd")
 const FACILITY := "facility" # 탭 id (업그레이드 분류 5개 뒤의 여섯 번째 탭)
+const EXCHANGE := "exchange" # 일곱 번째 탭: 지갑 교환소
 const EMBER := Color("ff8a2a") # 원본 ORANGE
 const PANEL := Color(0.09, 0.04, 0.035, 0.88)
 
@@ -21,6 +25,8 @@ var title: Label
 var launch: Button
 var back: Button
 var lang: Button
+var skill_btn: Button
+var skill_panel: CanvasLayer
 var wave_minus: Button
 var wave_plus: Button
 var wave_label: Label
@@ -35,7 +41,8 @@ var toast_left := 0.0
 const TEXT := {
 	"en": {"hub.title": "Headquarters", "hub.launch": "Deploy", "hub.back": "Title", "hub.stats": "Best wave {w} · Runs {r} · Kills {k}",
 		"hub.buy": "Upgrade", "hub.max": "MAX", "hub.locked": "Needs {name} Lv{lv}", "hub.lv": "Lv {a}/{b}",
-		"hub.later": "Not applied in this version yet", "cat.facility": "Facilities", "hub.perSec": "+{n}/s", "hub.income": "Income {n}/s",
+		"cat.exchange": "Exchange", "ex.sub": "Wallet gold <-> resources (same rates as the in-sortie shop)", "ex.sell1": "Sell 1", "ex.sellAll": "Sell all", "ex.buy1": "Buy 1", "ex.buy10": "Buy 10", "ex.px": "Sell {s} · Buy {b}",
+		"cat.facility": "Facilities", "hub.perSec": "+{n}/s", "hub.income": "Income {n}/s",
 		"hub.startWave": "Start wave {w} / {m}", "hub.startFree": "free", "hub.poor": "Not enough resources", "hub.unreached": "Not reached yet",
 		"hub.earned": "Earn {n} {k} first",
 		"cat.weapon": "Weapons", "cat.base": "Base & core", "cat.turret": "Turrets", "cat.ally": "Allies", "cat.econ": "Supply",
@@ -43,13 +50,11 @@ const TEXT := {
 		"wallet.parts": "Parts", "wallet.samples": "Samples", "wallet.samplesSp": "Special samples", "wallet.skillPoints": "Skill points"},
 	"ko": {"hub.title": "본부", "hub.launch": "출격", "hub.back": "타이틀", "hub.stats": "최고 웨이브 {w} · 출격 {r}회 · 처치 {k}",
 		"hub.buy": "강화", "hub.max": "최대", "hub.locked": "{name} Lv{lv} 필요", "hub.lv": "Lv {a}/{b}",
-		"hub.later": "이 버전에는 아직 적용되지 않아요", "cat.facility": "시설", "hub.perSec": "+{n}/초", "hub.income": "수입 {n}/초",
+		"cat.exchange": "교환소", "ex.sub": "지갑 골드 <-> 자원 (판매가·구매가는 출격 중 상점과 같아요)", "ex.sell1": "팔기 1", "ex.sellAll": "팔기 전부", "ex.buy1": "사기 1", "ex.buy10": "사기 10", "ex.px": "판매 {s} · 구매 {b}",
+		"cat.facility": "시설", "hub.perSec": "+{n}/초", "hub.income": "수입 {n}/초",
 		"hub.startWave": "시작 웨이브 {w} / {m}", "hub.startFree": "무료", "hub.poor": "재화가 부족해요", "hub.unreached": "아직 도달하지 못했어요",
 		"hub.earned": "{k} {n} 누적 필요"},
 }
-## Upgrades whose effect this port already applies (meta_bonus.gd, allies.gd, save.gd bank_run).
-const LIVE := ["startGold", "maxHp", "coreHp", "prepBonus", "startRes", "startSamples", "startSamplesSp", "turretDmgMul", "turretRangeMul", "turretRateMul", "turretAmmoMul", "turretHpMul", "trapDpsMul", "gatherSpeed", "weapon", "weaponLv", "allyCap", "allyDmgMul", "allyHpMul", "vacBonus", "keepRatio", "dmgMul", "startWave", "incomeMul"]
-
 func _t(key: String, args := {}) -> String:
 	var dt: Dictionary = data.text.get(I18n.locale, {}) if data else {}
 	var s: String = dt.get(key, TEXT.get(I18n.locale, TEXT.en).get(key, TEXT.en.get(key, key)))
@@ -123,6 +128,11 @@ func _ready() -> void:
 	wave_plus.pressed.connect(_step_wave.bind(1))
 	wave_cost = _label(bottom, 14, Color(1, 0.85, 0.5))
 	wave_cost.custom_minimum_size.x = 200
+	skill_btn = _button(bottom, 20, Vector2(140, 56))
+	skill_btn.pressed.connect(func(): skill_panel.open())
+	skill_panel = SkillPanel.new()
+	skill_panel.on_change = _refresh
+	add_child(skill_panel)
 	back = _button(bottom, 20, Vector2(180, 56))
 	back.pressed.connect(func(): Loading.go("res://scenes/title.tscn"))
 	launch = _button(bottom, 28, Vector2(280, 60))
@@ -257,6 +267,8 @@ func _exit_tree() -> void:
 ## What can be bought right now in the open tab (and the sortie button): when it changes the cards are rebuilt.
 func _signature() -> String:
 	var s := ""
+	if cat == EXCHANGE:
+		return "x" # 교환소 카드는 누른 뒤에 직접 다시 그린다
 	if cat == FACILITY:
 		for p in data.producers:
 			s += "1" if HubLogic.facility_lv(Save.meta, p.id) < int(p.max) and HubLogic.facility_unlocked(Save.meta, p) and _afford(HubLogic.facility_cost(Save.meta, p)) else "0"
@@ -270,6 +282,7 @@ func _refresh() -> void:
 	title.text = _t("hub.title")
 	launch.text = _t("hub.launch")
 	back.text = _t("hub.back")
+	skill_btn.text = "%s %d" % [Skills.tx("skill.hub"), floori(Save.wallet("skillPoints"))]
 	lang.text = I18n.t("title.lang")
 	stats.text = _t("hub.stats", {"w": int(Save.meta.bestWave), "r": int(Save.meta.totalRuns), "k": int(Save.meta.totalKills)})
 	grid.columns = 3 if size.x >= 1100 else (2 if size.x >= 720 else 1)
@@ -284,7 +297,7 @@ func _refresh() -> void:
 	_refresh_wallet()
 	for c in tabs.get_children():
 		c.queue_free()
-	for k in data.catOrder + [FACILITY]:
+	for k in data.catOrder + [FACILITY, EXCHANGE]:
 		var b := _button(tabs, 18, Vector2(140, 42))
 		b.text = _t("cat." + k)
 		if k == cat:
@@ -292,7 +305,9 @@ func _refresh() -> void:
 		b.pressed.connect(func(): cat = k; _refresh())
 	for c in grid.get_children():
 		c.queue_free()
-	if cat == FACILITY:
+	if cat == EXCHANGE:
+		_exchange_rows()
+	elif cat == FACILITY:
 		for p in data.producers:
 			grid.add_child(_facility_card(p))
 	else:
@@ -395,9 +410,6 @@ func _card(u: Dictionary) -> Control:
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if not u.effect.kind in LIVE:
-		var later := _label(v, 12, Color(0.75, 0.7, 0.65, 0.7))
-		later.text = _t("hub.later")
 	var row := HBoxContainer.new()
 	v.add_child(row)
 	var cost := _label(row, 14, Color(1, 0.85, 0.5))
@@ -422,3 +434,37 @@ func _card(u: Dictionary) -> Control:
 		btn.disabled = not _afford(c)
 	btn.pressed.connect(_buy.bind(u))
 	return card
+
+## 교환소: 자원마다 한 줄. 판매는 1개·전부, 구매는 1개·10개.
+func _exchange_rows() -> void:
+	grid.columns = 1
+	var sub := _label(grid, 14, Color(1, 0.9, 0.8, 0.75))
+	sub.text = _t("ex.sub")
+	for r in HubLogic.RES:
+		var have := floori(Save.wallet(r))
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _box(PANEL, Color(0.35, 0.16, 0.1)))
+		grid.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		card.add_child(row)
+		var nm := _label(row, 18, Color(1, 0.93, 0.85))
+		nm.text = "%s  %d" % [_wallet_name(r), have]
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var px := _label(row, 14, Color(1, 0.85, 0.5))
+		px.text = _t("ex.px", {"s": HubLogic.sell_unit(Save.meta, r), "b": HubLogic.buy_unit(r)})
+		_ex_button(row, "ex.sell1", have >= 1, func(): HubLogic.meta_sell(Save.meta, r, 1))
+		_ex_button(row, "ex.sellAll", have >= 1, func(): HubLogic.meta_sell(Save.meta, r, have))
+		var afford := floori(Save.wallet("gold") / HubLogic.buy_unit(r))
+		_ex_button(row, "ex.buy1", afford >= 1, func(): HubLogic.meta_buy(Save.meta, r, 1))
+		_ex_button(row, "ex.buy10", afford >= 10, func(): HubLogic.meta_buy(Save.meta, r, 10))
+
+func _ex_button(row: Control, key: String, enabled: bool, act: Callable) -> void:
+	var b := _button(row, 15, Vector2(96, 34))
+	b.text = _t(key)
+	b.disabled = not enabled
+	b.pressed.connect(func():
+		act.call()
+		Save.save_meta()
+		Sfx.play("gather")
+		_refresh())

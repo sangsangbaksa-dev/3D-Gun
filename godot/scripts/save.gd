@@ -78,6 +78,9 @@ func add_wallet(k: String, v: float) -> void:
 func upgrade_lv(id: String) -> int:
 	return int(meta.upgrades.get(id, 0))
 
+func skill_lv(id: String) -> int:
+	return int(meta.skills.get(id, 0))
+
 ## bankRun(): what the run earned (start grant excluded) × keep ratio, plus the wave/kill bonus, goes to the wallet.
 ## snap: see hub_logic.gd bank_run(). Returns {gold, kept, waveBonus, keepRatio, newBest}.
 func bank(snap: Dictionary) -> Dictionary:
@@ -87,7 +90,7 @@ func bank(snap: Dictionary) -> Dictionary:
 
 ## Banks a finished game scene (game.gd): gold, resources and samples it holds, minus what the hub gave at the start.
 func bank_game(game: Node) -> Dictionary:
-	return bank({"wave": game.wave, "kills": game.kills, "gold": game.coins, "res": game.res, "samples": game.samples, "samplesSp": game.samples_sp,
+	return bank({"wave": game.wave, "kills": game.kills, "gold": game.coins, "res": game.res, "samples": game.samples, "samplesSp": game.samples_sp, "skillPoints": game.get_meta("skill_points", 0),
 		"grant": game.get_meta("run_grant", {})})
 
 func bank_run(wave: int, kills: int, gold: int) -> Dictionary:
