@@ -5,6 +5,7 @@ extends Control
 ## The skill tree and the wallet exchange come later. Rules live in hub_logic.gd (testable without nodes).
 
 const MetaBonus := preload("res://scripts/meta_bonus.gd")
+const UiKit := preload("res://scripts/ui_kit.gd")
 const HubLogic := preload("res://scripts/hub_logic.gd")
 const FACILITY := "facility" # 탭 id (업그레이드 분류 5개 뒤의 여섯 번째 탭)
 const EMBER := Color("ff8a2a") # 원본 ORANGE
@@ -13,7 +14,7 @@ const PANEL := Color(0.09, 0.04, 0.035, 0.88)
 var data: Dictionary
 var cat := "weapon"
 var wallet_box: HBoxContainer
-var tabs: HBoxContainer
+var tabs: HFlowContainer
 var grid: GridContainer
 var stats: Label
 var title: Label
@@ -58,6 +59,7 @@ func _t(key: String, args := {}) -> String:
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	UiKit.auto_scale(self)
 	data = MetaBonus.data()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var art := TextureRect.new()
@@ -76,8 +78,8 @@ func _ready() -> void:
 	root.add_theme_constant_override("separation", 14)
 	add_child(root)
 	# 위: 제목 + 지갑
-	var top := HBoxContainer.new()
-	top.alignment = BoxContainer.ALIGNMENT_CENTER
+	var top := HFlowContainer.new()
+	top.alignment = FlowContainer.ALIGNMENT_CENTER
 	top.add_theme_constant_override("separation", 18)
 	root.add_child(top)
 	title = _label(top, 40, Color(0.95, 0.25, 0.2))
@@ -93,7 +95,7 @@ func _ready() -> void:
 	lang.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	lang.pressed.connect(I18n.toggle)
 	stats = _label(root, 16, Color(1, 0.9, 0.8, 0.8))
-	tabs = HBoxContainer.new()
+	tabs = HFlowContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
 	root.add_child(tabs)
 	var scroll := ScrollContainer.new()
@@ -106,8 +108,8 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
-	var bottom := HBoxContainer.new()
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	var bottom := HFlowContainer.new()
+	bottom.alignment = FlowContainer.ALIGNMENT_CENTER
 	bottom.add_theme_constant_override("separation", 16)
 	root.add_child(bottom)
 	wave_minus = _button(bottom, 22, Vector2(48, 48))
