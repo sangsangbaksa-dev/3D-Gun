@@ -106,7 +106,7 @@ static func swing_pose(kind: String, ph: float) -> Dictionary:
 			pos = Vector3(-0.06 * a, 0.14 * up, 0.12 * up - 0.16 * down)
 		"herb": # 손을 내밀어 풀을 쥐고(앞·아래) 뽑듯 끌어올린다
 			var grab := clampf(1.0 - absf(a + 0.2) * 2.0, 0.0, 1.0)
-			rot = Vector3(deg_to_rad(-70.0 - 20.0 * a), 0.0, 0.0)
+			rot = Vector3(deg_to_rad(-70.0 + 20.0 * a), 0.0, 0.0)
 			pos = Vector3(-0.1, -0.05 - 0.1 * down + 0.1 * up, -0.1 * (1.0 + a) + 0.06 * grab)
 		_: # 렌치: 앞으로 뻗어 볼트에 걸고 돌린다
 			rot = Vector3(deg_to_rad(-40.0 + 30.0 * a), 0.0, deg_to_rad(-20.0 + 70.0 * a))
