@@ -1,7 +1,7 @@
 extends Node3D
 ## The 3D sortie: world, lanes, core, waves, coins, HUD and the death card.
 ## Waves port src/enemies/logic/director.ts (queue of lane groups, roster, elites, bosses).
-## Gathering (E), base building (B) and turrets port src/gathering and src/base. Allies come in a later stage.
+## Gathering (E), base building (B) and turrets port src/gathering and src/base. Allies, vaccines, lab and shop: allies.gd, station_panel.gd.
 
 const ZombieScript := preload("res://scripts/zombie.gd")
 const PlayerScript := preload("res://scripts/player.gd")
