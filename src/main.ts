@@ -13,6 +13,7 @@ import { BaseSystem } from './base';
 import { AlliesSystem, setGatherNodeProvider, gatherNodesFrom } from './allies';
 import { gatherNodes } from './core/entities';
 import { HudSystem } from './core/hud';
+import { CorePointerSystem } from './ui/view/corePointer';
 import { Tycoon2dSystem } from './tycoon2d';
 import { TitleSystem } from './title';
 import { AudioSystem } from './audio';
@@ -35,6 +36,7 @@ startGame(document.getElementById('c') as HTMLCanvasElement, usePlaytest
     AlliesSystem,
     InteractSystem,
     HudSystem,
+    CorePointerSystem, // 핵 방향 화살표 + 피격 자동 알림
     AudioSystem, // 효과음·배경음 (WebAudio 합성). 카메라 위치를 쓰므로 PlayerSystem 뒤
     TitleSystem, // 타이틀 카메라 궤도(PlayerSystem 뒤에 카메라를 덮어씀) + 첫 출격 안내 띠
   ]);
