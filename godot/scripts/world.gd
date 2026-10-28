@@ -24,7 +24,24 @@ func _ready() -> void:
 	# Compatibility 렌더러는 색을 sRGB 공간에서 계산하므로 sRGB 로 되돌려야 웹과 같은 밝기가 된다
 	for mi in vis.find_children("*", "MeshInstance3D", true, false):
 		_vertex_colors_to_srgb(mi)
+	_unlight(vis)
 	_build_collision()
+
+## 폐허 분위기: 맵의 발광 재질(창 불빛, 붉은·청록 불빛)을 모두 끄고 어두운 구멍처럼 만든다. 유일한 빛은 핵뿐.
+func _unlight(root: Node) -> void:
+	var done := {}
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		if m == null:
+			continue
+		for i in m.get_surface_count():
+			var mat := m.surface_get_material(i)
+			if mat is BaseMaterial3D and not done.has(mat):
+				done[mat] = true
+				var bm := mat as BaseMaterial3D
+				if bm.emission_enabled:
+					bm.emission_enabled = false
+					bm.albedo_color = bm.albedo_color.lerp(Color(0.05, 0.05, 0.055), 0.75)
 
 func _vertex_colors_to_srgb(mi: MeshInstance3D) -> void:
 	var src := mi.mesh as ArrayMesh

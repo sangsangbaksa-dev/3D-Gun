@@ -325,6 +325,7 @@ func demolish(s: Node) -> void:
 		game.res[r] += int(floor(float(s.def.cost[r]) * frac))
 	structures.erase(s)
 	s.dead = true
+	s.fx_demolish()
 	s.queue_free()
 	if s.def.has("turret"):
 		persist_turrets(true)
