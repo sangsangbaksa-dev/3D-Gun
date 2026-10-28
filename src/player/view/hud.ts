@@ -44,6 +44,7 @@ const CSS = `
 .pv-hit.head i{background:#FF8A2A;width:3px;height:9px;left:-1.5px;top:-12px;transform-origin:1.5px 12px;opacity:1;box-shadow:0 0 3px #000,0 0 6px #FF8A2A99}
 .pv-hit i:nth-child(1){transform:rotate(45deg)}.pv-hit i:nth-child(2){transform:rotate(135deg)}
 .pv-hit i:nth-child(3){transform:rotate(225deg)}.pv-hit i:nth-child(4){transform:rotate(315deg)}
+.pv-heal{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(80,220,110,.5) 100%);opacity:0}
 .pv-vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(224,48,58,.65) 100%);opacity:0}
 .pv-low{position:absolute;inset:0;box-shadow:inset 0 0 120px 30px rgba(224,48,58,.45);opacity:0;transition:opacity .4s ease-out}
 .pv-low::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 90px 10px rgba(224,48,58,.35);animation:pvPulse 1.6s ease-in-out infinite}
@@ -77,6 +78,8 @@ export class CombatHud {
   private hit = el('pv-hit', '<i></i><i></i><i></i><i></i>');
   private vig = el('pv-vig');
   private low = el('pv-low');
+  private heal = el('pv-heal');
+  private healAnim?: Animation;
   private ammo = el('pv-ammo', '<div class="nm"></div><div class="n"></div><div class="rl"><div></div></div><div class="pv-slots"></div>');
   private dash = el('pv-dash', '<div></div>');
   private nm: HTMLElement; private n: HTMLElement; private rl: HTMLElement; private rlFill: HTMLElement; private slots: HTMLElement;
@@ -95,7 +98,7 @@ export class CombatHud {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
-    this.root.append(this.scope, this.vig, this.low, this.cross, this.hit, this.dash);
+    this.root.append(this.scope, this.vig, this.heal, this.low, this.cross, this.hit, this.dash);
     if (SHOW_AMMO_PANEL) this.root.append(this.ammo);
     document.body.appendChild(this.root);
     this.nm = this.ammo.querySelector('.nm')!;
@@ -145,6 +148,12 @@ export class CombatHud {
   hurt(strength: number) {
     this.vigAnim?.cancel();
     this.vigAnim = this.vig.animate([{ opacity: Math.min(0.8, 0.45 + strength) }, { opacity: 0 }], { duration: 300, easing: 'ease-out' });
+  }
+
+  /** 약초 응급처치 성공: 화면 가장자리가 잠깐 초록빛으로 번진다 */
+  healed() {
+    this.healAnim?.cancel();
+    this.healAnim = this.heal.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 600, easing: 'ease-out' });
   }
 
   setLowHp(on: boolean) { this.low.style.opacity = on ? '1' : '0'; }

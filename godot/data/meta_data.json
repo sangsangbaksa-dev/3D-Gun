@@ -770,6 +770,130 @@
    }
   }
  ],
+ "producers": [
+  {
+   "id": "p_gold",
+   "name": "약탈 정찰대",
+   "icon": "🪙",
+   "desc": "폐허에서 골드를 모아 온다",
+   "produces": "gold",
+   "perSec": 0.092,
+   "max": 15,
+   "cost": {
+    "gold": 62
+   },
+   "costGrowth": 1.26
+  },
+  {
+   "id": "p_wood",
+   "name": "벌목장",
+   "icon": "🪵",
+   "desc": "나무를 계속 베어 온다",
+   "produces": "wood",
+   "perSec": 0.05,
+   "max": 13,
+   "cost": {
+    "gold": 78,
+    "wood": 12
+   },
+   "costGrowth": 1.27
+  },
+  {
+   "id": "p_stone",
+   "name": "채석장",
+   "icon": "🪨",
+   "desc": "돌을 캔다",
+   "produces": "stone",
+   "perSec": 0.04,
+   "max": 13,
+   "cost": {
+    "gold": 112,
+    "wood": 30
+   },
+   "costGrowth": 1.27
+  },
+  {
+   "id": "p_herb",
+   "name": "약초밭",
+   "icon": "🌿",
+   "desc": "약초를 키운다",
+   "produces": "herb",
+   "perSec": 0.03,
+   "max": 14,
+   "cost": {
+    "gold": 135,
+    "wood": 42
+   },
+   "costGrowth": 1.26
+  },
+  {
+   "id": "p_iron",
+   "name": "철광 갱도",
+   "icon": "⛓️",
+   "desc": "철을 캔다",
+   "produces": "iron",
+   "perSec": 0.016,
+   "max": 12,
+   "cost": {
+    "gold": 340,
+    "stone": 55
+   },
+   "costGrowth": 1.28
+  },
+  {
+   "id": "p_parts",
+   "name": "폐차 해체장",
+   "icon": "⚙️",
+   "desc": "부품을 뜯어 낸다",
+   "produces": "parts",
+   "perSec": 0.008,
+   "max": 12,
+   "cost": {
+    "gold": 620,
+    "iron": 32
+   },
+   "costGrowth": 1.3
+  },
+  {
+   "id": "p_lab",
+   "name": "샘플 배양실",
+   "icon": "🧪",
+   "desc": "좀비 샘플을 배양한다",
+   "produces": "samples",
+   "perSec": 0.006,
+   "max": 12,
+   "cost": {
+    "gold": 880,
+    "herb": 55,
+    "parts": 8
+   },
+   "costGrowth": 1.32
+  },
+  {
+   "id": "p_lab2",
+   "name": "특수 샘플 연구소",
+   "icon": "☣️",
+   "desc": "희귀한 특수 샘플을 얻는다",
+   "produces": "samplesSp",
+   "perSec": 0.0015,
+   "max": 8,
+   "cost": {
+    "gold": 4000,
+    "samples": 55,
+    "parts": 28
+   },
+   "costGrowth": 1.4,
+   "unlockEarned": {
+    "key": "samples",
+    "amount": 20
+   }
+  }
+ ],
+ "idle": {
+  "baseClickGold": 3,
+  "skillCostBase": 1,
+  "producerIncomeMul": 0.5
+ },
  "catOrder": [
   "weapon",
   "base",
@@ -907,7 +1031,23 @@
    "upg.e_wave.name": "Forward base",
    "upg.e_wave.desc": "Wave skip cost −8% per level",
    "upg.e_sp.name": "Drill instructor",
-   "upg.e_sp.desc": "Sortie XP +20% (skill points on level-up)"
+   "upg.e_sp.desc": "Sortie XP +20% (skill points on level-up)",
+   "prod.p_gold.name": "Scavenger patrol",
+   "prod.p_gold.desc": "Scours ruins for gold",
+   "prod.p_wood.name": "Lumber camp",
+   "prod.p_wood.desc": "Steady wood income",
+   "prod.p_stone.name": "Quarry",
+   "prod.p_stone.desc": "Mines stone",
+   "prod.p_herb.name": "Herb garden",
+   "prod.p_herb.desc": "Grows herbs",
+   "prod.p_iron.name": "Iron mine",
+   "prod.p_iron.desc": "Mines iron",
+   "prod.p_parts.name": "Salvage yard",
+   "prod.p_parts.desc": "Strips parts from wrecks",
+   "prod.p_lab.name": "Sample lab",
+   "prod.p_lab.desc": "Cultivates zombie samples",
+   "prod.p_lab2.name": "Special sample lab",
+   "prod.p_lab2.desc": "Rare special samples"
   },
   "ko": {
    "wallet.gold": "골드",
@@ -991,7 +1131,23 @@
    "upg.e_wave.name": "전진 기지",
    "upg.e_wave.desc": "출격 시 웨이브 건너뛰기 비용 -8% (레벨당)",
    "upg.e_sp.name": "교범 학습",
-   "upg.e_sp.desc": "출격 경험치 +20% (레벨업마다 스킬 포인트)"
+   "upg.e_sp.desc": "출격 경험치 +20% (레벨업마다 스킬 포인트)",
+   "prod.p_gold.name": "약탈 정찰대",
+   "prod.p_gold.desc": "폐허에서 골드를 모아 온다",
+   "prod.p_wood.name": "벌목장",
+   "prod.p_wood.desc": "나무를 계속 베어 온다",
+   "prod.p_stone.name": "채석장",
+   "prod.p_stone.desc": "돌을 캔다",
+   "prod.p_herb.name": "약초밭",
+   "prod.p_herb.desc": "약초를 키운다",
+   "prod.p_iron.name": "철광 갱도",
+   "prod.p_iron.desc": "철을 캔다",
+   "prod.p_parts.name": "폐차 해체장",
+   "prod.p_parts.desc": "부품을 뜯어 낸다",
+   "prod.p_lab.name": "샘플 배양실",
+   "prod.p_lab.desc": "좀비 샘플을 배양한다",
+   "prod.p_lab2.name": "특수 샘플 연구소",
+   "prod.p_lab2.desc": "희귀한 특수 샘플을 얻는다"
   }
  },
  "baseStart": {

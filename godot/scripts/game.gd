@@ -1,7 +1,7 @@
 extends Node3D
 ## The 3D sortie: world, lanes, core, waves, coins, HUD and the death card.
 ## Waves port src/enemies/logic/director.ts (queue of lane groups, roster, elites, bosses).
-## Gathering (E), base building (B) and turrets port src/gathering and src/base. Allies come in a later stage.
+## Gathering (E), base building (B) and turrets port src/gathering and src/base. Allies, vaccines, lab and shop: allies.gd, station_panel.gd.
 
 const ZombieScript := preload("res://scripts/zombie.gd")
 const PlayerScript := preload("res://scripts/player.gd")
@@ -15,6 +15,7 @@ const BaseScript := preload("res://scripts/base.gd")
 const StationScript := preload("res://scripts/station_panel.gd")
 const PauseScript := preload("res://scripts/pause_menu.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
+const RoamersScript := preload("res://scripts/roamers.gd")
 const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
 const BuildOverlay := preload("res://scripts/build_overlay.gd")
@@ -35,6 +36,7 @@ var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
 var gathering: Node3D
+var roamers: Node
 var gather_focus := {}
 var lbl_res: Label
 var lbl_prompt: Label
@@ -75,6 +77,8 @@ var station: CanvasLayer
 var samples := 0
 var samples_sp := 0
 var _t := 0.0
+var _toast_tw: Tween
+var _banner_tw: Tween
 
 func _ready() -> void:
 	rng.randomize()
@@ -102,6 +106,9 @@ func _ready() -> void:
 	gathering.game = self
 	add_child(gathering)
 	gathering.gathered.connect(_on_gathered)
+	roamers = RoamersScript.new()
+	roamers.game = self
+	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
 	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
@@ -305,6 +312,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				var st: String = allies.station_near(player.global_position)
 				if st != "" and not base.building:
 					station.open(st)
+				elif not base.building and gathering.nearest_ready(player.global_position).is_empty() and base.actionable_near(player.global_position):
+					var b: Node = base.actionable_near(player.global_position)
+					base.perform(b, base.building_action(b))
 				elif _near_core() and gathering.nearest_ready(player.global_position).is_empty():
 					var a := core_action()
 					if a.get("kind") == "repair":
@@ -460,18 +470,23 @@ func _wave_cleared() -> void:
 	for b in base.structures:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
-	prep_left = PREP_TIME
+	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
 	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
 
 func _on_core_destroyed() -> void:
 	core_dead = true
+	if phase == "ended": # 플레이어가 먼저 쓰러졌으면 사망 사유를 바꾸지 않는다
+		return
 	lose_reason = "core"
 	player.die()
 
 func toast(text: String) -> void:
 	lbl_toast.text = text
 	lbl_toast.modulate.a = 1.0
+	if _toast_tw:
+		_toast_tw.kill() # 앞선 토스트의 페이드가 새 글자를 일찍 지우지 않게
 	var tw := create_tween()
+	_toast_tw = tw
 	tw.tween_interval(2.6)
 	tw.tween_property(lbl_toast, "modulate:a", 0.0, 0.6)
 
@@ -645,7 +660,10 @@ func _label(parent: Control, font_size: int, preset: int, pos: Vector2) -> Label
 func _banner(text: String) -> void:
 	lbl_center.text = text
 	lbl_center.modulate.a = 1.0
+	if _banner_tw:
+		_banner_tw.kill()
 	var tw := create_tween()
+	_banner_tw = tw
 	tw.tween_interval(1.6)
 	tw.tween_property(lbl_center, "modulate:a", 0.0, 0.6)
 
@@ -704,6 +722,8 @@ func _refresh_base_hud() -> void:
 			gather_bar.position = Vector2((hud.size.x - gather_bar.size.x) * 0.5, hud.size.y * 0.5 + 72)
 	elif allies.station_near(player.global_position) != "" and not base.building:
 		prompt = allies.tt("prompt." + allies.station_near(player.global_position))
+	elif not base.building and base.near_building(player.global_position) != null and (base.actionable_near(player.global_position) != null or (not _near_core() and not base.building_action(base.near_building(player.global_position)).is_empty())):
+		prompt = base.building_action(base.near_building(player.global_position)).label
 	elif _near_core():
 		prompt = core_action().get("label", "")
 	lbl_prompt.text = prompt
@@ -783,7 +803,7 @@ func _draw_scope() -> void:
 func _on_died() -> void:
 	phase = "ended"
 	allies.flush()
-	var report := Save.bank_run(wave, kills, coins)
+	var report := Save.bank_game(self)
 	await get_tree().create_timer(1.0).timeout
 	var layer := CanvasLayer.new()
 	layer.layer = 5
@@ -847,10 +867,10 @@ func _on_died() -> void:
 	btns.add_theme_constant_override("separation", 14)
 	box.add_child(btns)
 	var btn := UiKit.button(I18n.t("death.hub"), Vector2(250, 54), true, 22)
-	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
+	btn.pressed.connect(func(): Loading.go("res://scenes/hub.tscn"))
 	btns.add_child(btn)
 	var back := UiKit.button(I18n.t("death.back"), Vector2(200, 54), false, 18)
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	back.pressed.connect(func(): Loading.go("res://scenes/title.tscn"))
 	btns.add_child(back)
 	btn.grab_focus()
 	root.modulate.a = 0.0

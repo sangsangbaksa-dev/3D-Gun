@@ -16,6 +16,7 @@ GameData="*res://scripts/game_data.gd"
 I18n="*res://scripts/i18n.gd"
 Save="*res://scripts/save.gd"
 Sfx="*res://scripts/sfx.gd"
+Loading="*res://scripts/loading.gd"
 
 [display]
 

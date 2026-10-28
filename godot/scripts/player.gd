@@ -10,6 +10,7 @@ signal died
 
 const EYE_HEIGHT := 1.65
 const BASE_FOV := 70.0
+const DASH_CD := 2.0 # calcStats().dashCd 기본값 (스킬 감소는 허브 이식 때)
 
 var P: Dictionary
 var gun_id := "pistol"
@@ -20,12 +21,14 @@ var ammo: int
 ## 총기별 보유·강화 레벨·남은 탄. 권총은 기본 지급 (GUN_UNLOCK_GOLD 에 없음)
 var owned := {"pistol": true}
 var lv := {}
+var dmg_mul := 1.0 # 총열 정밀 가공 (본부 영구 업그레이드, meta_bonus.gd)
 var mags := {}
 var reload_left := 0.0
 var cooldown := 0.0
 var bloom := 0.0
 var since_shot := 9.0
 var dash_left := 0.0
+var dash_cd := 0.0
 var dash_dir := Vector3.ZERO
 var iframes := 0.0
 var aiming := false
@@ -37,6 +40,11 @@ var view_model: Node3D
 var muzzle: Node3D
 var flash: OmniLight3D
 var _kick := 0.0
+const Ballistics := preload("res://scripts/ballistics.gd")
+## 사격 반동으로 시선이 위로 튄 각도(라디안, 웹의 p.kick). 시간이 지나면 돌아온다. camera.rotation.x 에는 _kick_applied 만큼 더해져 있다
+var recoil_pitch := 0.0
+var _kick_applied := 0.0
+var recoil_mul := 1.0 # 스킬 '반동 줄이기' (calcStats().recoilMul). 스킬 트리가 오면 여기에 넣는다
 var _bob := 0.0
 var _trigger_was_down := false
 
@@ -155,9 +163,11 @@ func _physics_process(dt: float) -> void:
 func _move(dt: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var wish := (transform.basis * Vector3(input.x, 0, input.y)).normalized()
-	if Input.is_action_just_pressed("dash") and dash_left <= 0.0:
+	dash_cd = maxf(0.0, dash_cd - dt)
+	if Input.is_action_just_pressed("dash") and dash_left <= 0.0 and dash_cd <= 0.0:
 		dash_dir = wish if wish.length() > 0.1 else -transform.basis.z
 		dash_left = P.dashTime
+		dash_cd = DASH_CD
 		iframes = maxf(iframes, P.dashIframes)
 	var speed: float = P.speed * (P.aimSpeedMul if aiming else 1.0)
 	if dash_left > 0.0:
@@ -178,6 +188,10 @@ func _tick_weapon(dt: float) -> void:
 	cooldown = maxf(0.0, cooldown - dt)
 	bloom = maxf(0.0, bloom - dt * (1.5 if since_shot < 0.28 else 2.4))
 	since_shot += dt
+	# 시선 반동 회복 (movement.ts + controller.ts). 쏘는 중에도 천천히, 0.16초 쉬면 더 빨리 내려온다
+	recoil_pitch = Ballistics.kick_recover(recoil_pitch, dt)
+	recoil_pitch = Ballistics.kick_recover_idle(recoil_pitch, dt, since_shot, false)
+	_apply_recoil_view()
 	if reload_left > 0.0:
 		reload_left -= dt
 		if reload_left <= 0.0:
@@ -198,7 +212,7 @@ func stats(id: String) -> Dictionary:
 	if pellets > 1:
 		pellets += l / int(u.pelletEvery)
 	return {
-		"dmg": float(d.dmg) * (1.0 + float(u.dmg) * l),
+		"dmg": float(d.dmg) * (1.0 + float(u.dmg) * l) * dmg_mul,
 		"mag": maxi(1, roundi(float(d.mag) * (1.0 + float(u.mag) * l))),
 		"reload": float(d.reload) * (1.0 - float(u.reload) * l),
 		"spread": float(d.spread) * (1.0 - float(u.spread) * l),
@@ -254,28 +268,30 @@ func _try_fire() -> void:
 	var spread := current_spread()
 	bloom = minf(bloom + float(gun.bloom) * 1.15, 2.8)
 	_kick = 1.0
-	camera.rotation.x = clampf(camera.rotation.x + float(gun.recoil) * 0.35, -1.45, 1.45)
+	# 이번 발은 반동이 더해지기 전 시선으로 쏜다 (controller.ts: 발사 뒤에 p.kick 갱신)
 	var origin := camera.global_position
 	var basis := camera.global_transform.basis
 	var range_m: float = gun.range
+	var drop_mul: float = float(gun.get("dropMul", 1.0))
+	var bullet_drop: float = P.bulletDrop
 	var space := get_world_3d().direct_space_state
 	for _i in int(gs.pellets):
 		# 원판 안 균일 분포 (weapons.ts 와 같은 방식)
 		var ang := randf() * TAU
 		var rad := sqrt(randf()) * spread
 		var dir := (-basis.z + basis.x * cos(ang) * rad + basis.y * sin(ang) * rad).normalized()
-		var end := origin + dir * range_m
+		# 낙차가 있는 탄도의 끝 (아무것도 안 맞으면 사거리 끝, 낙차 포함)
+		var end := Ballistics.point_at(origin, dir, range_m, drop_mul, bullet_drop)
 		var exclude: Array[RID] = [get_rid()]
 		var hits := 0
 		var headshot := false
 		var kill := false
 		var also: Array = []
-		# 관통: 좀비를 맞히면 그 좀비를 빼고 다시 쏜다. 맞힐 때마다 피해 70%
+		var t_from := 0.0
+		# 관통: 좀비를 맞히면 그 좀비를 빼고 그 자리부터 다시 쏜다. 맞힐 때마다 피해 70%
 		while hits < maxi(1, int(gun.pierce)):
-			var q := PhysicsRayQueryParameters3D.create(origin, origin + dir * range_m, 1 | 4)
-			q.exclude = exclude
-			var hit := space.intersect_ray(q)
-			if not hit:
+			var hit := Ballistics.trace(space, origin, dir, range_m, drop_mul, bullet_drop, 1 | 4, exclude, t_from)
+			if hit.is_empty():
 				break
 			var target: Object = hit.collider
 			if target == null or not target.has_method("take_hit"):
@@ -285,15 +301,28 @@ func _try_fire() -> void:
 				also.append(end)
 			end = hit.position
 			var head: bool = target.is_head_hit(end)
-			var fall := 1.0 - float(gun.falloff) * clampf(origin.distance_to(end) / range_m, 0.0, 1.0)
+			var fall := 1.0 - float(gun.falloff) * clampf(float(hit.t) / range_m, 0.0, 1.0)
 			var dmg: float = float(gs.dmg) * fall * pow(0.7, hits) * (float(P.headshotMul) if head else 1.0)
 			kill = target.take_hit(dmg, dir) or kill
 			headshot = headshot or head
 			exclude.append(hit.rid)
+			t_from = hit.t
 			hits += 1
 		fired.emit(muzzle.global_position, end, hits > 0, headshot, kill, also)
+	# 반동: 연사로 쌓인 bloom 이 클수록 더 튀고, 조준하면 0.45배 (controller.ts)
+	recoil_pitch = Ballistics.kick_after_shot(recoil_pitch, gun, bloom, aiming, recoil_mul)
+	_apply_recoil_view()
 	if ammo <= 0:
 		_start_reload()
+
+## 반동은 마우스로 맞춘 시선에 덧씌우는 값이라, 바뀐 만큼만 camera.rotation.x 에 더한다 (카메라 pitch 가 -1.45~1.45 에 걸려도 어긋나지 않게 실제 적용량을 기억한다).
+func _apply_recoil_view() -> void:
+	var delta := recoil_pitch - _kick_applied
+	if is_zero_approx(delta):
+		return
+	var before := camera.rotation.x
+	camera.rotation.x = clampf(before + delta, -1.45, 1.45)
+	_kick_applied += camera.rotation.x - before
 
 func take_damage(dmg: float) -> void:
 	if dead or iframes > 0.0:

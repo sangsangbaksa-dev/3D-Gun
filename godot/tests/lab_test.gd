@@ -10,6 +10,7 @@ func _initialize() -> void:
 	root.get_node("Save").meta.allies = []
 	game = load("res://scenes/game.tscn").instantiate()
 	root.add_child(game)
+	game.ready.connect(func(): game.roamers.enabled = false) # 구역 배회 좀비는 roamers_test 에서만
 
 func _process(_dt: float) -> bool:
 	frames += 1
