@@ -153,3 +153,6 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 ## 채집 연출 (일부)
 
 `scripts/gather_fx.gd`: 타격 시점(스윙 위상)에 맞춘 종류별 파편·불꽃·먼지 파티클, 타격음, 카메라 미세 흔들림, 완료 시 나무 쓰러짐/바위 부서짐/약초 뽑힘/폐차 주저앉음 조각. `tests/gather_test.gd` 로 확인. 1인칭 도구 모션·진행 링·날아오는 아이콘은 아직 미구현.
+
+### HUD 연출 (floating_text.gd, hud_style.gd)
+데미지 숫자(`floating_text.gd`: 일반 흰색, 헤드샷 노랑, 처치 주황빛 빨강; 좀비 `damaged` 신호를 game.gd 가 연결), 종류별 명중 마커(`HudStyle.draw_hitmarker`), 웨이브 시작/보스(붉게)/클리어 배너(`HudStyle.banner`, 슬라이드+페이드), 타이틀·HUD `UiKit.auto_scale` 과 좁은 창 폭 대응. `tests/shots_hud.gd` 로 화면 확인(미검증). sfx.gd 의 `volume_db` null 오류는 `--import` 안 한 프로젝트에서 wav 를 못 읽어 생긴 것이라 null 가드로 해결.

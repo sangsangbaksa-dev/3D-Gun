@@ -8,6 +8,7 @@ const ORANGE := Color("ff8a2a")
 const RED := Color("e0303a")
 const PANEL := Color("121a20b3")
 const SettingsScript := preload("res://scripts/settings_panel.gd")
+const UiKit := preload("res://scripts/ui_kit.gd")
 
 var logo: Control
 var sub: Label
@@ -22,6 +23,7 @@ var embers: CPUParticles2D
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	UiKit.auto_scale(self) # 세로 모바일 화면에서 확대
 	I18n.locale = Save.settings.locale
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var art := TextureRect.new()
