@@ -8,7 +8,7 @@
 - 타이틀: 스플래시 그림, 3D-GUN 로고, 출격 버튼(Enter), English / 한국어 전환
 - 1인칭 이동: WASD, 마우스 시점, Space 점프, Shift 구르기(무적 시간 포함)
 - 총기 6종 (권총·매그넘·기관단총·샷건·돌격소총·저격총): 1~6 교체, 탄 퍼짐·반동, 우클릭 조준(시야 확대),
-  R 재장전, 머리 명중 1.8배, 거리 감쇠, 샷건 산탄, 매그넘·저격총 관통(맞힐 때마다 피해 70%), 저격총 조준경
+  R 재장전, 탄 낙차(거리²에 비례, 저격총은 1/20)와 시선 반동(연사할수록 더 튀고 조준하면 0.45배, 멈추면 회복), 머리 명중 1.8배, 거리 감쇠, 샷건 산탄, 매그넘·저격총 관통(맞힐 때마다 피해 70%), 저격총 조준경
 - V 무기 창: 코인으로 총 구매·강화(최대 5단계, 피해·연사·탄창·재장전·퍼짐, 샷건은 산탄 수). 열려 있는 동안 일시정지
 - 좀비 15종 전부: 일반·달리기·뚱보(죽으면 독가스)·기어다니는·떼거리·도약·산성(침과 웅덩이)·폭탄(자폭)·비명(주변 가속과 소환)·장갑,
   보스 4종(브루저·폭파광·산성 괴수·군단장)과 50웨이브 좀비 왕. 보스는 내려찍기·돌진·산성 연사·폭격·소환·포효 패턴, 체력 절반 이하면 더 자주
@@ -84,6 +84,13 @@ godot --headless --path godot --fixed-fps 60 -s res://tests/hub_test.gd
 본부 규칙(업그레이드·시설 수입·시작 웨이브 비용·런 정산)과 저장 파일(저장·불러오기, 깨진 값 거르기, 깨진 파일), 게임 장면으로의
 인계(시작 웨이브, 공격력 배율, 시작 지급 제외)를 확인합니다 (`HUB ... -> PASS`). 저장은 임시 파일에만 쓰고 실제 저장은 건드리지 않습니다.
 
+```bash
+godot --headless --path godot --fixed-fps 60 -s res://tests/ballistics_test.gd
+```
+
+탄 낙차 거리별 값(30m 0.72m, 50m 2m, 저격총 1/20), 시선 반동의 누적·상한·조준 감소·회복, 낙차를 따라가는 구간 광선과 관통 재발사를
+확인합니다 (`BALLISTICS ... -> PASS`).
+
 ### 화면 확인 (디자인)
 
 ```bash
@@ -106,6 +113,7 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `scripts/title.gd` | 타이틀 화면 |
 | `scripts/game.gd` | 월드, 웨이브, HUD, 사망 카드 |
 | `scripts/player.gd` | 1인칭 이동과 총기 6종 (`src/player/logic` 이식) |
+| `scripts/ballistics.gd` | 탄 낙차·구간 광선·시선 반동 규칙 (`hitscan.ts`, `controller.ts`, `movement.ts` 이식). 노드 없는 정적 함수 |
 | `scripts/weapon_shop.gd` | V 무기 창 (구매·강화·장착) |
 | `scripts/zombie.gd` | 좀비 15종: 레인 이동, 목표 선택, 근접 공격, 특수 능력, 보스 패턴 (`src/enemies/logic/sim.ts` 이식) |
 | `scripts/hazards.gd` | 범위 공격과 연출: 경고 원, 폭발, 산성 침, 폭격, 독가스·산성 웅덩이 |
@@ -120,6 +128,7 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `assets/art/` | `public/art` 에서 복사한 그림 |
 | `tools/export-data.ts` | `src/data` → JSON |
 | `tests/smoke_test.gd` | 헤드리스 자동 테스트: 전투와 총기 |
+| `tests/ballistics_test.gd` | 헤드리스 자동 테스트: 낙차 값, 반동 누적·회복, 구간 광선 |
 | `tests/enemies_test.gd` | 헤드리스 자동 테스트: 좀비 15종, 레인, 보스 |
 | `tests/base_test.gd` | 헤드리스 자동 테스트: 채집, 건설, 포탑, 바리케이드 |
 | `tests/roamers_test.gd` | 헤드리스 자동 테스트: 배회 좀비, 함정 감속, E 수리·강화, 핵 회복, 포탑 저장 |
