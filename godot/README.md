@@ -3,7 +3,7 @@
 웹 게임(`../src`, TypeScript + Three.js)을 Godot 4(GDScript)로 옮기는 작업 폴더입니다.
 웹 게임은 그대로 두고, 이 폴더만 따로 자랍니다. 이식 계획은 [PORTING.md](PORTING.md)에 있습니다.
 
-## 지금 되는 것 (1~5단계)
+## 지금 되는 것 (1~6단계)
 
 - 타이틀: 스플래시 그림, 3D-GUN 로고, 출격 버튼(Enter), English / 한국어 전환
 - 1인칭 이동: WASD, 마우스 시점, Space 점프, Shift 구르기(무적 시간 포함)
@@ -21,9 +21,14 @@
 - 구역 배회 좀비: 숲·채석장·폐허·폐광·황무지·둥지(위험도 2 이상)마다 위험도에 비례해 어슬렁거리고(웨이브 수와 별개), 가까이 가면 쫓아옴. 처치 코인·샘플은 받는다
 - 맞으면 하얗게 번쩍이고, 죽으면 뒤로 넘어짐. 경고 원, 폭발, 산성 침, 독가스 연출
 - HUD: 웨이브·처치·코인·남은 좀비, 체력·핵 바, 보스 체력 바, 새 적·보스 알림, 탄약, 퍼짐을 따라 벌어지는 조준선, 명중 표시
-- 사망 카드: 기록 표시 후 타이틀로
+- 사망 카드: 기록 표시 후 본부 또는 타이틀로
 - 아군: 체력이 줄어 기절한 좀비 곁에서 E 를 길게 눌러 백신 주사(성공률은 백신 등급·남은 체력에 따라). 성공하면 아군(전투병·경비·채집·연구 보조), 실패하면 분노해서 깸. 아군은 다음 출격에도 저장됨
 - 연구소(E): 약초·부품·철·샘플로 백신 제작, 숙소는 아군 수 +3, 상점(E): 자원↔코인 교환
+- 본부(2D, `hub.tscn`): 사망·핵 파괴 때 번 재화(시작 지급 제외)의 일부와 도달 웨이브·처치 보너스가 지갑에 쌓임.
+  영구 업그레이드 구매(분류 5개), 생산 시설 8종(본부 화면을 보는 동안만 수입이 쌓이는 방치 수익, 오프라인 정산 없음),
+  출격 전 시작 웨이브 구매(도달한 최고 웨이브까지, 웨이브마다 골드·철·부품·샘플 비용). 저장은 `user://save.json`
+  (웹 빌드는 원본 게임과 같은 localStorage 키라 두 버전이 진행을 공유; 예전 `user://meta.json` 은 처음 한 번 읽어 옴).
+  스킬 트리와 지갑 교환소는 아직 없음
 
 수치(체력, 속도, 피해, 탄창, 재장전…)는 모두 웹 게임의 `src/data` 에서 그대로 가져옵니다.
 
@@ -72,6 +77,13 @@ godot --headless --path godot --fixed-fps 60 -s res://tests/roamers_test.gd
 준비 단계 핵 회복, 포탑 저장·복원(저장 파일은 건드리지 않음)을 확인합니다 (`ROAMERS ... -> PASS`).
 (다른 테스트는 배회 좀비를 꺼 두고 돈다: `game.roamers.enabled = false`)
 
+```bash
+godot --headless --path godot --fixed-fps 60 -s res://tests/hub_test.gd
+```
+
+본부 규칙(업그레이드·시설 수입·시작 웨이브 비용·런 정산)과 저장 파일(저장·불러오기, 깨진 값 거르기, 깨진 파일), 게임 장면으로의
+인계(시작 웨이브, 공격력 배율, 시작 지급 제외)를 확인합니다 (`HUB ... -> PASS`). 저장은 임시 파일에만 쓰고 실제 저장은 건드리지 않습니다.
+
 ### 화면 확인 (디자인)
 
 ```bash
@@ -97,6 +109,10 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `scripts/weapon_shop.gd` | V 무기 창 (구매·강화·장착) |
 | `scripts/zombie.gd` | 좀비 15종: 레인 이동, 목표 선택, 근접 공격, 특수 능력, 보스 패턴 (`src/enemies/logic/sim.ts` 이식) |
 | `scripts/hazards.gd` | 범위 공격과 연출: 경고 원, 폭발, 산성 침, 폭격, 독가스·산성 웅덩이 |
+| `scripts/hub.gd`, `scenes/hub.tscn` | 2D 본부 화면 (지갑, 업그레이드·시설 카드, 시작 웨이브, 출격) |
+| `scripts/hub_logic.gd` | 본부 규칙 (`tycoon2d/logic/economy.ts` 이식): 구매, 방치 수입, 시작 웨이브 비용, 런 정산. 노드 없이 테스트 가능 |
+| `scripts/save.gd` | 자동 로드. 영구 진행·설정 저장/불러오기 |
+| `scripts/meta_bonus.gd` | 영구 업그레이드를 새 런에 적용 (시작 골드·자원, 체력, 총 품질, 시작 웨이브…) |
 | `scripts/core.gd` | 핵 (체력, 피해, 회복) |
 | `scripts/base.gd` · `structure.gd` | 격자 건설, 건물(포탑·함정·바리케이드), 수리·강화·철거, 핵 수리·강화, 포탑 저장 (`src/base/logic` 이식) |
 | `scripts/gathering.gd` | 채집 노드 (`src/gathering/logic` 이식, 배치는 웹과 같은 시드) |
@@ -109,3 +125,4 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `tests/roamers_test.gd` | 헤드리스 자동 테스트: 배회 좀비, 함정 감속, E 수리·강화, 핵 회복, 포탑 저장 |
 | `scripts/allies.gd`, `ally.gd`, `station_panel.gd` | 백신 주사, 아군 관리·저장, 아군 AI, 연구소·상점 창 |
 | `tests/allies_test.gd`, `lab_test.gd` | 헤드리스 자동 테스트: 기절→백신→아군, 백신 제작·교환 |
+| `tests/hub_test.gd` | 헤드리스 자동 테스트: 본부 규칙, 저장 파일, 시작 웨이브 인계 |
