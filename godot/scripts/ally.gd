@@ -41,6 +41,16 @@ var _hp_fill: MeshInstance3D
 var _walk := 0.0
 var _speed := 0.0
 var _mats: Array[StandardMaterial3D] = []
+var _props: Array[Node3D] = []  # 팔 피벗(arm0/arm1)의 자식으로 붙는 손에 든 소품
+var _prop_tool: Node3D          # 오른손 도구 (몽둥이·경비봉·곡괭이)
+var _tablet_mat: StandardMaterial3D
+var _atk_anim := 0.0            # 내려치기 연출 남은 시간 (0.55초)
+var _hit_t := 0.0               # 내려치는 순간까지 남은 시간 (피해는 이때 들어간다)
+var _hit_target: Node3D
+var _flinch := 0.0              # 피격 젖힘 (1 → 0)
+var _look := 0.0
+const ATK_ANIM := 0.55
+const ATK_HIT := 0.3
 
 func _ready() -> void:
 	add_to_group("allies")
@@ -184,6 +194,67 @@ func _apply_role() -> void:
 	var c := Color.hex((int(mgr.data.allyRoles[role].color) << 8) | 0xff)
 	_hat_mat.albedo_color = c
 	(_marker.material_override as StandardMaterial3D).albedo_color = c
+	_build_props(c)
+
+func _box(parent: Node3D, size: Vector3, pos: Vector3, col: Color, rot := Vector3.ZERO, unshaded := false) -> MeshInstance3D:
+	var m := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = size
+	m.mesh = b
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.roughness = 0.85
+	if unshaded:
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.material_override = mat
+	m.position = pos
+	m.rotation = rot
+	parent.add_child(m)
+	return m
+
+## 역할별 손에 든 소품 (allyView.dress). 팔 피벗의 자식이라 팔을 따라 움직인다.
+## arm0 = 왼손, arm1 = 오른손. 팔이 아래로 처졌을 때의 좌표 (손은 y -0.62 근처, 앞은 -z).
+func _build_props(color: Color) -> void:
+	for p in _props:
+		if is_instance_valid(p):
+			p.queue_free()
+	_props.clear()
+	_prop_tool = null
+	_tablet_mat = null
+	if _arms.size() < 2:
+		return
+	var wood := Color("8a5a2b")
+	var tool_root := Node3D.new()
+	tool_root.position = Vector3(0, -0.62, -0.05)
+	match role:
+		"fighter": # 몽둥이: 손잡이는 가늘고 끝이 굵다
+			_box(tool_root, Vector3(0.09, 0.09, 0.8), Vector3(0, 0, -0.3), wood)
+			_box(tool_root, Vector3(0.16, 0.16, 0.34), Vector3(0, 0, -0.62), Color("6e4521"))
+		"guard": # 경비봉: 검은 막대에 역할 색 띠
+			_box(tool_root, Vector3(0.06, 0.06, 0.7), Vector3(0, 0, -0.28), Color("23272e"))
+			_box(tool_root, Vector3(0.075, 0.075, 0.1), Vector3(0, 0, -0.56), color)
+			_box(tool_root, Vector3(0.075, 0.075, 0.1), Vector3(0, 0, -0.04), color)
+		"gatherer": # 곡괭이: 자루 끝에 가로 쇠날
+			_box(tool_root, Vector3(0.08, 0.08, 0.95), Vector3(0, 0, -0.32), wood)
+			_box(tool_root, Vector3(0.62, 0.1, 0.12), Vector3(0, 0, -0.8), Color("9aa3ad"))
+			_box(tool_root, Vector3(0.1, 0.1, 0.16), Vector3(0.3, 0, -0.84), Color("c5ccd3"))
+			_box(tool_root, Vector3(0.1, 0.1, 0.16), Vector3(-0.3, 0, -0.84), Color("c5ccd3"))
+		_:
+			tool_root.free()
+			tool_root = null
+	if tool_root:
+		_arms[1].add_child(tool_root)
+		_props.append(tool_root)
+		_prop_tool = tool_root
+	if role == "researcher": # 왼손에 태블릿, 화면은 청록으로 빛난다
+		var tab := Node3D.new()
+		tab.position = Vector3(0, -0.6, -0.14)
+		tab.rotation.x = -0.25
+		_box(tab, Vector3(0.36, 0.46, 0.04), Vector3.ZERO, Color("2a2f38"))
+		var scr := _box(tab, Vector3(0.3, 0.38, 0.02), Vector3(0, 0, -0.025), Color("66ccff"), Vector3.ZERO, true)
+		_tablet_mat = scr.material_override
+		_arms[0].add_child(tab)
+		_props.append(tab)
 
 func set_role(r: String) -> void:
 	role = r
@@ -201,6 +272,7 @@ func take_damage(dmg: float) -> void:
 	hp -= dmg
 	hurt_t = 0.25
 	since_hit = 0.0
+	_flinch = 1.0
 	if hp <= 0.0:
 		hp = 0.0
 		_die()
@@ -213,6 +285,16 @@ func _die() -> void:
 	remove_from_group("allies")
 	Sfx.play("allyDead", global_position)
 	mgr.on_ally_dead(self)
+	_hit_t = 0.0
+	for i in _arms.size(): # 팔이 튕겨 올라갔다 늘어진다
+		var at := create_tween()
+		var side := -1.0 if i == 0 else 1.0
+		at.tween_property(_arms[i], "rotation", Vector3(-2.6, 0.0, side * 1.1), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		at.tween_property(_arms[i], "rotation", Vector3(0.4, 0.0, side * 0.25), 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	if _prop_tool: # 도구는 손에서 빠져 나간다
+		var pt := create_tween()
+		pt.tween_property(_prop_tool, "rotation:x", 1.6, 0.4)
+		pt.parallel().tween_property(_prop_tool, "position:z", -0.5, 0.4)
 	var tw := create_tween()
 	tw.tween_property(_model, "rotation:x", -PI * 0.5, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_interval(1.4)
@@ -228,6 +310,12 @@ func _physics_process(dt: float) -> void:
 	born += dt
 	atk_cd = maxf(0.0, atk_cd - dt)
 	swing = maxf(0.0, swing - dt * 4.0)
+	_atk_anim = maxf(0.0, _atk_anim - dt)
+	_flinch = maxf(0.0, _flinch - dt * 3.0)
+	if _hit_t > 0.0:
+		_hit_t -= dt
+		if _hit_t <= 0.0:
+			_land_hit()
 	hurt_t = maxf(0.0, hurt_t - dt)
 	since_hit += dt
 	if since_hit > float(a.regenDelay) and hp < max_hp:
@@ -235,7 +323,7 @@ func _physics_process(dt: float) -> void:
 	_speed = 0.0
 	velocity.x = 0.0
 	velocity.z = 0.0
-	if act == "attack" and swing <= 0.0:
+	if act == "attack" and swing <= 0.0 and _atk_anim <= 0.0:
 		act = "idle"
 	if born >= 0.6: # 등장 연출 동안 가만히
 		if act != "attack":
@@ -281,8 +369,18 @@ func _strike(t: Node3D, dt: float) -> void:
 		swing = 1.0
 		act = "attack"
 		act_t = 0.0
-		var dir := (t.global_position - global_position).normalized()
-		t.take_hit(float(a.dmg) * mgr.dmg_mul() * (0.9 + randf() * 0.2), dir, true)
+		_atk_anim = ATK_ANIM # 치켜들었다가 내려치는 순간(ATK_HIT)에 피해가 들어간다
+		_hit_t = ATK_HIT
+		_hit_target = t
+
+func _land_hit() -> void:
+	var t := _hit_target
+	_hit_target = null
+	if t == null or not is_instance_valid(t) or dead:
+		return
+	var dir := t.global_position - global_position
+	dir.y = 0.0
+	t.take_hit(float(mgr.data.ally.dmg) * mgr.dmg_mul() * (0.9 + randf() * 0.2), dir.normalized(), true)
 
 func _fighter(dt: float) -> void:
 	var a: Dictionary = mgr.data.ally
@@ -346,6 +444,76 @@ func _gatherer(dt: float) -> void:
 
 # ── 걷기·일하기 연출 ─────────────────────────────────────────────────
 
+## 팔 목표 각도 (x: 앞으로 +, 머리 위로 넘기면 +2.8 근처 / 뒤로 젖히면 -). 값은 [왼팔, 오른팔]
+func _arm_pose(t: float) -> Array:
+	var swing_a := sin(_walk) * 0.45 if _speed > 0.1 else 0.0
+	var l := -swing_a
+	var r := swing_a
+	var lz := 0.0
+	var rz := 0.0
+	var snap := false # true 면 보간 없이 바로 (내려치기처럼 빠른 동작)
+	if born < 0.6: # 등장: 만세
+		l = 2.8 + sin(t * 14.0) * 0.25
+		r = l
+		snap = true
+	elif _atk_anim > 0.0 and role != "researcher":
+		# 치켜들고(0~55%) → 내려친다(55~75%) → 거둔다
+		var p := 1.0 - _atk_anim / ATK_ANIM
+		var up := -2.7 if role == "fighter" else -2.3
+		if p < 0.55:
+			r = lerpf(0.4, up, _ease_out(p / 0.55))
+		elif p < 0.75:
+			r = lerpf(up, 1.5, (p - 0.55) / 0.2)
+		else:
+			r = lerpf(1.5, 0.4, (p - 0.75) / 0.25)
+		l = -0.3
+		snap = true
+	elif act == "flee":
+		l = 2.6 + sin(t * 20.0) * 0.35
+		r = l
+	elif act == "work":
+		match role:
+			"gatherer": # 곡괭이질: 천천히 들어 올려 빠르게 내리꽂는다
+				var ph := fmod(t * 1.5 + slot * 0.37, 1.0)
+				if ph < 0.6:
+					r = lerpf(0.5, -2.5, _ease_out(ph / 0.6))
+				elif ph < 0.72:
+					r = lerpf(-2.5, 1.3, (ph - 0.6) / 0.12)
+				else:
+					r = lerpf(1.3, 0.5, (ph - 0.72) / 0.28)
+				l = r * 0.6 + 0.2
+				snap = true
+			"researcher": # 왼손 태블릿을 들고 오른손 손가락으로 두드린다
+				l = 1.1
+				lz = 0.15
+				r = 1.25 + sin(t * 9.0) * 0.12 + maxf(0.0, sin(t * 27.0)) * 0.1
+				rz = -0.2
+			_:
+				l = 0.9 + sin(t * 8.0) * 0.35
+				r = 0.9 + sin(t * 8.0 + PI) * 0.35
+	elif not carry.is_empty(): # 상자를 안고 걷기
+		l = 1.15
+		r = 1.15
+		lz = 0.18
+		rz = -0.18
+	else:
+		match role:
+			"fighter": # 몽둥이를 어깨 위로 비스듬히 든 대기
+				r = 0.5 + sin(t * 1.7 + slot) * 0.05 + swing_a * 0.3
+			"guard": # 경비봉을 앞으로 내려 든 순찰
+				r = 0.35 + swing_a * 0.25 + sin(t * 1.3 + slot) * 0.04
+			"gatherer":
+				r = 0.45 + swing_a * 0.3
+			"researcher": # 태블릿을 보며 가만히
+				l = 1.0
+				r = 0.3
+				lz = 0.12
+	return [l, r, lz, rz, snap]
+
+func _ease_out(x: float) -> float:
+	x = clampf(x, 0.0, 1.0)
+	return 1.0 - (1.0 - x) * (1.0 - x)
+
 func _animate(dt: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	if _speed > 0.1:
@@ -355,19 +523,58 @@ func _animate(dt: float) -> void:
 	else:
 		for l in _legs:
 			l.rotation.x = lerpf(l.rotation.x, 0.0, dt * 8.0)
-	for i in _arms.size():
-		var want := sin(_walk + PI * i) * 0.4 if _speed > 0.1 else 0.0
-		if swing > 0.0 and i == 0:
-			want = 1.6 * swing # 휘두르기
-		elif act == "work":
-			want = 0.9 + sin(t * 8.0 + i * PI) * 0.35 # 망치질·채집
-		_arms[i].rotation.x = lerpf(_arms[i].rotation.x, want, dt * 12.0)
+	var pose := _arm_pose(t)
+	var k := 1.0 if pose[4] else minf(1.0, dt * 12.0)
+	if _arms.size() >= 2:
+		for i in 2:
+			_arms[i].rotation.x = lerpf(_arms[i].rotation.x, float(pose[i]), k)
+			_arms[i].rotation.z = lerpf(_arms[i].rotation.z, float(pose[2 + i]), minf(1.0, dt * 12.0))
+	# 몸통·머리: 피격 젖힘, 내려칠 때 숙임, 연구보조는 화면을 보느라 숙임, 경비는 두리번
+	var lean := 0.0
+	var head_x := 0.0
+	var head_y := 0.0
+	if role == "researcher" and act == "work":
+		lean = -0.18
+		head_x = 0.25
+	if _atk_anim > 0.0:
+		var p := 1.0 - _atk_anim / ATK_ANIM
+		lean = 0.2 * sin(clampf(p / 0.55, 0.0, 1.0) * PI * 0.5) if p < 0.55 else lerpf(0.2, -0.3, clampf((p - 0.55) / 0.2, 0.0, 1.0)) * (1.0 - clampf((p - 0.75) / 0.25, 0.0, 1.0))
+	lean += 0.5 * _flinch
+	head_x += -0.35 * _flinch
+	if role == "guard" and _atk_anim <= 0.0 and born >= 0.6:
+		_look = lerpf(_look, sin(t * 0.8 + slot * 1.7) * 0.8 * (1.0 if _speed < 0.1 else 0.6), minf(1.0, dt * 3.0))
+		head_y = _look
+	if _torso:
+		_torso.rotation.x = lerpf(_torso.rotation.x, lean, minf(1.0, dt * 14.0))
+	if _head:
+		_head.rotation.x = lerpf(_head.rotation.x, head_x, minf(1.0, dt * 10.0))
+		_head.rotation.y = lerpf(_head.rotation.y, head_y, minf(1.0, dt * 8.0))
+	# 등장: 땅에서 솟으며 통통 커진다
+	if born < 0.6:
+		var b := born / 0.6
+		var pop := 0.8 + 0.2 * (1.0 + 2.7 * pow(b - 1.0, 3) + 1.7 * pow(b - 1.0, 2))
+		_model.scale = Vector3.ONE * (1.9 / UNIT_H) * pop
+		_model.position.y = -1.4 * pow(1.0 - b, 2)
+	elif _model.position.y != 0.0 and not dead:
+		_model.position.y = 0.0
+		_model.scale = Vector3.ONE * (1.9 / UNIT_H)
+	var bob := 0.0
+	if _speed > 0.5:
+		bob = absf(sin(_walk)) * 0.05
+	elif act == "work" and role == "researcher":
+		bob = absf(sin(t * 4.0)) * 0.015
+	if not dead and born >= 0.6:
+		_model.position.y = bob
+	if _tablet_mat:
+		_tablet_mat.albedo_color = Color("66ccff").lerp(Color("c8f0ff"), 0.5 + 0.5 * sin(t * 6.0))
 	_crate.visible = not carry.is_empty()
+	if _prop_tool:
+		_prop_tool.visible = carry.is_empty() # 상자를 안으면 도구는 내려놓는다
 	_marker.position.y = 2.55 + sin(t * 2.0 + slot) * 0.06
 	_marker.rotation.y += dt * 1.5
-	var k := 0.7 if hurt_t > 0.0 else 0.0
+	var hk := 0.7 if hurt_t > 0.0 else 0.0
 	for m in _mats:
-		m.emission = Color(0.9, 0.3, 0.3) * k
+		m.emission = Color(0.9, 0.3, 0.3) * hk
 	var show := hp < max_hp - 0.5
 	_hp_back.visible = show
 	_hp_fill.visible = show
