@@ -10,9 +10,15 @@ const TEAL := Color8(0x2e, 0xe6, 0xd6)
 const ORANGE := Color8(0xff, 0x8a, 0x2a)
 const RED := Color8(0xe0, 0x30, 0x3a)
 const TEXT := Color8(0xd6, 0xe4, 0xe8)
+const UiKit := preload("res://scripts/ui_kit.gd")
+
+## 명중 마커가 보이는 시간(초)
+const HIT_TIME := {"normal": 0.18, "head": 0.28, "kill": 0.42}
 
 var game: Node
 var hud: Control
+var _banner_root: Control
+var _banner_tw: Tween
 var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
@@ -39,6 +45,7 @@ static func box(bg: Color, edge: Color, radius := 10, border := 1, margin := Vec
 
 func _ready() -> void:
 	hud = game.hud
+	UiKit.auto_scale(game) # 세로 모바일 화면에서 HUD 가 너무 작아지지 않게
 	_logo()
 	for l in [game.lbl_top, game.lbl_res, game.lbl_ammo, game.lbl_gun, game.lbl_hint, game.lbl_center, game.lbl_toast,
 			game.lbl_core, game.lbl_boss, game.lbl_prompt, game.build_panel, game.build_hover]:
@@ -179,11 +186,27 @@ func _process(_dt: float) -> void:
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
-	lt.size.x = 900
-	lt.position = Vector2((w - 900) * 0.5, 14)
+	var tw := minf(900.0, w - 24.0)
+	lt.size.x = tw
+	lt.position = Vector2((w - tw) * 0.5, 14)
 	var lr: Label = game.lbl_res
-	lr.size.x = 900
-	lr.position = Vector2((w - 900) * 0.5, 54)
+	lr.size.x = tw
+	lr.position = Vector2((w - tw) * 0.5, 54)
+	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
+	var tl: Label = game.lbl_toast
+	tl.size.x = minf(900.0, w - 24.0)
+	tl.position.x = (w - tl.size.x) * 0.5
+	var pr: Label = game.lbl_prompt
+	pr.size.x = minf(600.0, w - 24.0)
+	pr.position.x = (w - pr.size.x) * 0.5
+	var bh: Label = game.build_hover
+	bh.size.x = minf(640.0, w - 24.0)
+	bh.position.x = (w - bh.size.x) * 0.5
+	game.build_panel.size.x = minf(520.0, w - 24.0)
+	game.build_panel.position.x = w - game.build_panel.size.x - 12.0
+	game.boss_bar.size.x = minf(560.0, w - 24.0)
+	game.lbl_boss.size.x = minf(560.0, w - 24.0)
+	game.lbl_boss.position.x = (w - game.lbl_boss.size.x) * 0.5
 	# 아래 왼쪽 HP 패널: HP 글자, 체력 막대, 핵 막대와 이름
 	_hp_label.text = "HP %d / %d" % [ceili(maxf(0.0, game.player.hp)), int(game.player.max_hp)]
 	_hp_label.size.x = 260
@@ -220,3 +243,118 @@ func _process(_dt: float) -> void:
 			p.position = r.position - pad
 			p.size = r.size + pad * 2.0
 			p.modulate.a = l.modulate.a
+
+# ── 명중 마커 ────────────────────────────────────────────────────────
+
+## 조준선 위에 그리는 명중 표시. kind: normal(흰 X), head(노랑 X + 위쪽 화살촉), kill(붉은 큰 X + 십자 + 퍼지는 고리).
+## t: 0 → 1 (시작 → 끝). 처음엔 바깥에서 안으로 모이며 커졌다가 뒤쪽에서 사라진다.
+static func draw_hitmarker(ci: Control, kind: String, t: float) -> void:
+	var settle := 1.0 - pow(1.0 - clampf(t * 3.0, 0.0, 1.0), 2.0) # 0 → 1 빠르게
+	var pull := 1.0 + (1.0 - settle) * 0.6 # 처음 1.6배 → 1
+	var a := 1.0 - clampf((t - 0.55) / 0.45, 0.0, 1.0)
+	var diag := [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]
+	match kind:
+		"kill":
+			var col := Color(1.0, 0.22, 0.18, a)
+			for d in diag:
+				ci.draw_line(d.normalized() * 8.0 * pull, d.normalized() * 22.0 * pull, col, 3.5, true)
+			for d in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+				ci.draw_line(d * 26.0 * pull, d * 33.0 * pull, Color(1, 0.55, 0.35, a), 2.5, true)
+			ci.draw_arc(Vector2.ZERO, 12.0 + 26.0 * t, 0.0, TAU, 32, Color(1.0, 0.3, 0.2, a * 0.7), 2.0, true)
+		"head":
+			var col := Color(1.0, 0.86, 0.2, a)
+			for d in diag:
+				ci.draw_line(d.normalized() * 7.0 * pull, d.normalized() * 18.0 * pull, col, 3.0, true)
+			# 위쪽 화살촉 (머리 쪽을 가리킴)
+			var y := -30.0 - (1.0 - settle) * 8.0
+			ci.draw_polyline(PackedVector2Array([Vector2(-8, y - 6), Vector2(0, y + 3), Vector2(8, y - 6)]), col, 3.0, true)
+		_:
+			var col := Color(1, 1, 1, a)
+			for d in diag:
+				ci.draw_line(d.normalized() * 6.0 * pull, d.normalized() * 13.0 * pull, col, 2.2, true)
+
+# ── 웨이브 배너 ──────────────────────────────────────────────────────
+
+## 가로 띠가 옆에서 밀려 들어와 잠시 머물고 반대쪽으로 사라진다. kind: wave(청록) / boss(붉게, 더 크고 오래) / clear(주황 금빛).
+func banner(text: String, kind := "wave", sub := "") -> void:
+	if _banner_tw:
+		_banner_tw.kill()
+	if _banner_root and is_instance_valid(_banner_root):
+		_banner_root.queue_free()
+	var w := hud.size.x
+	var k := clampf(w / 1280.0, 0.55, 1.0) # 좁은 화면에서는 글자를 줄인다
+	var boss := kind == "boss"
+	var accent: Color = RED if boss else (Color8(0xff, 0xb3, 0x47) if kind == "clear" else TEAL)
+	var h := (150.0 if boss else 118.0) * k
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.size = Vector2(w, h)
+	root.position = Vector2(0, maxf(104.0, hud.size.y * 0.2))
+	root.pivot_offset = Vector2(w * 0.5, h * 0.5)
+	hud.add_child(root)
+	_banner_root = root
+	# 양 끝이 투명하게 사라지는 어두운 띠
+	var band := TextureRect.new()
+	var gt := GradientTexture2D.new()
+	var gr := Gradient.new()
+	gr.offsets = PackedFloat32Array([0.0, 0.2, 0.8, 1.0])
+	var base := Color(0.16, 0.0, 0.02) if boss else Color(0.03, 0.06, 0.08)
+	gr.colors = PackedColorArray([Color(base, 0.0), Color(base, 0.82), Color(base, 0.82), Color(base, 0.0)])
+	gt.gradient = gr
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(1, 0)
+	band.texture = gt
+	band.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	band.size = Vector2(w, h)
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(band)
+	# 위·아래 가는 강조선
+	for y in [0.0, h - 2.0]:
+		var line := ColorRect.new()
+		line.color = Color(accent, 0.7)
+		line.position = Vector2(w * 0.15, y)
+		line.size = Vector2(w * 0.7, 2)
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(line)
+	var col := VBoxContainer.new()
+	col.size = Vector2(w, h)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", int(2 * k))
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(col)
+	var title := Label.new()
+	title.text = text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", int((64.0 if boss else 50.0) * k))
+	title.add_theme_color_override("font_color", Color(1, 0.92, 0.9) if boss else Color(1, 1, 1))
+	title.add_theme_color_override("font_outline_color", Color(accent, 0.85))
+	title.add_theme_constant_override("outline_size", int(8 * k))
+	col.add_child(title)
+	if sub != "":
+		var sl := Label.new()
+		sl.text = sub
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sl.add_theme_font_size_override("font_size", int((24.0 if boss else 22.0) * k))
+		sl.add_theme_color_override("font_color", Color8(0xff, 0x9a, 0x9a) if boss else accent)
+		sl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		sl.add_theme_constant_override("shadow_offset_y", 1)
+		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sl.custom_minimum_size.x = w - 40.0
+		col.add_child(sl)
+	root.modulate.a = 0.0
+	root.position.x = -w * 0.25
+	var base_y := root.position.y
+	var hold := 2.4 if boss else 1.5
+	var tw := create_tween()
+	_banner_tw = tw
+	tw.tween_property(root, "position:x", 0.0, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(root, "modulate:a", 1.0, 0.3)
+	if boss:
+		# 보스: 도착할 때 한 번 쿵 하고 흔들린다
+		tw.tween_property(root, "position:y", base_y + 5.0, 0.05)
+		tw.tween_property(root, "position:y", base_y - 4.0, 0.06)
+		tw.tween_property(root, "position:y", base_y, 0.08)
+	tw.tween_interval(hold)
+	tw.tween_property(root, "position:x", w * 0.25, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(root, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(root.queue_free)
