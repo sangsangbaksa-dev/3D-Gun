@@ -3,9 +3,10 @@ extends Node3D
 ## Port of src/gathering/logic/gathering.ts. The layout is the web game's own (same seed), exported to JSON.
 
 signal gathered(res: String, amount: int, pos: Vector3)
+signal hit(node: Dictionary) # 채집 중 0.26초마다 (웹의 gather:hit)
 
 var game: Node
-var nodes: Array = [] # {id, kind, res, pos, yaw, scale, r, state, progress, idle, respawn_t, shape}
+var nodes: Array = [] # {id, kind, res, pos, yaw, scale, r, state, progress, idle, respawn_t, hit_t, shape}
 var _mm := {}         # "kind_vi" -> [ready MultiMesh or null, always MultiMesh or null]
 var _slot := {}       # node index -> [group key, instance index]
 var _body: StaticBody3D
@@ -27,7 +28,7 @@ func _ready() -> void:
 		cs.position = pos + Vector3(0, 1.5, 0)
 		_body.add_child(cs)
 		var node := {"id": n.id, "kind": n.kind, "res": n.res, "pos": pos, "yaw": n.yaw, "scale": n.scale, "variant": n.variant,
-			"i": nodes.size(), "r": n.r, "state": "ready", "progress": 0.0, "idle": 0.0, "respawn_t": 0.0, "shape": cs}
+			"i": nodes.size(), "r": n.r, "state": "ready", "progress": 0.0, "idle": 0.0, "respawn_t": 0.0, "hit_t": 0.0, "shape": cs}
 		nodes.append(node)
 		var key := "%s_%d" % [n.kind, mini(VARIANTS - 1, int(float(n.variant) * VARIANTS))]
 		if not groups.has(key):
@@ -72,6 +73,17 @@ func _refresh(i: int) -> void:
 	if block > 0.0:
 		n.shape.shape.radius = float(n.r) * block
 
+## resetGathering(): 새 런이면 모든 노드를 다시 채집 가능하게 (배치는 그대로).
+func reset() -> void:
+	for n in nodes:
+		n.state = "ready"
+		n.progress = 0.0
+		n.idle = 99.0
+		n.hit_t = 0.0
+		n.respawn_t = 0.0
+		_refresh(n.i)
+	_active.clear()
+
 ## Ready node the player can reach right now, or {}.
 func nearest_ready(p: Vector3) -> Dictionary:
 	var best := {}
@@ -96,9 +108,18 @@ func harvest(n: Dictionary, dt: float) -> bool:
 	if not _active.has(n):
 		_active.append(n)
 	n.progress += dt / float(def.work)
+	n.hit_t = float(n.get("hit_t", 0.0)) - dt
+	if n.hit_t <= 0.0:
+		n.hit_t = 0.26
+		hit.emit(n)
+		Sfx.play("gather", n.pos)
 	if n.progress < 1.0:
 		return false
 	var amount: int = game.rng.randi_range(int(def.yieldMin), int(def.yieldMax))
+	# 채집 추가 확률(gatherExtra): 걸리면 +1. 0 이면 난수를 쓰지 않아 시드가 달라지지 않는다
+	var extra_p: float = float(game.meta.get("gatherExtra", 0.0))
+	if extra_p > 0.0 and game.rng.randf() < extra_p:
+		amount += 1
 	n.state = "depleted"
 	n.progress = 0.0
 	n.respawn_t = game.rng.randf_range(float(def.respawnMin), float(def.respawnMax))

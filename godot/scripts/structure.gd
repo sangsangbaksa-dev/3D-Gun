@@ -135,6 +135,8 @@ func take_damage(dmg: float) -> void:
 	_set_flash(true)
 	if hp <= 0.0:
 		destroy()
+	elif def.has("turret"):
+		game.base.persist_turrets(false)
 
 ## Hit flash: a red overlay on every mesh (the glb materials are shared, so they are not touched).
 func _set_flash(on: bool) -> void:
@@ -151,6 +153,7 @@ func destroy() -> void:
 		return
 	dead = true
 	destroyed.emit(self)
+	Sfx.play("destroyed", global_position)
 	game.hazards._blast(global_position, radius * 2.0, Color(0.8, 0.5, 0.3))
 	queue_free()
 
@@ -175,6 +178,7 @@ func _trap(dt: float) -> void:
 	var now := pulse <= 0.0
 	if now:
 		pulse = 0.5
+	var hit_any := false
 	for z in game.zombies_root.get_children():
 		if z.dead:
 			continue
@@ -183,8 +187,11 @@ func _trap(dt: float) -> void:
 			continue
 		z.slow_mul = minf(z.slow_mul, float(t.slow))
 		z.slow_t = 0.2
+		hit_any = true
 		if now:
-			z.take_hit(float(t.dps) * 0.5 * (1.0 + float(game.meta.get("trapDpsMul", 0.0))), Vector3.ZERO)
+			z.take_hit(float(t.dps) * 0.5 * (1.0 + float(game.meta.get("trapDpsMul", 0.0))), Vector3.ZERO, true) # 건물 피해는 기절시키지 않는다 (byAlly)
+	if now and hit_any: # 웹의 pulse 이펙트: 좀비가 걸려 있을 때만 퍼지는 고리
+		game.hazards.ring(global_position, float(t.radius), 0.4, Color(0.18, 0.9, 0.84))
 
 func _turret(dt: float) -> void:
 	var lv: Dictionary = levels()[level - 1]
@@ -209,10 +216,12 @@ func _turret(dt: float) -> void:
 		return
 	var crit: bool = game.rng.randf() < 0.1
 	var aim_pt: Vector3 = target.global_position + Vector3(game.rng.randf_range(-0.2, 0.2), target.height * (0.45 + game.rng.randf() * 0.3), game.rng.randf_range(-0.2, 0.2))
-	target.take_hit(float(lv.dmg) * (1.0 + float(game.meta.get("turretDmgMul", 0.0))) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized())
+	target.take_hit(float(lv.dmg) * (1.0 + float(game.meta.get("turretDmgMul", 0.0))) * (2.0 if crit else 1.0), (aim_pt - head.global_position).normalized(), true)
 	game.tracer(head.global_position + Vector3(-sin(aim_yaw), 0.1, -cos(aim_yaw)) * 0.9, aim_pt, Color(1, 0.85, 0.5))
 	ammo -= 1
 	cooldown = float(lv.rate) * maxf(0.55, 1.0 - float(game.meta.get("turretRateMul", 0.0)))
 	if ammo <= 0:
 		game.toast(I18n.t("build.ammoOut", {"name": I18n.bld_name(kind)}))
 		destroy()
+	else:
+		game.base.persist_turrets(false)

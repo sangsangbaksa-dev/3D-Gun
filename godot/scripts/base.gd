@@ -18,8 +18,15 @@ var _ghost_mat: StandardMaterial3D
 var _ring_mat: StandardMaterial3D
 var hover: Node = null # 건설 모드에서 조준한 건물 (F 수리 · U 강화 · X/우클릭 철거)
 var core_level := 0
+## 포탑은 판이 끝나도 남는다 (meta.turrets). 헤드리스 테스트에서는 저장소를 건드리지 않는다.
+var persist := DisplayServer.get_name() != "headless"
+var _save_dirty := false
+var _save_t := 0.0
+var _regen_t := 0.0
+const SAVE_EVERY := 2.0
 
 func _ready() -> void:
+	call_deferred("restore_turrets") # game.gd 가 meta(영구 업그레이드)를 채운 뒤에
 	ghost = Node3D.new()
 	add_child(ghost)
 	_ghost_mat = StandardMaterial3D.new()
@@ -85,7 +92,12 @@ func check_spot(kind: String, x: float, z: float) -> String:
 		return "noResources"
 	return ""
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	_core_regen(dt)
+	if _save_dirty:
+		_save_t += dt
+		if _save_t >= SAVE_EVERY:
+			persist_turrets(true)
 	if not building:
 		return
 	if game.phase != "prep":
@@ -125,6 +137,17 @@ func _process(_dt: float) -> void:
 	_ghost_mat.albedo_color = Color(0.3, 1, 0.5, 0.35) if ghost_ok else Color(1, 0.25, 0.2, 0.35)
 	_ring_mat.albedo_color = Color(0.18, 0.9, 0.84, 0.6) if ghost_ok else Color(0.88, 0.19, 0.23, 0.6)
 
+## 준비 단계에는 핵이 0.5초마다 최대 체력의 0.6% 씩 저절로 회복된다 (base.ts update).
+func _core_regen(dt: float) -> void:
+	var c: Node = game.core
+	if game.phase != "prep" or c.dead or c.hp >= c.max_hp:
+		_regen_t = 0.0
+		return
+	_regen_t += dt
+	if _regen_t >= 0.5:
+		_regen_t = 0.0
+		c.heal_pct(0.006)
+
 func place() -> bool:
 	if not building or not ghost_ok:
 		if building and hover == null:
@@ -133,7 +156,11 @@ func place() -> bool:
 	var def: Dictionary = GameData.buildings[pick]
 	if not game.spend(def.cost):
 		return false
-	spawn(pick, ghost_pos)
+	var s: Node = spawn(pick, ghost_pos)
+	Sfx.play("build", s.global_position)
+	game.hazards.ring(ghost_pos, float(def.radius), 0.35, Color(0.3, 1, 0.5)) # 웹의 'placed' 이펙트
+	if def.has("turret"):
+		persist_turrets(true)
 	return true
 
 func spawn(kind: String, pos: Vector3) -> Node:
@@ -141,10 +168,63 @@ func spawn(kind: String, pos: Vector3) -> Node:
 	s.kind = kind
 	s.game = game
 	s.position = pos
-	s.destroyed.connect(func(n): structures.erase(n))
+	s.destroyed.connect(_on_destroyed)
 	add_child(s)
 	structures.append(s)
 	return s
+
+func _on_destroyed(n: Node) -> void:
+	structures.erase(n)
+	if n.def.has("turret"):
+		persist_turrets(true)
+
+# ── 포탑 저장 (persistTurrets / restoreTurrets) ─────────────────────────
+
+## meta.turrets 에 살아 있고 내구도가 남은 포탑을 적는다. now=false 면 저장소 쓰기는 미뤄 2초마다 한 번만.
+func persist_turrets(now := true) -> void:
+	if not persist:
+		return
+	var list := []
+	for s in structures:
+		if not s.dead and s.def.has("turret") and s.ammo > 0:
+			list.append({"kind": s.kind, "x": s.position.x, "z": s.position.z, "level": s.level, "hp": s.hp, "ammo": s.ammo})
+	Save.meta["turrets"] = list
+	if now:
+		_save_dirty = false
+		_save_t = 0.0
+		Save.save_meta()
+	else:
+		_save_dirty = true
+
+func flush_turrets() -> void:
+	if _save_dirty:
+		persist_turrets(true)
+
+func _exit_tree() -> void:
+	flush_turrets()
+
+func restore_turrets() -> void:
+	if not persist:
+		return
+	for t in Save.meta.get("turrets", []):
+		if not t is Dictionary or not t.get("kind") in ["tower", "mgtower"]:
+			continue
+		if not float(t.get("hp", 0)) > 0.0 or not float(t.get("ammo", 0)) > 0.0:
+			continue
+		var dup := false
+		for o in structures:
+			if o.kind == t.kind and Vector2(o.position.x - float(t.x), o.position.z - float(t.z)).length() < 0.5:
+				dup = true
+		if dup:
+			continue
+		var def: Dictionary = GameData.buildings[t.kind]
+		var lv := clampi(int(t.get("level", 1)), 1, def.turret.levels.size())
+		var s: Node = spawn(t.kind, Vector3(float(t.x), game.world.ground_y(float(t.x), float(t.z)), float(t.z)))
+		if lv > 1:
+			s.set_level(lv)
+		s.max_hp = roundf(float(def.hp) * (1.0 + float(game.meta.get("turretHpMul", 0.0))) * (1.0 + 0.25 * (lv - 1)))
+		s.hp = minf(s.max_hp, maxf(1.0, float(t.hp)))
+		s.ammo = maxi(1, int(t.ammo))
 
 ## The building the player is looking at / standing next to.
 func focus_building() -> Node:
@@ -164,6 +244,45 @@ func focus_building() -> Node:
 			best = s
 	return best
 
+## E 로 쓰는 건물 곁: 가까운 건물 하나 (src/base/index.ts linkFor: range = radius + 2.4).
+## 연구소·상점은 allies.gd 의 station_near 가 맡으므로 여기서는 제외한다.
+func near_building(p: Vector3) -> Node:
+	var best: Node = null
+	var bd := INF
+	for s in structures:
+		if s.dead or s.kind == "lab" or s.kind == "shop":
+			continue
+		var d := Vector2(s.global_position.x - p.x, s.global_position.z - p.z).length()
+		if d <= s.radius + 2.4 and d < bd:
+			bd = d
+			best = s
+	return best
+
+## actionFor(): 다친 건물은 수리, 아니면 준비 단계에 강화, 포탑이면 내구도 안내. 없으면 {}.
+func building_action(s: Node) -> Dictionary:
+	var name := I18n.bld_name(s.kind)
+	if s.hp < s.max_hp - 0.5:
+		return {"kind": "repair", "label": I18n.t("build.act.repair", {"name": name, "c": I18n.cost_text(repair_cost(s))})}
+	var u := upgrade_info(s) if game.phase == "prep" else {}
+	if not u.is_empty():
+		return {"kind": "upgrade", "label": I18n.t("build.act.upgrade", {"name": name, "lv": s.level + 1, "c": I18n.cost_text(u.upCost, int(u.upGold))})}
+	if s.def.has("turret"):
+		return {"kind": "info", "label": I18n.t("build.act.durability", {"name": name, "n": s.ammo, "max": s.def.turret.ammo})}
+	return {}
+
+## near_building() only when E would really do something there (repair / upgrade).
+func actionable_near(p: Vector3) -> Node:
+	var b := near_building(p)
+	if b and building_action(b).get("kind", "") in ["repair", "upgrade"]:
+		return b
+	return null
+
+func perform(s: Node, a: Dictionary) -> bool:
+	match a.get("kind", ""):
+		"repair": return repair(s)
+		"upgrade": return upgrade(s)
+	return false
+
 func repair_cost(s: Node) -> Dictionary:
 	var out := {}
 	var k: float = 0.5 * (1.0 - s.hp / s.max_hp)
@@ -177,6 +296,8 @@ func repair(s: Node) -> bool:
 	if s.hp >= s.max_hp or not game.spend(repair_cost(s)):
 		return false
 	s.hp = s.max_hp
+	if s.def.has("turret"):
+		persist_turrets(true)
 	return true
 
 func upgrade_info(s: Node) -> Dictionary:
@@ -193,6 +314,8 @@ func upgrade(s: Node) -> bool:
 	s.set_level(s.level + 1)
 	s.max_hp = roundf(float(s.def.hp) * (1.0 + float(game.meta.get("turretHpMul", 0.0))) * (1.0 + 0.25 * (s.level - 1)))
 	s.hp = s.max_hp
+	game.hazards.ring(s.global_position, s.radius, 0.35, Color(0.3, 1, 0.5))
+	persist_turrets(true)
 	return true
 
 ## Demolish refunds DEMOLISH_REFUND of the cost scaled by remaining hp.
@@ -203,6 +326,8 @@ func demolish(s: Node) -> void:
 	structures.erase(s)
 	s.dead = true
 	s.queue_free()
+	if s.def.has("turret"):
+		persist_turrets(true)
 
 # ── 핵 ───────────────────────────────────────────────────────────────
 

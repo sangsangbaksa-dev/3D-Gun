@@ -15,6 +15,7 @@ const BaseScript := preload("res://scripts/base.gd")
 const StationScript := preload("res://scripts/station_panel.gd")
 const PauseScript := preload("res://scripts/pause_menu.gd")
 const GatheringScript := preload("res://scripts/gathering.gd")
+const RoamersScript := preload("res://scripts/roamers.gd")
 const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
 const BuildOverlay := preload("res://scripts/build_overlay.gd")
@@ -35,6 +36,7 @@ var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
 var gathering: Node3D
+var roamers: Node
 var gather_focus := {}
 var lbl_res: Label
 var lbl_prompt: Label
@@ -102,6 +104,9 @@ func _ready() -> void:
 	gathering.game = self
 	add_child(gathering)
 	gathering.gathered.connect(_on_gathered)
+	roamers = RoamersScript.new()
+	roamers.game = self
+	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
 	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
@@ -305,6 +310,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				var st: String = allies.station_near(player.global_position)
 				if st != "" and not base.building:
 					station.open(st)
+				elif not base.building and gathering.nearest_ready(player.global_position).is_empty() and base.actionable_near(player.global_position):
+					var b: Node = base.actionable_near(player.global_position)
+					base.perform(b, base.building_action(b))
 				elif _near_core() and gathering.nearest_ready(player.global_position).is_empty():
 					var a := core_action()
 					if a.get("kind") == "repair":
@@ -704,6 +712,8 @@ func _refresh_base_hud() -> void:
 			gather_bar.position = Vector2((hud.size.x - gather_bar.size.x) * 0.5, hud.size.y * 0.5 + 72)
 	elif allies.station_near(player.global_position) != "" and not base.building:
 		prompt = allies.tt("prompt." + allies.station_near(player.global_position))
+	elif not base.building and base.near_building(player.global_position) != null and (base.actionable_near(player.global_position) != null or (not _near_core() and not base.building_action(base.near_building(player.global_position)).is_empty())):
+		prompt = base.building_action(base.near_building(player.global_position)).label
 	elif _near_core():
 		prompt = core_action().get("label", "")
 	lbl_prompt.text = prompt

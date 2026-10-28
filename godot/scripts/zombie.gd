@@ -10,7 +10,10 @@ var wave := 1
 var elite := false
 var lane := 0
 var wp := 0
-var wave_zombie := true
+var wave_zombie := true # false: 구역 배회 좀비 (roamers.gd) - 레인도 핵도 건물도 노리지 않는다
+var home := {}          # 배회 구역 {x, z, r, zone}
+var slow_mul := 1.0     # 감속 함정 (structure.gd) 이 매 맥박 0.2초씩 건다
+var slow_t := 0.0
 var game: Node # game.gd: player, core, hazards
 
 var hp: float
@@ -58,6 +61,8 @@ var _detour := Vector3.ZERO
 var _detour_t := 0.0
 var _stuck_t := 0.0
 var _last_pos := Vector3.ZERO
+var _wander := Vector3.ZERO
+var _wander_t := 0.0
 
 func _ready() -> void:
 	var s := GameData.zombie_stats(wave, type)
@@ -284,6 +289,10 @@ func _physics_process(dt: float) -> void:
 			_mats[i].emission = _base_cols[i].lerp(Color(0.9, 0.7, 0.6), k)
 	if dead:
 		return
+	if slow_t > 0.0:
+		slow_t -= dt
+		if slow_t <= 0.0:
+			slow_mul = 1.0
 	if stunned:
 		# 기절: 휘청이며 서 있다가 stunTime 뒤 분노해서 깬다
 		stun_t -= dt
@@ -351,7 +360,8 @@ func _pick_target() -> void:
 	target = null
 	var bd := INF
 	var dp := _flat_dist(p.global_position) * 0.9
-	if not p.dead and dp <= float(r.aggroPlayer) * (1.6 if is_boss else 1.0):
+	var aggro: float = float(r.aggroPlayer) if wave_zombie else float(r.roamAggro)
+	if not p.dead and dp <= aggro * (1.6 if is_boss else 1.0):
 		target = p
 		bd = dp
 	# 아군도 노린다 (sim.ts pickTarget: aggroAlly 안의 가장 가까운 아군, 가까울 때)
@@ -365,7 +375,7 @@ func _pick_target() -> void:
 	var sb: Node3D = null
 	var sd: float = r.aggroStructure
 	for s in game.base.structures:
-		if s.dead:
+		if s.dead or not wave_zombie: # 배회 좀비는 기지 건물에 관심 없다
 			continue
 		var d: float = _flat_dist(s.global_position) - s.radius
 		if d < sd:
@@ -375,7 +385,7 @@ func _pick_target() -> void:
 		var d2 := _flat_dist(sb.global_position)
 		if d2 <= float(r.aggroStructure) + sb.radius and d2 < bd:
 			target = sb
-	if target == null and wp >= _lane_points().size() and not game.core_dead:
+	if target == null and wave_zombie and wp >= _lane_points().size() and not game.core_dead:
 		target = game.core
 
 func _lane_points() -> Array:
@@ -393,6 +403,18 @@ func _lane_goal() -> Vector3:
 		wp += 1
 	return game.core.global_position
 
+## 배회 좀비: 구역(home) 안의 임의 지점을 3~8초마다 새로 고른다 (sim.ts wanderGoal)
+func _wander_goal(dt: float) -> Vector3:
+	if home.is_empty():
+		return global_position
+	_wander_t -= dt
+	if _wander_t <= 0.0 or Vector2(_wander.x - global_position.x, _wander.z - global_position.z).length() < 1.2:
+		_wander_t = 3.0 + _rand() * 5.0
+		var a := _rand() * TAU
+		var d := sqrt(_rand()) * float(home.r)
+		_wander = Vector3(float(home.x) + cos(a) * d, 0, float(home.z) + sin(a) * d)
+	return _wander
+
 ## Choose what to do this frame; returns the wanted horizontal velocity.
 func _think(dt: float) -> Vector3:
 	retarget_t -= dt
@@ -403,7 +425,7 @@ func _think(dt: float) -> Vector3:
 		return Vector3.ZERO
 	if not is_boss and _ability_think():
 		return Vector3.ZERO
-	var goal: Vector3 = target.global_position if target else _lane_goal()
+	var goal: Vector3 = target.global_position if target else (_lane_goal() if wave_zombie else _wander_goal(dt))
 	var to := goal - global_position
 	to.y = 0
 	var dist := to.length()
@@ -427,7 +449,9 @@ func _think(dt: float) -> Vector3:
 			return Vector3.ZERO
 	elif dist < 1.2:
 		return Vector3.ZERO
-	var sp := speed * (float(GameData.enemy_rules.rageSpeed) if rage else 1.0) * (1.4 if frenzy > 0.0 else 1.0) * absf(sign)
+	var sp := speed * (float(GameData.enemy_rules.rageSpeed) if rage else 1.0) * (1.4 if frenzy > 0.0 else 1.0) * absf(sign) * slow_mul
+	if target == null and not wave_zombie:
+		sp *= 0.45 # 목표 없이 어슬렁거릴 때는 느리게
 	var v := dir * sign * sp
 	if sign > 0.0:
 		_face(goal)
