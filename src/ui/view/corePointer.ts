@@ -20,7 +20,7 @@ const MARGIN = 46;
 const CSS = `
 #ztCoreAlert{position:fixed;inset:0;z-index:36;pointer-events:none;font-family:var(--zt-font,'Pretendard','Malgun Gothic',system-ui,sans-serif)}
 #ztCoreAlert .glow{position:absolute;inset:0;opacity:0;box-shadow:inset 0 0 90px 18px #E0303Acc}
-#ztCoreAlert .ban{position:absolute;left:50%;top:104px;transform:translateX(-50%);display:none;text-align:center;white-space:nowrap}
+#ztCoreAlert .ban{position:absolute;left:50%;top:190px;transform:translateX(-50%);display:none;text-align:center;white-space:nowrap}
 #ztCoreAlert .ban b,#ztCoreAlert .ban i{display:block;font-style:normal;color:#ffebe6;text-shadow:2px 2px 0 #000d;border:1px solid #E0303A;border-radius:8px;padding:6px 18px}
 #ztCoreAlert .ban b{font-size:24px;font-weight:800;background:#590d12d1}
 #ztCoreAlert .ban i{display:none;margin-top:6px;font-size:15px;font-weight:700;background:#121a20cc}
@@ -99,12 +99,12 @@ function build() {
 }
 
 export const CorePointerSystem: System = {
-  init() {
+  init(ctx) {
     build();
     onLocaleChange(refreshTexts);
     events.on('core:damaged', ({ hp, maxHp }) => onHp(hp, maxHp));
     events.on('run:start', () => { alert.reset(); emphKey = ''; coreMax = 0; coreAlertProbe.events.length = 0; coreAlertProbe.alarms = 0; });
-    if (import.meta.env.DEV) (window as unknown as { __coreAlert: unknown }).__coreAlert = coreAlertProbe;
+    if (import.meta.env.DEV) (window as unknown as { __coreAlert: unknown }).__coreAlert = Object.assign(coreAlertProbe, { ctx });
   },
 
   update(dt, ctx) {
