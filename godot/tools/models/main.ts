@@ -9,6 +9,8 @@ import { buildZombieModel } from '../../../src/enemies/view/models';
 import { buildGun } from '../../../src/player/view/guns';
 import { buildWorldView } from '../../../src/core/worldview';
 import { populateWorldObstacles } from '../../../src/core/world';
+import { MAP } from '../../../src/data/map';
+import { buildRuins } from './ruins';
 import { buildModel, buildCoreModel } from '../../../src/base/view/models';
 import { buildNodeModel } from '../../../src/gathering/view/models';
 import type { GatherNode } from '../../../src/gathering/logic/nodes';
@@ -329,7 +331,18 @@ async function nodes() {
 async function world() {
   const src = new THREE.Scene();
   const { obstacles, boxObstacles } = populateWorldObstacles(src);
+  // 건물은 worldview 가 짓지 못하게 잠시 종류를 바꿔 숨기고, ruins.ts 가 폐허로 따로 짓는다
+  const buildings = MAP.props.filter((p) => p.kind === 'building');
+  buildings.forEach((p) => ((p as { kind: string }).kind = 'ruin'));
   buildWorldView(src);
+  buildings.forEach((p) => ((p as { kind: string }).kind = 'building'));
+  buildRuins(src, buildings);
+  // 시작 지점 둘레의 어두운 원형 띠: 기지 콘크리트 에이프런 링(반경 13.2~16.8m)이 어두운 단색 판으로 지면 위에 얹혀 경계가 또렷하다.
+  // 이 링은 빼고, 같은 자리의 지형 정점색(기지 바닥 톤이 부드럽게 번짐)이 그대로 보이게 한다.
+  for (const o of [...src.children]) {
+    const g = (o as THREE.Mesh).geometry as THREE.RingGeometry | undefined;
+    if (g && g.type === 'RingGeometry' && Math.abs(g.parameters.innerRadius - 13.2) < 1e-6) src.remove(o);
+  }
   const scene = new THREE.Scene();
   const baked = bake(src, 64);
   baked.name = 'world';
