@@ -37,7 +37,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_V and not game.player.dead:
+		if event.keycode == KEY_V and not game.player.dead and (visible or not get_tree().paused): # 일시정지·다른 창 위로 열면 닫을 때 게임이 멋대로 재개된다
 			toggle()
 			get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_ESCAPE and visible:

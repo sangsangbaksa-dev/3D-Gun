@@ -77,6 +77,8 @@ var station: CanvasLayer
 var samples := 0
 var samples_sp := 0
 var _t := 0.0
+var _toast_tw: Tween
+var _banner_tw: Tween
 
 func _ready() -> void:
 	rng.randomize()
@@ -468,18 +470,23 @@ func _wave_cleared() -> void:
 	for b in base.structures:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
-	prep_left = PREP_TIME
+	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
 	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
 
 func _on_core_destroyed() -> void:
 	core_dead = true
+	if phase == "ended": # 플레이어가 먼저 쓰러졌으면 사망 사유를 바꾸지 않는다
+		return
 	lose_reason = "core"
 	player.die()
 
 func toast(text: String) -> void:
 	lbl_toast.text = text
 	lbl_toast.modulate.a = 1.0
+	if _toast_tw:
+		_toast_tw.kill() # 앞선 토스트의 페이드가 새 글자를 일찍 지우지 않게
 	var tw := create_tween()
+	_toast_tw = tw
 	tw.tween_interval(2.6)
 	tw.tween_property(lbl_toast, "modulate:a", 0.0, 0.6)
 
@@ -653,7 +660,10 @@ func _label(parent: Control, font_size: int, preset: int, pos: Vector2) -> Label
 func _banner(text: String) -> void:
 	lbl_center.text = text
 	lbl_center.modulate.a = 1.0
+	if _banner_tw:
+		_banner_tw.kill()
 	var tw := create_tween()
+	_banner_tw = tw
 	tw.tween_interval(1.6)
 	tw.tween_property(lbl_center, "modulate:a", 0.0, 0.6)
 

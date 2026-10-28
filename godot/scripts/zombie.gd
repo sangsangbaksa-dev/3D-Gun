@@ -260,7 +260,7 @@ func _wake() -> void:
 	state = "chase"
 	rage = true
 	atk_t = 0.6
-	_body.rotation.x = 0.0
+	_body.rotation.x = -1.25 if type == "crawler" else 0.0 # 기어다니는 좀비는 계속 눕혀 둔다
 
 ## Vaccine worked: leave the wave quietly (no gold) so allies.gd can stand an ally here.
 func convert_to_ally() -> void:
