@@ -104,7 +104,7 @@ func _lane_name(i: int) -> String:
 ## 핵을 치고 있는 좀비의 레인 (핵에서 가장 가까운 살아 있는 좀비).
 func _attacker_lane() -> int:
 	var best := -1
-	var best_d := game.core.radius + 7.0
+	var best_d: float = float(game.core.radius) + 7.0
 	var c: Vector3 = game.core.global_position
 	for z in game.zombies_root.get_children():
 		if z.dead:
