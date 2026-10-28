@@ -126,7 +126,9 @@ func _ready() -> void:
 	launch = _button(bottom, 28, Vector2(280, 60))
 	launch.add_theme_stylebox_override("normal", _box(Color("ff8a2a"), Color("ffb070")))
 	launch.add_theme_stylebox_override("hover", _box(Color("ffa04d"), Color("ffd0a0")))
-	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+	launch.add_theme_stylebox_override("pressed", _box(Color("e8761c"), Color("ffb070")))
+	launch.add_theme_stylebox_override("hover_pressed", _box(Color("e8761c"), Color("ffb070")))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		launch.add_theme_color_override(c, Color("07090d"))
 	launch.pressed.connect(_launch)
 	toast_label = _label(root, 16, Color(1, 0.6, 0.4))

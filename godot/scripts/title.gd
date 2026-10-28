@@ -145,6 +145,9 @@ func _launch_block() -> void:
 		var sb := _box(states[st], TEAL if st == "hover" else Color(TEAL, 0.0), 6, 2 if st == "hover" else 0, Vector4(44, 8, 44, 8))
 		sb.shadow_color = Color(ORANGE, 0.55)
 		sb.shadow_size = 14
+		if st == "focus":
+			# 포커스 스타일은 normal 위에 겹쳐 그려진다. 같은 색으로 채우면 그림자까지 겹쳐 눌린 것처럼 보이므로 윤곽선만 둔다.
+			sb = _box(Color(0, 0, 0, 0), Color(1, 1, 1, 0.55), 6, 2, Vector4(44, 8, 44, 8))
 		btn.add_theme_stylebox_override(st, sb)
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		btn.add_theme_color_override(c, Color("07090d"))
