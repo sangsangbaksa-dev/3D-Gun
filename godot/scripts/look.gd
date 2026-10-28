@@ -10,9 +10,9 @@ var game: Node
 
 # 팔레트: bg #10141a, teal #2EE6D6, orange #FF8A2A, red #E0303A (atmosphere.ts LOOKS 그대로)
 const LOOKS := {
-	"prep": {"top": 0x1d2a33, "horizon": 0x8c6650, "fog": 0x65524a, "fog_near": 48.0, "fog_far": 248.0, "sun": 1.5, "sun_color": 0xffbb85, "hemi": 1.08, "hemi_sky": 0x5f8290, "hemi_ground": 0x3e352c, "ember": 0.35},
-	"combat": {"top": 0x16141c, "horizon": 0x6e3d3e, "fog": 0x45292d, "fog_near": 38.0, "fog_far": 188.0, "sun": 1.1, "sun_color": 0xe99a6a, "hemi": 0.86, "hemi_sky": 0x4c6a78, "hemi_ground": 0x3a2a26, "ember": 0.7},
-	"ended": {"top": 0x0f1a1c, "horizon": 0x3d5b5a, "fog": 0x25393a, "fog_near": 28.0, "fog_far": 130.0, "sun": 0.55, "sun_color": 0xb8c0cc, "hemi": 0.6, "hemi_sky": 0x1a4a48, "hemi_ground": 0x1c2226, "ember": 0.1},
+	"prep": {"top": 0x4a6272, "horizon": 0x9c6e54, "fog": 0x65524a, "fog_near": 48.0, "fog_far": 248.0, "sun": 1.5, "sun_color": 0xffbb85, "hemi": 1.08, "hemi_sky": 0x5f8290, "hemi_ground": 0x3e352c, "ember": 0.35},
+	"combat": {"top": 0x3a3646, "horizon": 0x7e4644, "fog": 0x45292d, "fog_near": 38.0, "fog_far": 188.0, "sun": 1.1, "sun_color": 0xe99a6a, "hemi": 0.86, "hemi_sky": 0x4c6a78, "hemi_ground": 0x3a2a26, "ember": 0.7},
+	"ended": {"top": 0x25403f, "horizon": 0x43666a, "fog": 0x25393a, "fog_near": 28.0, "fog_far": 130.0, "sun": 0.55, "sun_color": 0xb8c0cc, "hemi": 0.6, "hemi_sky": 0x1a4a48, "hemi_ground": 0x1c2226, "ember": 0.1},
 }
 # 구역 안개: [색, 세기, 안개 거리 배율] — 구역에 들어서면 안개가 그 색으로 서서히 기운다
 const ZONE_FOG := {
@@ -49,21 +49,29 @@ void sky() {
 		COLOR = mix(hc, vec3(dot(hc, vec3(.3, .55, .15))), hemi_desat) * hemi;
 	} else {
 		float y = max(vP.y, 0.);
-		// 수평선에서 천정까지 부드러운 그라데이션 (흐린 노을)
-		vec3 c = mix(hor, top, smoothstep(0., .9, pow(y, .62)));
-		// 해 쪽 수평선이 은은히 밝아진다
-		vec2 hd = normalize(sun_dir.xz + 1e-4);
-		float az = max(dot(normalize(vP.xz + 1e-4), hd), 0.);
-		c += sun_col * .16 * pow(az, 5.) * (1. - smoothstep(0., .4, y));
-		// 구름 층: 하늘 돔을 평면에 투영해 3겹 노이즈로. 멀리(지평선)는 촘촘하고 천정은 넓다. 대비는 낮게
-		vec2 cp = vP.xz / (y + .25) * .85 + vec2(t * .006, t * .0025);
-		float f = n(cp) * .5 + n(cp * 2.1 + 7.) * .3 + n(cp * 4.3 + 3.) * .2;
-		float cl = smoothstep(.4, .82, f) * smoothstep(0., .22, y);
-		vec3 cloud = mix(top, hor, .5) * 1.12;
-		c = mix(c, cloud, cl * .55);
-		// 작은 해 하나 (구름에 가려진다) + 아주 옅은 번짐
+		// 수평선(따뜻한 노을) -> 중간(탁한 보랏빛 회색) -> 천정(푸른 회색). 천정도 새까맣지 않게 top 을 밝게 쓴다
+		vec3 mid = mix(hor, top, .55) * vec3(1.0, 1.02, 1.08);
+		vec3 c = mix(hor, mid, smoothstep(0., .32, pow(y, .7)));
+		c = mix(c, top, smoothstep(.3, 1., y));
+		// 해 쪽 하늘이 은은히 밝아진다
 		float s = max(dot(vP, sun_dir), 0.);
-		c += sun_col * (pow(s, 2200.) * 1.5 + pow(s, 70.) * .08) * (1. - cl * .85);
+		c += sun_col * (.22 * pow(s, 6.) + .1 * pow(s, 2.)) * (1. - .5 * smoothstep(.2, 1., y));
+		// 구름: 하늘을 평면에 투영해 3겹 노이즈. 천정까지 퍼져 있고 지평선 쪽은 흐려진다
+		vec2 cp = vP.xz / (y + .14) * 1.5 + vec2(t * .008, t * .003);
+		float f = n(cp) * .55 + n(cp * 2.1 + 7.) * .3 + n(cp * 4.3 + 3.) * .15;
+		vec2 so = normalize(sun_dir.xz + 1e-4) * .09;
+		float f2 = n(cp + so) * .55 + n(cp * 2.1 + 7. + so * 2.) * .3 + n(cp * 4.3 + 3. + so * 4.) * .15;
+		float cov = smoothstep(.36, .72, f) * smoothstep(.0, .16, y);
+		// 해 쪽으로 향한 구름 가장자리는 밝고 따뜻하게, 반대쪽은 어둡게
+		float lit = clamp(.5 + (f - f2) * 5., 0., 1.);
+		vec3 cdark = mix(top, hor, .3) * .72;
+		vec3 clite = mix(mid, sun_col, .38) * 1.18;
+		vec3 cloud = mix(cdark, clite, lit);
+		c = mix(c, cloud, cov * .72);
+		// 작은 선명한 해: 또렷한 원반 + 좁은 번짐 (구름에 일부 가려진다)
+		float disc = smoothstep(.99955, .99975, s);
+		float halo = pow(s, 300.) * .35 + pow(s, 40.) * .07;
+		c += (vec3(1., .94, .78) * disc * 2.2 + sun_col * halo) * (1. - cov * .8);
 		// 지평선 안개
 		c = mix(fog_c, c, smoothstep(-.02, .16, vP.y));
 		// 웹은 이 선형 값을 sRGB 로 바꿔 화면에 쓴다. Compatibility 렌더러는 셰이더 값을 그대로 화면에 쓰므로(톤매핑 Linear) 여기서 바꾼다
