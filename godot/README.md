@@ -16,7 +16,12 @@
 - 핵: 레인 끝까지 온 좀비가 공격. 부서지면 출격 실패. 웨이브 클리어 시 30% 회복 + 보너스 코인. N 으로 다음 웨이브 바로 시작
 - 맞으면 하얗게 번쩍이고, 죽으면 뒤로 넘어짐. 경고 원, 폭발, 산성 침, 독가스 연출
 - HUD: 웨이브·처치·코인·남은 좀비, 체력·핵 바, 보스 체력 바, 새 적·보스 알림, 탄약, 퍼짐을 따라 벌어지는 조준선, 명중 표시
-- 사망 카드: 기록 표시 후 타이틀로
+- 사망 카드: 기록 표시 후 본부 또는 타이틀로
+- 본부(2D, `hub.tscn`): 사망·핵 파괴 때 번 재화(시작 지급 제외)의 일부와 도달 웨이브·처치 보너스가 지갑에 쌓임.
+  영구 업그레이드 구매(분류 5개), 생산 시설 8종(본부 화면을 보는 동안만 수입이 쌓이는 방치 수익, 오프라인 정산 없음),
+  출격 전 시작 웨이브 구매(도달한 최고 웨이브까지, 웨이브마다 골드·철·부품·샘플 비용). 저장은 `user://save.json`
+  (웹 빌드는 원본 게임과 같은 localStorage 키라 두 버전이 진행을 공유; 예전 `user://meta.json` 은 처음 한 번 읽어 옴).
+  스킬 트리와 지갑 교환소는 아직 없음
 
 수치(체력, 속도, 피해, 탄창, 재장전…)는 모두 웹 게임의 `src/data` 에서 그대로 가져옵니다.
 
@@ -57,6 +62,13 @@ godot --headless --path godot --fixed-fps 60 -s res://tests/enemies_test.gd
 좀비 15종이 하나씩 나와 플레이어에게 피해를 주는지, 처치 코인이 맞는지, 레인 좀비가 핵까지 와서 때리는지,
 10웨이브에 보스가 나오는지 확인합니다 (`ENEMIES ... -> PASS`).
 
+```bash
+godot --headless --path godot --fixed-fps 60 -s res://tests/hub_test.gd
+```
+
+본부 규칙(업그레이드·시설 수입·시작 웨이브 비용·런 정산)과 저장 파일(저장·불러오기, 깨진 값 거르기, 깨진 파일), 게임 장면으로의
+인계(시작 웨이브, 공격력 배율, 시작 지급 제외)를 확인합니다 (`HUB ... -> PASS`). 저장은 임시 파일에만 쓰고 실제 저장은 건드리지 않습니다.
+
 ### 화면 확인 (디자인)
 
 ```bash
@@ -82,8 +94,13 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `scripts/weapon_shop.gd` | V 무기 창 (구매·강화·장착) |
 | `scripts/zombie.gd` | 좀비 15종: 레인 이동, 목표 선택, 근접 공격, 특수 능력, 보스 패턴 (`src/enemies/logic/sim.ts` 이식) |
 | `scripts/hazards.gd` | 범위 공격과 연출: 경고 원, 폭발, 산성 침, 폭격, 독가스·산성 웅덩이 |
+| `scripts/hub.gd`, `scenes/hub.tscn` | 2D 본부 화면 (지갑, 업그레이드·시설 카드, 시작 웨이브, 출격) |
+| `scripts/hub_logic.gd` | 본부 규칙 (`tycoon2d/logic/economy.ts` 이식): 구매, 방치 수입, 시작 웨이브 비용, 런 정산. 노드 없이 테스트 가능 |
+| `scripts/save.gd` | 자동 로드. 영구 진행·설정 저장/불러오기 |
+| `scripts/meta_bonus.gd` | 영구 업그레이드를 새 런에 적용 (시작 골드·자원, 체력, 총 품질, 시작 웨이브…) |
 | `scripts/core.gd` | 핵 (체력, 피해, 회복) |
 | `assets/art/` | `public/art` 에서 복사한 그림 |
 | `tools/export-data.ts` | `src/data` → JSON |
 | `tests/smoke_test.gd` | 헤드리스 자동 테스트: 전투와 총기 |
 | `tests/enemies_test.gd` | 헤드리스 자동 테스트: 좀비 15종, 레인, 보스 |
+| `tests/hub_test.gd` | 헤드리스 자동 테스트: 본부 규칙, 저장 파일, 시작 웨이브 인계 |

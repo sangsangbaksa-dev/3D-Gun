@@ -20,6 +20,7 @@ var ammo: int
 ## 총기별 보유·강화 레벨·남은 탄. 권총은 기본 지급 (GUN_UNLOCK_GOLD 에 없음)
 var owned := {"pistol": true}
 var lv := {}
+var dmg_mul := 1.0 # 총열 정밀 가공 (본부 영구 업그레이드, meta_bonus.gd)
 var mags := {}
 var reload_left := 0.0
 var cooldown := 0.0
@@ -198,7 +199,7 @@ func stats(id: String) -> Dictionary:
 	if pellets > 1:
 		pellets += l / int(u.pelletEvery)
 	return {
-		"dmg": float(d.dmg) * (1.0 + float(u.dmg) * l),
+		"dmg": float(d.dmg) * (1.0 + float(u.dmg) * l) * dmg_mul,
 		"mag": maxi(1, roundi(float(d.mag) * (1.0 + float(u.mag) * l))),
 		"reload": float(d.reload) * (1.0 - float(u.reload) * l),
 		"spread": float(d.spread) * (1.0 - float(u.spread) * l),

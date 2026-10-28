@@ -1,19 +1,27 @@
 extends Node
 ## Progress that outlives a run (src/core/meta.ts) and the title settings (src/title/settings.ts).
 ## On the web it lives in the same localStorage keys as the classic game at /classic (same origin),
-## so both versions share coins, upgrades, allies and the volume. On desktop: user://meta.json, user://settings.json.
+## so both versions share coins, upgrades, allies and the volume. On desktop: user://save.json (older builds wrote
+## user://meta.json, which is still read once if save.json does not exist yet), user://settings.json.
 ## Fields this port does not use yet are kept as they are, so saving here never drops the classic game's data.
 
 const META_KEY := "zt3d.meta.v1"
 const SETTINGS_KEY := "3dgun.settings.v2"
+const HubLogic := preload("res://scripts/hub_logic.gd")
+const SAVE_PATH := "user://save.json"
+const LEGACY_PATH := "user://meta.json"
 const NUM_KEYS := ["currency", "totalRuns", "bestWave", "bestCheckpoint", "lastSeen", "totalKills"]
 const MAP_KEYS := ["upgrades", "facilities", "wallet", "skills"]
 
 var meta: Dictionary = {}
 var settings: Dictionary = {}
+## Desktop file of the meta save. Tests point this at a scratch file.
+var save_path := SAVE_PATH
+## Wave the next sortie starts at (bought in the headquarters, read once by meta_bonus.gd when the game scene starts).
+var pending_start_wave := 1
 
 func _ready() -> void:
-	meta = _clean_meta(_read(META_KEY, "user://meta.json"))
+	load_meta()
 	var s := _read(SETTINGS_KEY, "user://settings.json")
 	settings = {
 		"volume": clampf(float(s.get("volume", 0.8)), 0.0, 1.0),
@@ -23,6 +31,13 @@ func _ready() -> void:
 	for k in s:
 		if not settings.has(k):
 			settings[k] = s[k]
+
+## loadMeta(): reads the save (or starts fresh when it is missing or broken).
+func load_meta() -> void:
+	var d := _read(META_KEY, save_path)
+	if d.is_empty() and not _web() and save_path == SAVE_PATH:
+		d = _read(META_KEY, LEGACY_PATH)
+	meta = _clean_meta(d)
 
 ## loadMeta(): numbers must be finite, maps hold non-negative numbers, allies need hp > 0.
 func _clean_meta(d: Dictionary) -> Dictionary:
@@ -49,7 +64,7 @@ func _clean_meta(d: Dictionary) -> Dictionary:
 	return m
 
 func save_meta() -> void:
-	_write(META_KEY, "user://meta.json", meta)
+	_write(META_KEY, save_path, meta)
 
 func save_settings() -> void:
 	_write(SETTINGS_KEY, "user://settings.json", settings)
@@ -63,20 +78,20 @@ func add_wallet(k: String, v: float) -> void:
 func upgrade_lv(id: String) -> int:
 	return int(meta.upgrades.get(id, 0))
 
-## bankRun(): part of the gold earned this run (keep ratio) plus a wave/kill bonus goes to the wallet.
-## Resources and samples join when gathering is ported. Returns {gold, newBest}.
-func bank_run(wave: int, kills: int, gold: int) -> Dictionary:
-	var d: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/meta_data.json"))
-	var keep := minf(1.0, float(d.keepBase) + 0.06 * upgrade_lv("e_keep"))
-	var total := floori(gold * keep) + floori(maxf(0.0, wave - 1) * float(d.waveBonusGold) + kills * float(d.killBonusGold))
-	add_wallet("gold", total)
-	meta.currency = float(meta.currency) + total
-	var best := wave > int(meta.bestWave)
-	meta.bestWave = maxf(float(meta.bestWave), wave)
-	meta.totalRuns = float(meta.totalRuns) + 1.0
-	meta.totalKills = float(meta.totalKills) + kills
+## bankRun(): what the run earned (start grant excluded) × keep ratio, plus the wave/kill bonus, goes to the wallet.
+## snap: see hub_logic.gd bank_run(). Returns {gold, kept, waveBonus, keepRatio, newBest}.
+func bank(snap: Dictionary) -> Dictionary:
+	var report := HubLogic.bank_run(meta, snap)
 	save_meta()
-	return {"gold": total, "newBest": best}
+	return report
+
+## Banks a finished game scene (game.gd): gold, resources and samples it holds, minus what the hub gave at the start.
+func bank_game(game: Node) -> Dictionary:
+	return bank({"wave": game.wave, "kills": game.kills, "gold": game.coins, "res": game.res, "samples": game.samples, "samplesSp": game.samples_sp,
+		"grant": game.get_meta("run_grant", {})})
+
+func bank_run(wave: int, kills: int, gold: int) -> Dictionary:
+	return bank({"wave": wave, "kills": kills, "gold": gold})
 
 ## Wipes progress (title settings → reset). Same as resetMeta().
 func reset_meta() -> void:
@@ -102,6 +117,14 @@ func _write(key: String, path: String, d: Dictionary) -> void:
 	if _web():
 		JavaScriptBridge.eval("(function(){try{localStorage.setItem(%s,%s)}catch(e){}})()" % [JSON.stringify(key), JSON.stringify(text)], true)
 	else:
-		var f := FileAccess.open(path, FileAccess.WRITE)
-		if f:
-			f.store_string(text)
+		# 임시 파일에 쓴 뒤 바꿔치기: 쓰다가 꺼져도 예전 저장이 남는다
+		var tmp := path + ".tmp"
+		var f := FileAccess.open(tmp, FileAccess.WRITE)
+		if f == null:
+			return
+		f.store_string(text)
+		f.close()
+		if DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(path)) != OK:
+			var g := FileAccess.open(path, FileAccess.WRITE)
+			if g:
+				g.store_string(text)

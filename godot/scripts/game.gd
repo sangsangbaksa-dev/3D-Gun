@@ -783,7 +783,7 @@ func _draw_scope() -> void:
 func _on_died() -> void:
 	phase = "ended"
 	allies.flush()
-	var report := Save.bank_run(wave, kills, coins)
+	var report := Save.bank_game(self)
 	await get_tree().create_timer(1.0).timeout
 	var layer := CanvasLayer.new()
 	layer.layer = 5
