@@ -89,6 +89,33 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+#status {
+	transition: opacity 0.35s ease;
+}
+
+#status.fade-out {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#status-text {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: calc(10% + 22px);
+	text-align: center;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	font-size: 14px;
+	letter-spacing: 0.2em;
+	color: #ffb070;
+	text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
+	display: none;
+}
+
+#status-progress {
+	height: 6px;
+	accent-color: #ff8a2a;
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
@@ -105,13 +132,14 @@ body {
 
 		<div id="status">
 			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
+			<div id="status-text">LOADING</div>
 			<progress id="status-progress"></progress>
 			<div id="status-notice"></div>
 		</div>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":12041600,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":12127184,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -123,15 +151,48 @@ const engine = new Engine(GODOT_CONFIG);
 	let initializing = true;
 	let statusMode = '';
 
+	const statusText = document.getElementById('status-text');
+	const ko = (navigator.language || '').toLowerCase().startsWith('ko');
+	const T = ko
+		? { load: '로딩 중', init: '게임 준비 중' }
+		: { load: 'LOADING', init: 'STARTING' };
+
+	// 엔진이 시작된 뒤에도 게임이 첫 화면을 그렸다고 알릴 때까지(window.__gdReady) 로딩 화면을 유지한다.
+	let engineStarted = false;
+	let gameReady = false;
+	function finishLoading() {
+		if (!initializing) {
+			return;
+		}
+		initializing = false;
+		statusOverlay.classList.add('fade-out');
+		setTimeout(() => statusOverlay.remove(), 450);
+	}
+	function maybeFinish() {
+		if (engineStarted && gameReady) {
+			finishLoading();
+		}
+	}
+	window.__gdReady = function () {
+		gameReady = true;
+		maybeFinish();
+	};
+
 	function setStatusMode(mode) {
 		if (statusMode === mode || !initializing) {
 			return;
 		}
 		if (mode === 'hidden') {
-			statusOverlay.remove();
-			initializing = false;
+			// 바로 걷지 않고 게임의 준비 신호를 기다린다(신호가 없어도 15초 뒤에는 걷는다).
+			statusProgress.removeAttribute('value');
+			statusText.textContent = T.init;
+			engineStarted = true;
+			setTimeout(finishLoading, 15000);
+			maybeFinish();
 			return;
 		}
+		statusText.style.display = mode === 'progress' ? 'block' : 'none';
+		statusText.textContent = T.load;
 		statusOverlay.style.visibility = 'visible';
 		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
 		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
@@ -204,6 +265,7 @@ const engine = new Engine(GODOT_CONFIG);
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
+					statusText.textContent = T.load + ' ' + Math.floor((current / total) * 100) + '%';
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');
@@ -217,4 +279,5 @@ const engine = new Engine(GODOT_CONFIG);
 		</script>
 	</body>
 </html>
+
 
