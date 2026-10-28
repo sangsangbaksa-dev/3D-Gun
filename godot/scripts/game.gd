@@ -24,6 +24,7 @@ const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 �
 
 var player: CharacterBody3D
 var wave := 0
+var wave_started := false
 var phase := "prep" # prep / combat / ended
 var queue: Array = [] # [{type, lane, elite}]
 var boss_pending := {}
@@ -359,6 +360,7 @@ func _roll(w: int) -> Dictionary:
 
 ## startCombat(): 3~5마리씩 같은 레인에서 몰려오고, 떼거리는 한 무리가 통째로. 10의 배수는 보스 웨이브
 func _start_wave() -> void:
+	wave_started = true
 	wave += 1
 	phase = "combat"
 	var lanes: int = GameData.map.lanes.size()
@@ -412,6 +414,10 @@ func _update_combat(dt: float) -> void:
 	spawn_timer = maxf(spawn_timer, 0.0)
 	if queue.is_empty() and boss_pending.is_empty() and alive == 0:
 		_wave_cleared()
+
+## HUD 웨이브 번호: 아직 한 웨이브도 시작하지 않았으면(시작 웨이브를 산 경우 wave 는 N-1) 곧 시작할 웨이브를 보여 준다
+func shown_wave() -> int:
+	return maxi(wave + (1 if not wave_started else 0), 1)
 
 func remaining() -> int:
 	return alive + queue.size() + (0 if boss_pending.is_empty() else 1)
@@ -670,7 +676,7 @@ func _banner(text: String) -> void:
 func _refresh_hud() -> void:
 	if hud == null:
 		return
-	lbl_top.text = "%s    %s    %s" % [I18n.t("hud.wave", {"n": maxi(wave, 1)}), I18n.t("hud.kills", {"n": kills}), I18n.t("hud.coins", {"n": coins})]
+	lbl_top.text = "%s    %s    %s" % [I18n.t("hud.wave", {"n": shown_wave()}), I18n.t("hud.kills", {"n": kills}), I18n.t("hud.coins", {"n": coins})]
 	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
 	elif phase == "combat":

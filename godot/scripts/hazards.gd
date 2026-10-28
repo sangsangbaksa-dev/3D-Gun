@@ -12,6 +12,8 @@ func targets() -> Array:
 	var out: Array = [game.player]
 	if not game.core_dead:
 		out.append(game.core)
+	for a in get_tree().get_nodes_in_group("allies"): # 웹 sim.ts aoe: 플레이어·아군·건물
+		out.append(a)
 	if game.base:
 		for b in game.base.structures:
 			if not b.dead and b.kind != "trap":
@@ -114,6 +116,9 @@ func _physics_process(dt: float) -> void:
 			var p: Node3D = game.player
 			if not p.dead and Vector2(p.global_position.x - g.pos.x, p.global_position.z - g.pos.z).length() <= g.r:
 				p.take_damage(g.dps * g.every)
+			for a in get_tree().get_nodes_in_group("allies"): # 웹 updateGas: 플레이어와 아군
+				if not a.dead and Vector2(a.global_position.x - g.pos.x, a.global_position.z - g.pos.z).length() <= g.r:
+					a.take_damage(g.dps * g.every)
 		if g.t <= 0.0:
 			g.node.queue_free()
 			_pools.remove_at(i)
