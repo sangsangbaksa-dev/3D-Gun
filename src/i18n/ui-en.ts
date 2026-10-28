@@ -93,7 +93,7 @@ export const EN_UI: Record<string, string> = {
   'keys.bind.move': 'Move', 'keys.bind.roll': 'Roll (brief invulnerability, cooldown)', 'keys.bind.jump': 'Jump',
   'keys.bind.look': 'Look around', 'keys.bind.lookNote': 'If pointer lock fails, use arrow keys or right-drag',
   'keys.bind.lookAlt': 'Look (alternate)', 'keys.bind.shoot': 'Shoot (first click locks pointer)', 'keys.bind.ads': 'Aim (hold)',
-  'keys.bind.reload': 'Reload', 'keys.bind.weapons': 'Switch weapons', 'keys.bind.shop': 'Weapon shop (buy & upgrade)',
+  'keys.bind.reload': 'Reload', 'keys.bind.weapons': 'Switch weapons', 'keys.bind.herbHeal': 'Herb first aid (3 herbs, 40% HP)', 'keys.bind.shop': 'Weapon shop (buy & upgrade)',
   'keys.bind.buildMode': 'Toggle build mode (prep only)', 'keys.bind.buildPick': 'Pick building (build mode)',
   'keys.bind.buildPlace': 'Place building (build mode)', 'keys.bind.demolish': 'Demolish building (partial refund)',
   'keys.bind.repair': 'Repair / upgrade targeted building', 'keys.bind.interact': 'Interact: gather (hold) · core · shop · lab',

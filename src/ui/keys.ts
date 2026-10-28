@@ -22,6 +22,7 @@ export function getKeybinds(): KeyBind[] {
     { keys: ['우클릭', 'RMB'], actionKey: 'keys.bind.ads', group: 'combat' },
     { keys: ['R'], actionKey: 'keys.bind.reload', group: 'combat' },
     { keys: ['1–6'], actionKey: 'keys.bind.weapons', group: 'combat' },
+    { keys: ['G'], actionKey: 'keys.bind.herbHeal', group: 'combat' },
     { keys: ['V'], actionKey: 'keys.bind.shop', group: 'combat' },
     { keys: ['B'], actionKey: 'keys.bind.buildMode', group: 'base' },
     { keys: [buildRange], actionKey: 'keys.bind.buildPick', group: 'base', noteKey: '__buildSlots' },

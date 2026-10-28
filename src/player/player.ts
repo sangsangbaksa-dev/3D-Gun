@@ -86,6 +86,7 @@ export const PlayerSystem: System = {
       fire: playing && input.mouseDown,
       firePressed: playing && input.mouseDown && !prevFire,
       reload: playing && input.pressed.has('KeyR'),
+      heal: playing && input.pressed.has('KeyG'),
       slot: null,
     };
     prevFire = input.mouseDown;
@@ -149,6 +150,7 @@ export const PlayerSystem: System = {
     if (out.switched || out.reloadDone || out.reloadStarted || out.shot) {
       hud.setWeapon(w.current, w.ammo[w.current], magSize(w, state.stats), state.weapons);
     }
+    if (out.healed > 0) hud.healed();
     if (out.hurt) { hud.hurt(Math.min(0.4, out.hurt.dmg / 60)); shake = Math.min(1, shake + 0.55); }
     if (out.died) shake = 1;
 

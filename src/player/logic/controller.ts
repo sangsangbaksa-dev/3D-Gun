@@ -1,15 +1,16 @@
 // 플레이어 컨트롤러: 이동 + 무기 + 피격/사망을 한 프레임에 묶는다. 엔진 비의존.
 // 입력은 FrameIntent, 월드 정보는 FrameEnv 로 받고, 결과는 FrameOut 으로 돌려준다 (view 는 이것만 읽는다).
-import { GUNS, GUN_ORDER, PLAYER, type GunId } from '../../data';
+import { GUNS, GUN_ORDER, HERB_HEAL, PLAYER, type GunId } from '../../data';
 import { MAP } from '../../data/map';
 import { gunName, t } from '../../i18n';
 import { events } from '../../core/events';
-import { state } from '../../core/state';
+import { spend, state } from '../../core/state';
 import type { ZombieRef } from '../../core/entities';
 import { aimOrigin, cameraPose, type CameraPose, type CameraView } from './camera';
 import { stepMovement, type MoveIntent } from './movement';
 import { createPlayerState, type Player } from './player';
 import { createWeaponState, currentSpread, isReloading, magSize, startReload, switchWeapon, tickWeapon, tryFire, type FireResult, type WeaponState } from './weapons';
+import { planHerbHeal } from './heal';
 import type { Rng } from './math';
 
 export interface FrameIntent extends MoveIntent {
@@ -17,6 +18,8 @@ export interface FrameIntent extends MoveIntent {
   /** 이번 프레임에 막 눌렀는가 (단발 총기용) */
   firePressed: boolean;
   reload: boolean;
+  /** 이번 프레임에 약초 응급처치 키(G)를 눌렀는가 */
+  heal?: boolean;
   /** 이번 프레임에 눌린 무기 슬롯 (0부터) 또는 null */
   slot: number | null;
 }
@@ -47,6 +50,8 @@ export interface FrameOut {
   reloadStarted: boolean;
   reloadDone: boolean;
   switched: boolean;
+  /** 이번 프레임에 응급처치로 회복한 체력 (없으면 0) */
+  healed: number;
 }
 
 export class PlayerController {
@@ -58,6 +63,8 @@ export class PlayerController {
   private pendingRun = false;
   /** 단발 총기의 입력 버퍼: 쿨다운이 끝나기 직전에 누른 클릭도 놓치지 않는다 */
   private fireBuf = 0;
+  /** 응급처치 재사용 대기(초) */
+  healCd = 0;
 
   constructor() {
     this.player = createPlayerState(state.stats.maxHp);
@@ -90,7 +97,7 @@ export class PlayerController {
 
   update(dt: number, it: FrameIntent, env: FrameEnv): FrameOut {
     const p = this.player, w = this.weapons, stats = state.stats;
-    const out: FrameOut = { pose: null as unknown as CameraPose, shot: null, hurt: null, died: false, respawned: false, dashed: false, dryFire: false, reloadStarted: false, reloadDone: false, switched: false };
+    const out: FrameOut = { pose: null as unknown as CameraPose, shot: null, hurt: null, died: false, respawned: false, dashed: false, dryFire: false, reloadStarted: false, reloadDone: false, switched: false, healed: 0 };
 
     if (this.pendingRun) this.resetRun(out);
 
@@ -124,6 +131,23 @@ export class PlayerController {
       }
     }
     this.pendingHits.length = 0;
+
+    // 약초 응급처치: 대기시간 + 약초 3개 → 체력 40% 회복
+    this.healCd = Math.max(0, this.healCd - dt);
+    if (it.heal && env.canShoot) {
+      const plan = planHerbHeal(p.hp, p.maxHp, p.dead, this.healCd, state.res.herb);
+      if (plan.ok) {
+        if (spend({ herb: HERB_HEAL.cost })) {
+          p.hp = Math.min(p.maxHp, p.hp + plan.healed);
+          this.healCd = HERB_HEAL.cooldown;
+          out.healed = plan.healed;
+          events.emit('player:healed', { amount: plan.healed });
+          events.emit('toast', { text: t('toast.herbHeal', { n: String(Math.round(plan.healed)) }) });
+        }
+      } else if (plan.reason === 'herb') events.emit('toast', { text: t('toast.herbNeed', { n: String(HERB_HEAL.cost) }) });
+      else if (plan.reason === 'full') events.emit('toast', { text: t('toast.herbFull') });
+      else if (plan.reason === 'cooldown') events.emit('toast', { text: t('toast.herbWait', { s: this.healCd.toFixed(1) }) });
+    }
 
     // 사망 후 아무도 되살리지 않으면 자동 부활 (enemies 가 먼저 hp 를 채우면 위에서 처리된다)
     if (p.dead) {
@@ -204,7 +228,7 @@ export class PlayerController {
     for (const k of Object.keys(state.weaponLv)) delete state.weaponLv[k];
     w.current = 'pistol'; w.reloadLeft = 0; w.cooldown = 0.3; w.bloom = 0;
     for (const id of GUN_ORDER) w.ammo[id] = magSize(w, state.stats, id);
-    p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0;
+    p.maxHp = state.stats.maxHp; p.hp = p.maxHp; p.dead = false; p.deadT = 0; p.iframes = 2; p.dashT = 0; p.kick = 0; this.healCd = 0;
     p.jumpVelocity = 0; p.grounded = true;
     p.x = MAP.playerStart.x; p.z = MAP.playerStart.z; p.yaw = Math.PI; p.pitch = 0.2;
     this.pendingHits.length = 0;
