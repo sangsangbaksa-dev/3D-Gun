@@ -41,13 +41,17 @@ func cap() -> int:
 	for s in game.base.structures:
 		if s.kind == "barracks" and not s.dead:
 			barracks += 1
-	return mini(int(data.allyHardCap), 2 + Save.upgrade_lv("a_cap") + 3 * barracks)
+	return mini(int(data.allyHardCap), int(sk().allyCap) + Save.upgrade_lv("a_cap") + 3 * barracks) # 스킬 사령관: 기본 2 + 레벨당 2
+
+## 스킬 트리 값 (skills.gd stats). 저장된 스킬 레벨에서 바로 계산한다.
+func sk() -> Dictionary:
+	return preload("res://scripts/skills.gd").stats_of(Save.meta)
 
 func dmg_mul() -> float:
-	return 1.0 + 0.08 * Save.upgrade_lv("a_adm")
+	return 1.0 + 0.08 * Save.upgrade_lv("a_adm") + float(sk().allyDmg) - 1.0
 
 func hp_mul() -> float:
-	return 1.0 + 0.12 * Save.upgrade_lv("a_ahp")
+	return 1.0 + 0.12 * Save.upgrade_lv("a_ahp") + float(sk().allyHp) - 1.0
 
 func anchor() -> Vector3:
 	return game.core.global_position
@@ -59,9 +63,12 @@ func craft_time() -> float:
 func craft_left() -> float:
 	return maxf(0.0, craft_time() - float(craft_queue[0].t)) if not craft_queue.is_empty() else 0.0
 
+## vaccineCost(): 재료 절약 스킬(vacCostMul)을 곱하고, 0 이 아닌 재료는 최소 1
 func vaccine_cost(t: int) -> Dictionary:
 	var d: Dictionary = data.vaccines[t]
-	return {"herb": int(d.herb), "parts": int(d.parts), "iron": int(d.iron), "sample": int(d.sample), "sampleSp": int(d.sampleSp)}
+	var m := float(sk().vacCostMul)
+	var f := func(v: int) -> int: return 0 if v <= 0 else maxi(1, floori(v * m + 0.5))
+	return {"herb": f.call(int(d.herb)), "parts": f.call(int(d.parts)), "iron": f.call(int(d.iron)), "sample": f.call(int(d.sample)), "sampleSp": f.call(int(d.sampleSp))}
 
 func can_afford_vaccine(c: Dictionary) -> bool:
 	return int(game.res.herb) >= c.herb and int(game.res.parts) >= c.parts and int(game.res.iron) >= c.iron \
@@ -241,7 +248,7 @@ func chance_for(z: Node) -> float:
 		return 0.0
 	var inj: Dictionary = data.inject
 	var ratio := clampf(z.hp / z.max_hp, 0.0, 1.0) if z.max_hp > 0.0 else 1.0
-	var p: float = float(data.vaccines[t].rate) + (1.0 - ratio) * float(inj.lowHpBonus) + 0.05 * Save.upgrade_lv("a_vac")
+	var p: float = float(data.vaccines[t].rate) + (1.0 - ratio) * float(inj.lowHpBonus) + 0.05 * Save.upgrade_lv("a_vac") + float(sk().vacBonus)
 	if z.is_boss:
 		p -= float(inj.bossPenalty)
 	return clampf(p, float(inj.minRate), float(inj.maxRate))

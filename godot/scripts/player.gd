@@ -10,7 +10,6 @@ signal died
 
 const EYE_HEIGHT := 1.65
 const BASE_FOV := 70.0
-const DASH_CD := 2.0 # calcStats().dashCd 기본값 (스킬 감소는 허브 이식 때)
 
 var P: Dictionary
 var gun_id := "pistol"
@@ -45,7 +44,14 @@ const Ballistics := preload("res://scripts/ballistics.gd")
 ## 사격 반동으로 시선이 위로 튄 각도(라디안, 웹의 p.kick). 시간이 지나면 돌아온다. camera.rotation.x 에는 _kick_applied 만큼 더해져 있다
 var recoil_pitch := 0.0
 var _kick_applied := 0.0
-var recoil_mul := 1.0 # 스킬 '반동 줄이기' (calcStats().recoilMul). 스킬 트리가 오면 여기에 넣는다
+## 스킬 트리 (skills.gd apply(), calcStats() 의 같은 이름 값)
+var recoil_mul := 1.0 # 반동 줄이기
+var dash_cd_time := 2.0 # 날쌘 발: 대시 쿨타임
+var mag_mul := 1.0 # 대용량 탄창
+var reload_mul := 1.0 # 빠른 손
+var spread_mul := 1.0 # 안정된 조준
+var head_mul := 1.0 # 급소 사격
+var speed_mul := 1.0 # 빠른 걸음
 var _bob := 0.0
 var _trigger_was_down := false
 # ── 1인칭 뷰모델 상태 (playerView.ts 이식) ──
@@ -255,9 +261,9 @@ func _move(dt: float) -> void:
 	if Input.is_action_just_pressed("dash") and dash_left <= 0.0 and dash_cd <= 0.0:
 		dash_dir = wish if wish.length() > 0.1 else -transform.basis.z
 		dash_left = P.dashTime
-		dash_cd = DASH_CD
+		dash_cd = dash_cd_time
 		iframes = maxf(iframes, P.dashIframes)
-	var speed: float = P.speed * (P.aimSpeedMul if aiming else 1.0)
+	var speed: float = P.speed * speed_mul * (P.aimSpeedMul if aiming else 1.0)
 	if dash_left > 0.0:
 		dash_left -= dt
 		velocity.x = dash_dir.x * P.dashSpeed
@@ -302,8 +308,8 @@ func stats(id: String) -> Dictionary:
 		pellets += l / int(u.pelletEvery)
 	return {
 		"dmg": float(d.dmg) * (1.0 + float(u.dmg) * l) * dmg_mul,
-		"mag": maxi(1, roundi(float(d.mag) * (1.0 + float(u.mag) * l))),
-		"reload": float(d.reload) * (1.0 - float(u.reload) * l),
+		"mag": maxi(1, roundi(float(d.mag) * mag_mul * (1.0 + float(u.mag) * l))),
+		"reload": float(d.reload) * reload_mul * (1.0 - float(u.reload) * l),
 		"spread": float(d.spread) * (1.0 - float(u.spread) * l),
 		"rate": float(d.rate) * (1.0 - float(u.rate) * l),
 		"pellets": pellets,
@@ -342,7 +348,7 @@ func is_moving() -> bool:
 ## Same formula as currentSpread() in weapons.ts (without skill multipliers yet).
 func current_spread() -> float:
 	var spray := bloom * (1.0 + bloom * 0.45)
-	return float(stats(gun_id).spread) * (1.0 + spray) * (1.35 if is_moving() else 1.0) * (0.5 if aiming else 1.0)
+	return float(stats(gun_id).spread) * (1.0 + spray) * (1.35 if is_moving() else 1.0) * (0.5 if aiming else 1.0) * spread_mul
 
 func _try_fire() -> void:
 	if cooldown > 0.0 or is_reloading():
@@ -392,7 +398,7 @@ func _try_fire() -> void:
 			end = hit.position
 			var head: bool = target.is_head_hit(end)
 			var fall := 1.0 - float(gun.falloff) * clampf(float(hit.t) / range_m, 0.0, 1.0)
-			var dmg: float = float(gs.dmg) * fall * pow(0.7, hits) * (float(P.headshotMul) if head else 1.0)
+			var dmg: float = float(gs.dmg) * fall * pow(0.7, hits) * (float(P.headshotMul) * head_mul if head else 1.0)
 			kill = target.take_hit(dmg, dir) or kill
 			headshot = headshot or head
 			exclude.append(hit.rid)

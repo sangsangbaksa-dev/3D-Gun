@@ -338,7 +338,7 @@ func _physics_process(dt: float) -> void:
 	_animate(dt)
 
 func _move_speed(k := 1.0) -> float:
-	return float(mgr.data.ally.speed) * k
+	return float(mgr.data.ally.speed) * k * (1.0 + 0.1 * Save.skill_lv("aspeed")) # 행군
 
 ## moveTo(): walk toward (tx, tz) until `stop` away. Returns the distance.
 func _move_to(t: Vector3, speed: float, dt: float, stop: float) -> float:
@@ -437,7 +437,7 @@ func _gatherer(dt: float) -> void:
 	if _move_to(node.pos, _move_speed(0.9), dt, 1.2) <= 1.5:
 		act = "work"
 		_turn_to(node.pos - global_position, dt * 8.0)
-		act_t += dt
+		act_t += dt * float(mgr.sk().gatherSpeed) # 채집 속도 스킬은 아군도
 		if act_t >= 3.0:
 			act_t = 0.0
 			carry = {"res": node.res, "amount": 1}

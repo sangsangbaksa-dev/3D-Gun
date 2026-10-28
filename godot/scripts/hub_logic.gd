@@ -144,6 +144,48 @@ static func tick(m: Dictionary, dt: float) -> Dictionary:
 			m.currency = float(m.currency) + v
 	return out
 
+# ── 지갑 교환소 (metaSell · metaBuy) ─────────────────────────────────
+
+static var _res: Dictionary = {}
+
+## Resource prices of the in-sortie shop (game_data.json res: price = base sell, buyPrice).
+static func res_table() -> Dictionary:
+	if _res.is_empty():
+		_res = JSON.parse_string(FileAccess.get_file_as_string("res://data/game_data.json")).res
+	return _res
+
+## exchangeSellUnit(): base price + 교환 협상 (clickGold) bonus, always below the buy price.
+static func sell_unit(m: Dictionary, r: String) -> int:
+	var t := res_table()
+	var base_p := int(t.price[r])
+	var cap_b := maxi(0, int(t.buyPrice[r]) - base_p - 1)
+	return base_p + mini(maxi(0, floori(effect_sum(m, "clickGold"))), cap_b)
+
+static func buy_unit(r: String) -> int:
+	return int(res_table().buyPrice[r])
+
+## metaSell(): sells up to n of a wallet resource for gold. Returns how many were sold.
+static func meta_sell(m: Dictionary, r: String, n: int) -> int:
+	var c := maxi(0, mini(n, floori(bal(m, r))))
+	if c <= 0 or not r in RES:
+		return 0
+	var gold := c * sell_unit(m, r)
+	m.wallet[r] = bal(m, r) - c
+	m.wallet.gold = bal(m, "gold") + gold
+	return c
+
+## metaBuy(): buys up to n of a resource with wallet gold. Returns how many were bought.
+static func meta_buy(m: Dictionary, r: String, n: int) -> int:
+	if n <= 0 or not r in RES:
+		return 0
+	var price := buy_unit(r)
+	var c := mini(n, floori(bal(m, "gold") / price))
+	if c <= 0:
+		return 0
+	m.wallet.gold = bal(m, "gold") - c * price
+	m.wallet[r] = bal(m, r) + c
+	return c
+
 # ── 출격 웨이브 구매 ──────────────────────────────────────────────────
 
 static func max_start_wave(m: Dictionary) -> int:
@@ -182,7 +224,7 @@ static func buy_start_wave(m: Dictionary, target: int) -> String:
 # ── 런 정산 ───────────────────────────────────────────────────────────
 
 ## bankRun(): the part of what the run earned (start grant excluded) that survives death, plus the wave/kill bonus.
-## snap: {wave, kills, gold, res:{}, samples, samplesSp, grant:{gold, res:{}, samples}}. Returns {gold, kept, waveBonus, keepRatio, newBest}.
+## snap: {wave, kills, gold, res:{}, samples, samplesSp, skillPoints, grant:{gold, res:{}, samples, skillPoints}}. Returns {gold, kept, waveBonus, keepRatio, newBest}.
 static func bank_run(m: Dictionary, snap: Dictionary) -> Dictionary:
 	var d := data()
 	var keep := minf(1.0, float(d.keepBase) + effect_sum(m, "keepRatio"))
@@ -191,6 +233,7 @@ static func bank_run(m: Dictionary, snap: Dictionary) -> Dictionary:
 		"gold": floori(maxf(0.0, float(snap.get("gold", 0)) - float(g.get("gold", 0))) * keep),
 		"samples": floori(maxf(0.0, float(snap.get("samples", 0)) - float(g.get("samples", 0))) * keep),
 		"samplesSp": floori(float(snap.get("samplesSp", 0)) * keep),
+		"skillPoints": floori(maxf(0.0, float(snap.get("skillPoints", 0)) - float(g.get("skillPoints", 0)))), # 번 스킬 포인트는 전부 보존
 	}
 	var gres: Dictionary = g.get("res", {})
 	for r in snap.get("res", {}):

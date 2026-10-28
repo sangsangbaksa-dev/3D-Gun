@@ -21,6 +21,9 @@ const HudStyle := preload("res://scripts/hud_style.gd")
 const BuildOverlay := preload("res://scripts/build_overlay.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
 const FloatingText := preload("res://scripts/floating_text.gd")
+const Skills := preload("res://scripts/skills.gd")
+const SkillPanelScript := preload("res://scripts/skill_panel.gd")
+const DeathCardScript := preload("res://scripts/death_card.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -76,6 +79,7 @@ var world: Node3D
 var core_visual: Node3D
 var allies: Node3D
 var station: CanvasLayer
+var skill_panel: CanvasLayer
 var samples := 0
 var samples_sp := 0
 var _t := 0.0
@@ -132,6 +136,9 @@ func _ready() -> void:
 	station = StationScript.new()
 	station.game = self
 	add_child(station)
+	skill_panel = SkillPanelScript.new() # Tab: 스킬 트리
+	skill_panel.game = self
+	add_child(skill_panel)
 	var pause_menu := PauseScript.new()
 	pause_menu.game = self
 	add_child(pause_menu)
@@ -139,6 +146,7 @@ func _ready() -> void:
 	audio.game = self
 	add_child(audio)
 	preload("res://scripts/meta_bonus.gd").apply(self) # 본부 영구 업그레이드
+	Skills.apply(self) # 스킬 트리 (런 경험치 포함)
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
@@ -471,7 +479,7 @@ func spawn_zombie(type: String, pos: Vector3, lane: int, elite: bool) -> Node3D:
 func _on_zombie_killed(z: Node, gold: int) -> void:
 	alive -= 1
 	kills += 1
-	coins += gold
+	coins += Skills.on_kill(self, z, gold)
 	if not z.converted:
 		allies.roll_sample(z.type)
 	if z == boss:
@@ -696,6 +704,7 @@ func _refresh_hud() -> void:
 	if hud == null:
 		return
 	lbl_top.text = "%s    %s    %s" % [I18n.t("hud.wave", {"n": shown_wave()}), I18n.t("hud.kills", {"n": kills}), I18n.t("hud.coins", {"n": coins})]
+	lbl_top.text += "    Lv %d (+%d)" % [Skills.run_level(self), Skills.run_points(self)] # 런 레벨과 이번 판에 번 스킬 포인트
 	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
 	elif phase == "combat":
@@ -827,74 +836,11 @@ func _on_died() -> void:
 	phase = "ended"
 	allies.flush()
 	var report := Save.bank_game(self)
-	await get_tree().create_timer(1.0).timeout
-	var layer := CanvasLayer.new()
-	layer.layer = 5
-	add_child(layer)
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(root)
-	var art := TextureRect.new()
-	art.texture = load("res://assets/art/death.webp")
-	art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.modulate = Color(1, 1, 1, 0.85)
-	root.add_child(art)
-	hud.visible = false
-	# 웹 사망 카드(src/ui/deathScreen.ts): 어두운 유리 패널에 붉은 테두리, 큰 붉은 제목, 주황 버튼
-	var shade := ColorRect.new()
-	shade.color = Color(0.02, 0.0, 0.0, 0.45)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(shade)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(center)
-	var panel := PanelContainer.new()
-	var card := HudStyle.box(Color8(0x12, 0x1a, 0x20, 0xf0), Color8(0xe0, 0x30, 0x3a, 0x88), 14, 1, Vector4(48, 30, 48, 34))
-	card.shadow_color = Color8(0xe0, 0x30, 0x3a, 0x33)
-	card.shadow_size = 32
-	panel.add_theme_stylebox_override("panel", card)
-	panel.custom_minimum_size = Vector2(640, 0)
-	center.add_child(panel)
-	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 14)
-	panel.add_child(box)
-	var title := Label.new()
-	title.text = I18n.t("death.coreTitle" if lose_reason == "core" else "death.title")
-	title.add_theme_font_size_override("font_size", 64)
-	title.add_theme_color_override("font_color", Color8(0xff, 0x3a, 0x44))
-	title.add_theme_color_override("font_shadow_color", Color8(0xe0, 0x30, 0x3a, 0x99))
-	title.add_theme_constant_override("shadow_outline_size", 18)
-	title.add_theme_constant_override("shadow_offset_y", 0)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
-	var sub := Label.new()
-	sub.text = I18n.t("death.sub", {"w": wave, "k": kills, "c": coins})
-	sub.add_theme_font_size_override("font_size", 20)
-	sub.add_theme_color_override("font_color", Color8(0xd6, 0xe4, 0xe8))
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(sub)
-	var bank := Label.new()
-	bank.text = I18n.t("death.bank", {"g": int(report.gold), "best": I18n.t("death.best") if report.newBest else ""})
-	bank.add_theme_font_size_override("font_size", 18)
-	bank.add_theme_color_override("font_color", Color8(0xff, 0xb3, 0x47))
-	bank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(bank)
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 8)
-	box.add_child(gap)
-	var btns := HBoxContainer.new()
-	btns.alignment = BoxContainer.ALIGNMENT_CENTER
-	btns.add_theme_constant_override("separation", 14)
-	box.add_child(btns)
-	var btn := UiKit.button(I18n.t("death.hub"), Vector2(250, 54), true, 22)
-	btn.pressed.connect(func(): Loading.go("res://scenes/hub.tscn"))
-	btns.add_child(btn)
-	var back := UiKit.button(I18n.t("death.back"), Vector2(200, 54), false, 18)
-	back.pressed.connect(func(): Loading.go("res://scenes/title.tscn"))
-	btns.add_child(back)
-	btn.grab_focus()
-	root.modulate.a = 0.0
-	create_tween().tween_property(root, "modulate:a", 1.0, 0.6)
+	report["wave"] = wave
+	report["kills"] = kills
+	# 슬로모션·붉어짐·기록 카드 연출은 death_card.gd
+	var card := DeathCardScript.new()
+	card.game = self
+	card.report = report
+	card.reason = lose_reason
+	add_child(card)
