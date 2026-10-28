@@ -61,6 +61,11 @@ var _detour := Vector3.ZERO
 var _detour_t := 0.0
 var _stuck_t := 0.0
 var _last_pos := Vector3.ZERO
+var _hit_t := 0.0
+var _lod_n := 0
+var _lod_every := 1
+var _lod_check := 0.0
+var _lod_acc := 0.0
 var _wander := Vector3.ZERO
 var _wander_t := 0.0
 
@@ -210,6 +215,7 @@ func take_hit(amount: float, dir: Vector3, by_ally := false) -> bool:
 	var r: Dictionary = GameData.enemy_rules
 	var left := hp - amount * (1.0 if stunned else 1.0 - float(tune.get("armor", 0.0))) # 기절하면 장갑 약점이 드러난다
 	_flash = 0.1
+	_hit_t = 0.18
 	# 체력이 기절 구간이 되는 타격은 확률적으로 죽이지 않고 기절시킨다 (아군 타격, 보스, 자폭 중 제외)
 	if not by_ally and not is_boss and not stunned and state != "spawn" and move != "fuse" \
 			and left <= max_hp * float(r.stunHpRatio) and _rand() < float(r.stunBase):
@@ -240,8 +246,21 @@ func _die(dir: Vector3) -> void:
 	var away := Vector3(dir.x, 0, dir.z).normalized()
 	if away.length() > 0.1:
 		look_at(global_position - away, Vector3.UP)
+	if exploded:
+		_body.visible = false
+		get_tree().create_timer(0.1).timeout.connect(queue_free)
+		return
+	var fall := 0.9 if is_boss else 0.45
+	for a in _arms: # 팔을 휘저으며 쓰러진다
+		var at := create_tween()
+		at.tween_property(a, "rotation:x", 2.8, fall * 0.4)
+		at.tween_property(a, "rotation:x", 0.3, fall * 0.6)
+	for i in _legs.size():
+		create_tween().tween_property(_legs[i], "rotation:x", (-0.6 if i == 0 else 0.5), fall * 0.5)
+	_body.rotation.z = (_rand() - 0.5) * 0.5
 	var tw := create_tween()
-	tw.tween_property(_body, "rotation:x", PI * 0.5, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(_body, "rotation:x", PI * 0.5 + 0.08, fall).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(_body, "rotation:x", PI * 0.5, 0.12)
 	tw.tween_interval(1.6)
 	tw.tween_property(_body, "position:y", -0.6 * scale_k, 0.8)
 	tw.tween_callback(queue_free)
@@ -705,15 +724,64 @@ func _run_boss_act(dt: float) -> Vector3:
 # ── 걷기 연출 ────────────────────────────────────────────────────────
 
 func _animate(dt: float, sp: float) -> void:
-	if state == "windup" or move == "slam":
+	# 먼 좀비는 포즈 갱신 빈도를 낮춘다 (이동·판정은 매 프레임 그대로)
+	_lod_acc += dt
+	_lod_check -= dt
+	if _lod_check <= 0.0:
+		_lod_check = 0.4 + randf() * 0.2
+		var d := _flat_dist(game.player.global_position)
+		_lod_every = 1 if d < 25.0 else (2 if d < 45.0 else (4 if d < 70.0 else 8))
+	_lod_n += 1
+	if _lod_every > 1 and (_lod_n + get_instance_id()) % _lod_every != 0:
 		return
+	var ad := _lod_acc
+	_lod_acc = 0.0
+	_pose(ad, sp)
+
+func _pose(dt: float, sp: float) -> void:
+	_hit_t = maxf(0.0, _hit_t - dt)
+	var hk := _hit_t / 0.18
+	var winding := state == "windup"
+	var k := 1.0 - clampf(state_t / maxf(0.01, float(GameData.enemy_rules.windup)), 0.0, 1.0)
 	if sp > 0.1:
 		_walk += dt * sp * 2.2 / maxf(0.6, scale_k)
 		for i in _legs.size():
 			_legs[i].rotation.x = sin(_walk + PI * i) * 0.6
+	elif not winding:
+		for l in _legs:
+			l.rotation.x = lerpf(l.rotation.x, 0.0, dt * 8.0)
 	var raise := 2.2 if move in ["scream", "summon", "spit", "volley"] else 1.35
+	if move == "slam":
+		raise = 2.9
+	var tor := -_hunch
+	var head := 0.12
+	if winding:
+		raise = lerpf(1.35, 2.6, k) # 공격 예비동작: 팔을 번쩍 들고 몸을 젖힌다
+		tor = -_hunch + 0.3 * k
+		head = 0.12 + 0.35 * k
+	elif atk_t > float(tune.atkCd) - 0.25 and atk_t <= float(tune.atkCd):
+		raise = 0.35 # 내려찍은 직후
+		tor = -_hunch - 0.4
+	elif move in ["scream", "summon"]:
+		head = 0.7
+		tor = -_hunch + 0.25
+	elif move == "leap" and phase == 0:
+		tor = -_hunch - 0.5
+		raise = 0.4
+	if type != "crawler":
+		if _torso:
+			_torso.rotation.x = lerpf(_torso.rotation.x, tor + hk * 0.35, minf(1.0, dt * 14.0))
+		if _head:
+			_head.rotation.x = lerpf(_head.rotation.x, head + hk * 0.4, minf(1.0, dt * 14.0))
 	for i in _arms.size():
-		_arms[i].rotation.x = lerpf(_arms[i].rotation.x, raise + sin(_walk + PI * i) * 0.15, dt * 8.0)
+		var w := 0.0 if winding else sin(_walk + PI * i) * 0.15
+		_arms[i].rotation.x = lerpf(_arms[i].rotation.x, raise + w, minf(1.0, dt * (14.0 if winding else 8.0)))
+	if is_boss and sp > 0.1:
+		_body.position.y = (0.18 if type == "crawler" else 0.0) - absf(sin(_walk)) * 0.05 * scale_k # 쿵쿵 걸음
+	if elite and _flash <= 0.0:
+		var g := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 400.0 + float(get_instance_id() % 7))
+		for i in _mats.size():
+			_mats[i].emission = Color(0.14, 0.1, 0.0).lerp(Color(0.4, 0.3, 0.05), g)
 
 ## The sortie's seeded RNG (tests fix the seed), as a typed float.
 func _rand() -> float:
