@@ -1047,7 +1047,49 @@
    "prod.p_lab.name": "Sample lab",
    "prod.p_lab.desc": "Cultivates zombie samples",
    "prod.p_lab2.name": "Special sample lab",
-   "prod.p_lab2.desc": "Rare special samples"
+   "prod.p_lab2.desc": "Rare special samples",
+   "skill.hp.name": "Tough body",
+   "skill.hp.desc": "Max HP +20",
+   "skill.dash.name": "Quick feet",
+   "skill.dash.desc": "Dash cooldown −0.3s",
+   "skill.dmg.name": "Firepower",
+   "skill.dmg.desc": "Damage +10%",
+   "skill.reload.name": "Fast hands",
+   "skill.reload.desc": "Reload time −13%",
+   "skill.gspeed.name": "Gather speed",
+   "skill.gspeed.desc": "Gather speed +25% (allies too)",
+   "skill.gextra.name": "Bountiful harvest",
+   "skill.gextra.desc": "Bonus gather chance +12%",
+   "skill.mag.name": "Extended mag",
+   "skill.mag.desc": "Magazine +20%",
+   "skill.vrate.name": "Vaccine tuning",
+   "skill.vrate.desc": "Ally conversion +8%",
+   "skill.vcost.name": "Material thrift",
+   "skill.vcost.desc": "Vaccine cost −10%",
+   "skill.stun.name": "Stun rounds",
+   "skill.stun.desc": "Stun chance +10%",
+   "skill.cap.name": "Commander",
+   "skill.cap.desc": "Ally cap +2",
+   "skill.adm.name": "Ally firepower",
+   "skill.adm.desc": "Ally damage +20%",
+   "skill.ahp.name": "Ally resilience",
+   "skill.ahp.desc": "Ally HP +25%",
+   "skill.run.name": "Swift stride",
+   "skill.run.desc": "Move speed +8%",
+   "skill.recoil.name": "Recoil control",
+   "skill.recoil.desc": "Gun recoil −10%",
+   "skill.steady.name": "Steady aim",
+   "skill.steady.desc": "Spread −8%",
+   "skill.hs.name": "Vital shots",
+   "skill.hs.desc": "Headshot damage +12%",
+   "skill.loot.name": "Loot bonus",
+   "skill.loot.desc": "Kill coins +15%",
+   "skill.aspeed.name": "March order",
+   "skill.aspeed.desc": "Ally move speed +10%",
+   "branch.생존": "Survival",
+   "branch.채집": "Gathering",
+   "branch.연구": "Research",
+   "branch.사령": "Command"
   },
   "ko": {
    "wallet.gold": "골드",
@@ -1147,9 +1189,273 @@
    "prod.p_lab.name": "샘플 배양실",
    "prod.p_lab.desc": "좀비 샘플을 배양한다",
    "prod.p_lab2.name": "특수 샘플 연구소",
-   "prod.p_lab2.desc": "희귀한 특수 샘플을 얻는다"
+   "prod.p_lab2.desc": "희귀한 특수 샘플을 얻는다",
+   "skill.hp.name": "튼튼한 몸",
+   "skill.hp.desc": "최대 체력 +20",
+   "branch.생존": "생존",
+   "skill.dash.name": "날쌘 발",
+   "skill.dash.desc": "대시 쿨타임 -0.3초",
+   "skill.dmg.name": "화력 강화",
+   "skill.dmg.desc": "공격력 +10%",
+   "skill.reload.name": "빠른 손",
+   "skill.reload.desc": "재장전 시간 -13%",
+   "skill.gspeed.name": "채집 속도",
+   "skill.gspeed.desc": "채집 속도 +25% (아군 포함)",
+   "branch.채집": "채집",
+   "skill.gextra.name": "풍작",
+   "skill.gextra.desc": "추가 획득 확률 +12%",
+   "skill.mag.name": "대용량 탄창",
+   "skill.mag.desc": "탄창 +20%",
+   "skill.vrate.name": "백신 개량",
+   "skill.vrate.desc": "아군화 성공률 +8%",
+   "branch.연구": "연구",
+   "skill.vcost.name": "재료 절약",
+   "skill.vcost.desc": "백신 재료 -10%",
+   "skill.stun.name": "기절 사격",
+   "skill.stun.desc": "기절 확률 +10%",
+   "skill.cap.name": "사령관",
+   "skill.cap.desc": "아군 상한 +2",
+   "branch.사령": "사령",
+   "skill.adm.name": "아군 강화",
+   "skill.adm.desc": "아군 공격력 +20%",
+   "skill.ahp.name": "아군 맷집",
+   "skill.ahp.desc": "아군 체력 +25%",
+   "skill.run.name": "빠른 걸음",
+   "skill.run.desc": "이동 속도 +8%",
+   "skill.steady.name": "안정된 조준",
+   "skill.steady.desc": "탄 퍼짐 -8%",
+   "skill.recoil.name": "반동 줄이기",
+   "skill.recoil.desc": "총기 반동 -10%",
+   "skill.hs.name": "급소 사격",
+   "skill.hs.desc": "헤드샷 피해 +12%",
+   "skill.loot.name": "전리품",
+   "skill.loot.desc": "처치 코인 +15%",
+   "skill.aspeed.name": "행군",
+   "skill.aspeed.desc": "아군 이동 속도 +10%"
   }
  },
+ "skills": [
+  {
+   "id": "hp",
+   "branch": "생존",
+   "name": "튼튼한 몸",
+   "desc": "최대 체력 +20",
+   "max": 5
+  },
+  {
+   "id": "dash",
+   "branch": "생존",
+   "name": "날쌘 발",
+   "desc": "대시 쿨타임 -0.3초",
+   "max": 4
+  },
+  {
+   "id": "dmg",
+   "branch": "생존",
+   "name": "화력 강화",
+   "desc": "공격력 +10%",
+   "max": 5
+  },
+  {
+   "id": "reload",
+   "branch": "생존",
+   "name": "빠른 손",
+   "desc": "재장전 시간 -13%",
+   "max": 4
+  },
+  {
+   "id": "gspeed",
+   "branch": "채집",
+   "name": "채집 속도",
+   "desc": "채집 속도 +25% (아군 포함)",
+   "max": 4
+  },
+  {
+   "id": "gextra",
+   "branch": "채집",
+   "name": "풍작",
+   "desc": "추가 획득 확률 +12%",
+   "max": 5
+  },
+  {
+   "id": "mag",
+   "branch": "채집",
+   "name": "대용량 탄창",
+   "desc": "탄창 +20%",
+   "max": 3
+  },
+  {
+   "id": "vrate",
+   "branch": "연구",
+   "name": "백신 개량",
+   "desc": "아군화 성공률 +8%",
+   "max": 5
+  },
+  {
+   "id": "vcost",
+   "branch": "연구",
+   "name": "재료 절약",
+   "desc": "백신 재료 -10%",
+   "max": 3
+  },
+  {
+   "id": "stun",
+   "branch": "연구",
+   "name": "기절 사격",
+   "desc": "기절 확률 +10%",
+   "max": 4
+  },
+  {
+   "id": "cap",
+   "branch": "사령",
+   "name": "사령관",
+   "desc": "아군 상한 +2",
+   "max": 5
+  },
+  {
+   "id": "adm",
+   "branch": "사령",
+   "name": "아군 강화",
+   "desc": "아군 공격력 +20%",
+   "max": 5
+  },
+  {
+   "id": "ahp",
+   "branch": "사령",
+   "name": "아군 맷집",
+   "desc": "아군 체력 +25%",
+   "max": 4
+  },
+  {
+   "id": "run",
+   "branch": "생존",
+   "name": "빠른 걸음",
+   "desc": "이동 속도 +8%",
+   "max": 4
+  },
+  {
+   "id": "steady",
+   "branch": "생존",
+   "name": "안정된 조준",
+   "desc": "탄 퍼짐 -8%",
+   "max": 4
+  },
+  {
+   "id": "recoil",
+   "branch": "생존",
+   "name": "반동 줄이기",
+   "desc": "총기 반동 -10%",
+   "max": 5
+  },
+  {
+   "id": "hs",
+   "branch": "생존",
+   "name": "급소 사격",
+   "desc": "헤드샷 피해 +12%",
+   "max": 4
+  },
+  {
+   "id": "loot",
+   "branch": "채집",
+   "name": "전리품",
+   "desc": "처치 코인 +15%",
+   "max": 4
+  },
+  {
+   "id": "aspeed",
+   "branch": "사령",
+   "name": "행군",
+   "desc": "아군 이동 속도 +10%",
+   "max": 3
+  }
+ ],
+ "statsBase": {
+  "maxHp": 100,
+  "dmgMul": 1,
+  "dashCd": 2,
+  "reloadMul": 1,
+  "magMul": 1,
+  "gatherSpeed": 1,
+  "gatherExtra": 0,
+  "vacBonus": 0,
+  "vacCostMul": 1,
+  "stunBonus": 0,
+  "allyCap": 2,
+  "allyDmg": 1,
+  "allyHp": 1,
+  "speedMul": 1,
+  "goldMul": 1,
+  "headMul": 1,
+  "spreadMul": 1,
+  "recoilMul": 1
+ },
+ "statsPerLevel": {
+  "hp": {
+   "maxHp": 20
+  },
+  "dash": {
+   "dashCd": -0.3
+  },
+  "dmg": {
+   "dmgMul": 0.1
+  },
+  "reload": {
+   "reloadMul": -0.13
+  },
+  "gspeed": {
+   "gatherSpeed": 0.25
+  },
+  "gextra": {
+   "gatherExtra": 0.12
+  },
+  "mag": {
+   "magMul": 0.2
+  },
+  "vrate": {
+   "vacBonus": 0.08
+  },
+  "vcost": {
+   "vacCostMul": -0.1
+  },
+  "stun": {
+   "stunBonus": 0.1
+  },
+  "cap": {
+   "allyCap": 2
+  },
+  "adm": {
+   "allyDmg": 0.2
+  },
+  "ahp": {
+   "allyHp": 0.25
+  },
+  "run": {
+   "speedMul": 0.08
+  },
+  "steady": {
+   "spreadMul": -0.08
+  },
+  "recoil": {
+   "recoilMul": -0.1
+  },
+  "hs": {
+   "headMul": 0.12
+  },
+  "loot": {
+   "goldMul": 0.15
+  },
+  "aspeed": {}
+ },
+ "statsMin": {
+  "spreadMul": 0.55,
+  "recoilMul": 0.5
+ },
+ "runXp": {
+  "base": 68,
+  "perLevel": 44,
+  "spPerLevel": 1
+ },
+ "stunBase": 0.35,
  "baseStart": {
   "wood": 24,
   "stone": 16,
