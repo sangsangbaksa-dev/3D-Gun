@@ -150,3 +150,6 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 
 버튼 호버 확대/눌림 축소(`polish`), 패널 등장 페이드(`pop_in`), 화면폭에 맞는 패널(`fit_width`), 모달 여백,
 세로 모바일 화면 확대(`auto_scale`, 본부에서 사용). 본부의 위·탭·하단 바는 줄바꿈 컨테이너라 좁은 창에서 겹치지 않는다.
+## 채집 연출 (일부)
+
+`scripts/gather_fx.gd`: 타격 시점(스윙 위상)에 맞춘 종류별 파편·불꽃·먼지 파티클, 타격음, 카메라 미세 흔들림, 완료 시 나무 쓰러짐/바위 부서짐/약초 뽑힘/폐차 주저앉음 조각. `tests/gather_test.gd` 로 확인. 1인칭 도구 모션·진행 링·날아오는 아이콘은 아직 미구현.

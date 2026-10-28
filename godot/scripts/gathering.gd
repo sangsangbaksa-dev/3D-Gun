@@ -5,6 +5,10 @@ extends Node3D
 signal gathered(res: String, amount: int, pos: Vector3)
 signal hit(node: Dictionary) # 채집 중 0.26초마다 (웹의 gather:hit)
 
+const FxScript := preload("res://scripts/gather_fx.gd")
+var fx: Node3D
+var swing := 0.0 # 스윙 위상(주기 수). 타격 시점은 gather_fx.KIND[kind].impact
+var _swing_node = null
 var game: Node
 var nodes: Array = [] # {id, kind, res, pos, yaw, scale, r, state, progress, idle, respawn_t, hit_t, shape}
 var _mm := {}         # "kind_vi" -> [ready MultiMesh or null, always MultiMesh or null]
@@ -108,11 +112,20 @@ func harvest(n: Dictionary, dt: float) -> bool:
 	if not _active.has(n):
 		_active.append(n)
 	n.progress += dt / float(def.work)
-	n.hit_t = float(n.get("hit_t", 0.0)) - dt
-	if n.hit_t <= 0.0:
-		n.hit_t = 0.26
+	if fx == null and game.player:
+		fx = FxScript.new()
+		fx.game = game
+		add_child(fx)
+	var K: Dictionary = FxScript.KIND[n.kind]
+	if _swing_node != n:
+		_swing_node = n
+		swing = 0.0
+	var prev := swing
+	swing += dt / float(K.period)
+	if floorf(swing - float(K.impact)) > floorf(prev - float(K.impact)) and n.progress < 1.0:
 		hit.emit(n)
-		Sfx.play("gather", n.pos)
+		if fx:
+			fx.hit(n, false)
 	if n.progress < 1.0:
 		return false
 	var amount: int = game.rng.randi_range(int(def.yieldMin), int(def.yieldMax))
@@ -123,6 +136,10 @@ func harvest(n: Dictionary, dt: float) -> bool:
 	n.state = "depleted"
 	n.progress = 0.0
 	n.respawn_t = game.rng.randf_range(float(def.respawnMin), float(def.respawnMax))
+	if fx:
+		var sl: Array = _slot[n.i]
+		var pt = _mm[sl[0]][0]
+		fx.finish(n, pt.mesh if pt else null)
 	_refresh(n.i)
 	gathered.emit(n.res, amount, n.pos)
 	return true
