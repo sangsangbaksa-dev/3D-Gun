@@ -54,8 +54,12 @@ func _stream(id: String) -> AudioStreamWAV:
 		_streams[id] = load("res://assets/sfx/%s.wav" % id)
 	return _streams[id]
 
+## 가져오기(--import)를 안 한 프로젝트에서는 wav 를 못 읽어 null 이 돌아온다. 그러면 루프 플레이어도 없다(_process 가 건너뜀).
 func _loop(id: String, bus: String) -> AudioStreamPlayer:
-	var s: AudioStreamWAV = _stream(id).duplicate()
+	var base := _stream(id)
+	if base == null:
+		return null
+	var s: AudioStreamWAV = base.duplicate()
 	s.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	s.loop_begin = 0
 	s.loop_end = int(s.get_length() * s.mix_rate)
@@ -86,13 +90,18 @@ func play(id: String, at = null, gain := 1.0) -> void:
 	if not _allow(id, float(r.cooldown)):
 		return
 	var pitch := 1.0 + (randf() * 2.0 - 1.0) * float(r.jitter)
-	_emit(_stream(id), SFX_GAIN * gain, pitch, at if at is Vector3 and cam else null)
+	var st := _stream(id)
+	if st == null:
+		return
+	_emit(st, SFX_GAIN * gain, pitch, at if at is Vector3 and cam else null)
 
 ## Gun sounds (sfx.ts): fire per gun, plus dry / switch / reload / reloadDone / hit / headshot / kill.
 func gun(kind: String) -> void:
 	if kind == "hit" and not _allow("gun_hit", 0.03):
 		return
-	_emit(_stream("gun_" + kind), GUN_GAIN, 1.0, null)
+	var st := _stream("gun_" + kind)
+	if st != null:
+		_emit(st, GUN_GAIN, 1.0, null)
 
 func _emit(s: AudioStream, gain: float, pitch: float, at) -> void:
 	var p: Node
@@ -155,6 +164,8 @@ func _process(dt: float) -> void:
 	_wind_v = lerpf(_wind_v, float(_amb.wind), k)
 	_drone_v = lerpf(_drone_v, float(_amb.drone), k)
 	_cut = lerpf(_cut, float(_amb.cutoff), k)
-	_wind.volume_db = linear_to_db(maxf(0.0001, _wind_v))
-	_drone.volume_db = linear_to_db(maxf(0.0001, _drone_v / DRONE_REC))
+	if _wind:
+		_wind.volume_db = linear_to_db(maxf(0.0001, _wind_v))
+	if _drone:
+		_drone.volume_db = linear_to_db(maxf(0.0001, _drone_v / DRONE_REC))
 	_drone_lp.cutoff_hz = _cut
