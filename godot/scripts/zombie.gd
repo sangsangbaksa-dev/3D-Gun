@@ -4,6 +4,7 @@ extends CharacterBody3D
 ## Stun (for vaccines, allies.gd) as in sim.ts damaged()/stun()/wake(); structures other than the core with the base stage.
 
 signal killed(zombie: Node, gold: int)
+signal damaged(zombie: Node, amount: float, died: bool) # 피해 숫자 표시용 (game.gd 가 받는다)
 
 var type := "normal"
 var wave := 1
@@ -219,9 +220,11 @@ func take_hit(amount: float, dir: Vector3, by_ally := false) -> bool:
 	# 체력이 기절 구간이 되는 타격은 확률적으로 죽이지 않고 기절시킨다 (아군 타격, 보스, 자폭 중 제외)
 	if not by_ally and not is_boss and not stunned and state != "spawn" and move != "fuse" \
 			and left <= max_hp * float(r.stunHpRatio) and _rand() < float(r.stunBase):
+		damaged.emit(self, hp - maxf(1.0, left), false)
 		hp = maxf(1.0, left)
 		_stun()
 		return false
+	damaged.emit(self, hp - left, left <= 0.0)
 	hp = left
 	if not is_boss:
 		global_position += Vector3(dir.x, 0, dir.z).normalized() * 0.08 # 작은 넉백

@@ -20,6 +20,7 @@ const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
 const BuildOverlay := preload("res://scripts/build_overlay.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
+const FloatingText := preload("res://scripts/floating_text.gd")
 const PREP_TIME := 60.0 # 웹 게임과 같은 기지 건설 시간. N 으로 바로 시작
 
 var player: CharacterBody3D
@@ -79,7 +80,10 @@ var samples := 0
 var samples_sp := 0
 var _t := 0.0
 var _toast_tw: Tween
-var _banner_tw: Tween
+var floating: Node # 데미지 숫자 (floating_text.gd)
+var _pending_dmg: Array = [] # 이번 프레임 피해 [좀비 위치, 수치, 처치]; 사격이면 fired 가 헤드샷 여부를 붙여 비운다
+var hit_kind := "normal"
+var hit_total := 0.25
 
 func _ready() -> void:
 	rng.randomize()
@@ -112,6 +116,10 @@ func _ready() -> void:
 	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
+	floating = FloatingText.apply(self)
+	zombies_root.child_entered_tree.connect(func(n: Node):
+		if n.has_signal("damaged"):
+			n.damaged.connect(_on_zombie_damaged))
 	preload("res://scripts/core_pointer.gd").apply(self) # 핵 위치 화살표와 피격 알림
 	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
 	I18n.locale_changed.connect(_refresh_hud)
@@ -285,6 +293,8 @@ func _process(dt: float) -> void:
 	_t += dt
 	_process_core_visual(_t)
 	hitmark = maxf(0.0, hitmark - dt)
+	if not _pending_dmg.is_empty(): # 사격이 아닌 피해(아군·포탑·함정·폭발)
+		_flush_damage(false)
 	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
 	if phase == "ended":
 		return
@@ -394,7 +404,7 @@ func _start_wave() -> void:
 		boss_at = 3.0
 		var bt: String = boss_pending.type
 		toast(I18n.t("toast.bossKing") if wave == GameData.final_wave else I18n.t("toast.bossWave", {"n": wave, "name": I18n.zombie_name(bt)}))
-	_banner(I18n.t("hud.wave", {"n": wave}))
+	_banner(I18n.t("hud.wave", {"n": wave}), "boss" if is_boss else "wave", I18n.t("toast.bossKing") if is_boss and wave == GameData.final_wave else (I18n.t("toast.bossWave", {"n": wave, "name": I18n.zombie_name(GameData.boss_type_for(wave))}) if is_boss else ""))
 	# 이번 웨이브에 처음 나오는 종류 알림
 	var prev: Array = GameData.wave_roster(wave - 1).map(func(e): return e.type) if wave > 1 else ["normal"]
 	for e in GameData.wave_roster(wave):
@@ -478,7 +488,7 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓  +%d" % bonus)
+	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
 
 func _on_core_destroyed() -> void:
 	core_dead = true
@@ -499,13 +509,25 @@ func toast(text: String) -> void:
 
 # ── 사격 연출 ─────────────────────────────────────────────────────────
 
+func _on_zombie_damaged(z: Node, amount: float, died: bool) -> void:
+	_pending_dmg.append([z.global_position + Vector3(0, z.height, 0), amount, died])
+
+## 쌓인 피해를 숫자로 띄운다. 플레이어 사격이면 head 가 true (관통이면 첫 명중 외엔 일반 숫자).
+func _flush_damage(head: bool) -> void:
+	for i in _pending_dmg.size():
+		var d: Array = _pending_dmg[i]
+		floating.spawn(d[0], d[1], "kill" if d[2] else ("head" if head and i == 0 else "normal"))
+	_pending_dmg.clear()
+
 func _on_fired(from: Vector3, to: Vector3, hit_zombie: bool, headshot: bool, kill: bool, also: Array) -> void:
+	_flush_damage(headshot)
 	tracer(from, to)
 	for pt in also:
 		_blood(pt)
 	if hit_zombie:
-		hitmark = 0.25 if kill or headshot else 0.15
-		crosshair.set_meta("hit_col", Color(1, 0.25, 0.2) if kill else (Color(1, 0.85, 0.2) if headshot else Color.WHITE))
+		hit_kind = "kill" if kill else ("head" if headshot else "normal")
+		hit_total = HudStyle.HIT_TIME[hit_kind]
+		hitmark = hit_total
 		_blood(to)
 	else:
 		_puff(to)
@@ -664,15 +686,11 @@ func _label(parent: Control, font_size: int, preset: int, pos: Vector2) -> Label
 	parent.add_child(l)
 	return l
 
-func _banner(text: String) -> void:
-	lbl_center.text = text
-	lbl_center.modulate.a = 1.0
-	if _banner_tw:
-		_banner_tw.kill()
-	var tw := create_tween()
-	_banner_tw = tw
-	tw.tween_interval(1.6)
-	tw.tween_property(lbl_center, "modulate:a", 0.0, 0.6)
+## 웨이브 배너. kind: "wave" 시작, "boss" 보스 웨이브(붉게), "clear" 클리어. 연출은 HudStyle.banner.
+func _banner(text: String, kind := "wave", sub := "") -> void:
+	var hs := get_node_or_null("HudStyle")
+	if hs:
+		hs.banner(text, kind, sub)
 
 func _refresh_hud() -> void:
 	if hud == null:
@@ -773,9 +791,7 @@ func _draw_crosshair() -> void:
 	for d in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
 		crosshair.draw_line(d * gap, d * (gap + 9.0), c, 2.0)
 	if hitmark > 0.0:
-		var hc: Color = crosshair.get_meta("hit_col", Color.WHITE)
-		for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
-			crosshair.draw_line(d * 7.0, d * 14.0, hc, 2.5)
+		HudStyle.draw_hitmarker(crosshair, hit_kind, 1.0 - hitmark / hit_total)
 
 ## Sniper scope: black outside a circle, thin cross lines.
 func _draw_scope() -> void:

@@ -158,3 +158,5 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 
 `player.gd`: 걷기 흔들림(속도 비례, 조준 시 거의 없음), 시선 따라 늦게 오는 총, 숨쉬기, `_aim_t` 조준 전환, 총별 재장전(탄창 분리·삽입, 샷건 펌프 3회, 저격 볼트, 리볼버 실린더·해머, 권총 슬라이드 후퇴·탄 소진 시 걸림), 십자 가산혼합 총구 화염 0.06초, 탄피 풀 10개(샷건은 펌프 때, 리볼버 없음). 부품은 glb 노드 이름(`slide-` `mag-*` `drum-` `hammer-` `pump-` `bolt-*` `eject-*`)으로 찾는다.
 `ally.gd`: 역할별 소품(몽둥이·경비봉·곡괭이·태블릿)을 팔 피벗 자식으로 붙이고, 치켜들었다 내려치기(피해는 내려치는 순간), 경비 두리번, 곡괭이질, 상자 안고 걷기, 태블릿 두드리기, 등장 때 솟기, 피격 젖힘, 사망 때 팔 튕김. 화면 확인(스크린샷)은 못 함.
+### HUD 연출 (floating_text.gd, hud_style.gd)
+데미지 숫자(`floating_text.gd`: 일반 흰색, 헤드샷 노랑, 처치 주황빛 빨강; 좀비 `damaged` 신호를 game.gd 가 연결), 종류별 명중 마커(`HudStyle.draw_hitmarker`), 웨이브 시작/보스(붉게)/클리어 배너(`HudStyle.banner`, 슬라이드+페이드), 타이틀·HUD `UiKit.auto_scale` 과 좁은 창 폭 대응. `tests/shots_hud.gd` 로 화면 확인(미검증). sfx.gd 의 `volume_db` null 오류는 `--import` 안 한 프로젝트에서 wav 를 못 읽어 생긴 것이라 null 가드로 해결.
