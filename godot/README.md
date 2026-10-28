@@ -126,3 +126,10 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `scripts/allies.gd`, `ally.gd`, `station_panel.gd` | 백신 주사, 아군 관리·저장, 아군 AI, 연구소·상점 창 |
 | `tests/allies_test.gd`, `lab_test.gd` | 헤드리스 자동 테스트: 기절→백신→아군, 백신 제작·교환 |
 | `tests/hub_test.gd` | 헤드리스 자동 테스트: 본부 규칙, 저장 파일, 시작 웨이브 인계 |
+
+## 로딩 화면
+
+- 웹: `web/shell.html`(내보내기 설정의 사용자 HTML 셸)이 다운로드 진행률을 "로딩 중 N%"로 보여 주고, 엔진이 시작된 뒤에도
+  게임이 첫 화면을 그려 `window.__gdReady()` 를 부를 때까지 로딩 화면을 유지합니다(신호가 없으면 15초 뒤 해제).
+  이 셸은 새로 내보낼 때(`build-web.sh`) 적용되므로, `godot-web/` 에 커밋된 예전 빌드를 새로 만들어 올려야 보입니다.
+- 게임 안: 모든 장면 전환은 `Loading.go(경로)`(자동 로드 `scripts/loading.gd`)를 씁니다. 검은 막과 "로딩 중"을 먼저 그린 뒤 전환합니다.

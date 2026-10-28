@@ -175,7 +175,7 @@ func _menu_block() -> void:
 		Save.settings.locale = I18n.locale
 		Save.save_settings())
 	hub = _menu_button(row)
-	hub.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
+	hub.pressed.connect(func(): Loading.go("res://scenes/hub.tscn"))
 
 func _open_settings(page: String) -> void:
 	var p := SettingsScript.new()
@@ -273,4 +273,4 @@ func _unhandled_input(event: InputEvent) -> void:
 		_launch()
 
 func _launch() -> void:
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	Loading.go("res://scenes/game.tscn")

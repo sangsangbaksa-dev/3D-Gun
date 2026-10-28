@@ -92,4 +92,4 @@ func _open_settings(page: String) -> void:
 func _to_title() -> void:
 	open = false
 	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	Loading.go("res://scenes/title.tscn")

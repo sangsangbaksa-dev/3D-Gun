@@ -867,10 +867,10 @@ func _on_died() -> void:
 	btns.add_theme_constant_override("separation", 14)
 	box.add_child(btns)
 	var btn := UiKit.button(I18n.t("death.hub"), Vector2(250, 54), true, 22)
-	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
+	btn.pressed.connect(func(): Loading.go("res://scenes/hub.tscn"))
 	btns.add_child(btn)
 	var back := UiKit.button(I18n.t("death.back"), Vector2(200, 54), false, 18)
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	back.pressed.connect(func(): Loading.go("res://scenes/title.tscn"))
 	btns.add_child(back)
 	btn.grab_focus()
 	root.modulate.a = 0.0

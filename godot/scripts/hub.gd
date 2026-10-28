@@ -122,7 +122,7 @@ func _ready() -> void:
 	wave_cost = _label(bottom, 14, Color(1, 0.85, 0.5))
 	wave_cost.custom_minimum_size.x = 200
 	back = _button(bottom, 20, Vector2(180, 56))
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	back.pressed.connect(func(): Loading.go("res://scenes/title.tscn"))
 	launch = _button(bottom, 28, Vector2(280, 60))
 	launch.add_theme_stylebox_override("normal", _box(Color("ff8a2a"), Color("ffb070")))
 	launch.add_theme_stylebox_override("hover", _box(Color("ffa04d"), Color("ffd0a0")))
@@ -222,7 +222,7 @@ func _launch() -> void:
 		return
 	Save.pending_start_wave = start_wave
 	Save.save_meta()
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	Loading.go("res://scenes/game.tscn")
 
 func _toast(text: String) -> void:
 	toast_label.text = text
