@@ -25,7 +25,7 @@ export interface SfxDef {
 export type SfxId =
   | 'groan' | 'zHit' | 'zDeath' | 'hurt' | 'stun' | 'convert' | 'allyDead'
   | 'coreHit' | 'waveStart' | 'waveClear' | 'boss' | 'build' | 'destroyed'
-  | 'click' | 'gather' | 'chest0' | 'chest1' | 'chest2' | 'heartbeat' | 'dead' | 'runOver';
+  | 'coreAlarm' | 'click' | 'gather' | 'chest0' | 'chest1' | 'chest2' | 'heartbeat' | 'dead' | 'runOver';
 
 export const SFX: Record<SfxId, SfxDef> = {
   // 좀비 신음: 떨리는 톱니파를 모음 같은 대역 필터로 걸러 "으어어"
@@ -61,6 +61,11 @@ export const SFX: Record<SfxId, SfxDef> = {
     { kind: 'noise', dur: 0.25, gain: 0.4, filter: { type: 'bandpass', f0: 1800, f1: 600, q: 6 } },
     { kind: 'osc', wave: 'square', f0: 440, dur: 0.12, gain: 0.25, delay: 0.12, filter: { type: 'lowpass', f0: 2000 } },
     { kind: 'osc', wave: 'square', f0: 330, dur: 0.12, gain: 0.25, delay: 0.28, filter: { type: 'lowpass', f0: 2000 } } ] },
+  // 핵 공격 경보: 높낮이 번갈아 울리는 짧은 사이렌 (corealert 모듈)
+  coreAlarm: { vol: 0.5, cooldown: 2.5, jitter: 0, layers: [
+    { kind: 'osc', wave: 'square', f0: 880, dur: 0.24, gain: 0.5, filter: { type: 'lowpass', f0: 2200 } },
+    { kind: 'osc', wave: 'square', f0: 660, dur: 0.24, gain: 0.5, delay: 0.28, filter: { type: 'lowpass', f0: 2200 } },
+    { kind: 'osc', wave: 'square', f0: 880, dur: 0.24, gain: 0.5, delay: 0.56, filter: { type: 'lowpass', f0: 2200 } } ] },
   // 웨이브 시작: 낮게 울리는 경적
   waveStart: { vol: 0.55, cooldown: 1, jitter: 0, layers: [
     { kind: 'osc', wave: 'sawtooth', f0: 110, f1: 104, dur: 1.1, gain: 0.5, attack: 0.12, filter: { type: 'lowpass', f0: 650 } },

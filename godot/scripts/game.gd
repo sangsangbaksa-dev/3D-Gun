@@ -112,6 +112,7 @@ func _ready() -> void:
 	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
+	preload("res://scripts/core_pointer.gd").apply(self) # 핵 위치 화살표와 피격 알림
 	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
 	I18n.locale_changed.connect(_refresh_hud)
 	shop = ShopScript.new()
