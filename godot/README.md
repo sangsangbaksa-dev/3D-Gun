@@ -123,6 +123,7 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 | `scripts/meta_bonus.gd` | 영구 업그레이드를 새 런에 적용 (시작 골드·자원, 체력, 총 품질, 시작 웨이브…) |
 | `scripts/core.gd` | 핵 (체력, 피해, 회복) |
 | `scripts/base.gd` · `structure.gd` | 격자 건설, 건물(포탑·함정·바리케이드), 수리·강화·철거, 핵 수리·강화, 포탑 저장 (`src/base/logic` 이식) |
+| `scripts/tool_view.gd`, `scripts/gather_hud.gd` | 채집 1인칭 도구, 진행 링·아이콘 연출 |
 | `scripts/gathering.gd` | 채집 노드 (`src/gathering/logic` 이식, 배치는 웹과 같은 시드) |
 | `scripts/roamers.gd` | 구역 배회 좀비 (`sim.ts` updateRoamers 이식) |
 | `assets/art/` | `public/art` 에서 복사한 그림 |
@@ -150,6 +151,11 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 
 버튼 호버 확대/눌림 축소(`polish`), 패널 등장 페이드(`pop_in`), 화면폭에 맞는 패널(`fit_width`), 모달 여백,
 세로 모바일 화면 확대(`auto_scale`, 본부에서 사용). 본부의 위·탭·하단 바는 줄바꿈 컨테이너라 좁은 창에서 겹치지 않는다.
-## 채집 연출 (일부)
+## 채집 연출
 
-`scripts/gather_fx.gd`: 타격 시점(스윙 위상)에 맞춘 종류별 파편·불꽃·먼지 파티클, 타격음, 카메라 미세 흔들림, 완료 시 나무 쓰러짐/바위 부서짐/약초 뽑힘/폐차 주저앉음 조각. `tests/gather_test.gd` 로 확인. 1인칭 도구 모션·진행 링·날아오는 아이콘은 아직 미구현.
+- `scripts/gather_fx.gd`: 타격 시점(스윙 위상)에 맞춘 종류별 파편·불꽃·먼지 파티클, 타격음, 카메라 미세 흔들림, 완료 시 나무 쓰러짐/바위 부서짐/약초 뽑힘/폐차 주저앉음 조각.
+- `scripts/tool_view.gd`: 1인칭 도구 뷰모델 (박스 프리미티브). 나무=도끼 휘두르기, 바위·철광=곡괭이 내려찍기, 약초=맨손 뜯기, 폐차=렌치. `gathering.swing` 위상(들어올림→내리침→되돌림)과 `hit` 시그널(타격 반동)에 맞춰 절차적으로 움직이고, 채집 중에는 `player.tool_active` 로 총을 내렸다가 끝나면 복귀.
+- `gathering.gd` 의 노드 연출: 타격마다 흔들림·눌림 펄스(recoil), 진행도에 따라 나무는 기울고 바위·철광·약초는 줄어듦 (MultiMesh 인스턴스 변환을 직접 갱신, 끝나면 원래 자세로 복귀).
+- `scripts/gather_hud.gd`: 화면 중앙 진행 링, 완료 시 자원 아이콘(코드로 그린 통나무·돌·주괴·잎·톱니)이 상단 자원 칸으로 날아가고 칸이 반짝임. 기존 `gather_bar` 는 숨김.
+- 도구·HUD 는 `gathering.gd` 가 처음 채집할 때 만들어 붙이므로 `game.gd` 는 건드리지 않음 (`gather_bar` 표시만 제거). `gathering.current`/`is_gathering()` 이 "지금 채집 중" 상태.
+- `tests/gather_test.gd` 로 확인 (파티클·흔들림·도구 장착/해제·총 숨김·아이콘 도착·스윙 자세·노드 자세 복귀).

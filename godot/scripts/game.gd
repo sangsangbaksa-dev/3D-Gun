@@ -722,11 +722,7 @@ func _refresh_base_hud() -> void:
 	gather_bar.visible = false
 	if not gather_focus.is_empty():
 		prompt = "E  " + I18n.t("node.%s.verb" % gather_focus.kind)
-		if gather_focus.progress > 0.0:
-			gather_bar.visible = true
-			gather_bar.max_value = 1.0
-			gather_bar.value = gather_focus.progress
-			gather_bar.position = Vector2((hud.size.x - gather_bar.size.x) * 0.5, hud.size.y * 0.5 + 72)
+		# 진행도는 gather_hud.gd 의 링이 그린다
 	elif allies.station_near(player.global_position) != "" and not base.building:
 		prompt = allies.tt("prompt." + allies.station_near(player.global_position))
 	elif not base.building and base.near_building(player.global_position) != null and (base.actionable_near(player.global_position) != null or (not _near_core() and not base.building_action(base.near_building(player.global_position)).is_empty())):
