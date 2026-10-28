@@ -22,6 +22,9 @@ func _initialize() -> void:
 	_test_start_wave()
 	_test_bank()
 	_test_save_file()
+
+## 자동 로드(Save)의 _ready 가 load_meta() 로 메타를 비운 뒤라야 하므로 첫 프레임에 한다.
+func _handover() -> void:
 	# 게임 장면으로 넘기기: 시작 웨이브 4, 총열 정밀 가공 2단계, 시작 골드 1단계
 	save.reset_meta()
 	save.meta.upgrades["w_mul"] = 2.0
@@ -139,7 +142,9 @@ func _test_save_file() -> void:
 
 func _process(_dt: float) -> bool:
 	frames += 1
-	if frames == 3:
+	if frames == 1:
+		_handover()
+	if frames == 6:
 		var p = game.player
 		# 시작 웨이브 4 → 첫 웨이브가 4 (wave 는 _start_wave 에서 +1)
 		ok.game_wave = game.wave == 3 and save.pending_start_wave == 1

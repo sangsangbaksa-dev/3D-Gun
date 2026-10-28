@@ -19,6 +19,9 @@ var core_hp0 := 0.0
 func _initialize() -> void:
 	game = load("res://scenes/game.tscn").instantiate()
 	root.add_child(game)
+	game.ready.connect(_setup)
+
+func _setup() -> void:
 	game.rng.seed = 5
 	game.prep_left = 99999.0
 	game.player.global_position = Vector3(-150, game.world.ground_y(-150, 150) + 0.3, 150)
@@ -28,7 +31,7 @@ func _initialize() -> void:
 	game.core.hp = core_hp0
 
 func _want(zone: Dictionary) -> int:
-	return maxi(0, floori(float(GameData.enemy_rules.roamPerDanger) * float(zone.danger)))
+	return maxi(0, floori(float(root.get_node("GameData").enemy_rules.roamPerDanger) * float(zone.danger)))
 
 func _process(_dt: float) -> bool:
 	frames += 1
@@ -39,7 +42,7 @@ func _process(_dt: float) -> bool:
 			have[z.home.zone] = int(have.get(z.home.zone, 0)) + 1
 		zone_ok = true
 		var any_zone := false
-		for zone in GameData.map.zones:
+		for zone in root.get_node("GameData").map.zones:
 			if zone.kind == "base" or float(zone.danger) < 2.0:
 				continue
 			any_zone = true
@@ -75,16 +78,16 @@ func _process(_dt: float) -> bool:
 		# 포탑 저장 → 새 판에서 복원
 		game.base.persist = true
 		game.base.persist_turrets(false) # now=false: 저장소에는 쓰지 않고 meta.turrets 만 채운다
-		var saved: Array = Save.meta.get("turrets", [])
+		var saved: Array = root.get_node("Save").meta.get("turrets", [])
 		var entry: Dictionary = saved[0] if saved.size() > 0 else {}
 		var snap_ok: bool = saved.size() == 1 and entry.get("kind") == "tower" and int(entry.get("level", 0)) == 2 and int(entry.get("ammo", 0)) == tw.ammo
-		var ammo := tw.ammo
+		var ammo: int = tw.ammo
 		game.base.persist = false # 철거가 파일을 쓰지 않게
 		game.base.demolish(tw)
 		game.base.persist = true
 		game.base.persist_turrets(false)
-		var gone: bool = Save.meta.get("turrets", []).size() == 0
-		Save.meta["turrets"] = [entry]
+		var gone: bool = root.get_node("Save").meta.get("turrets", []).size() == 0
+		root.get_node("Save").meta["turrets"] = [entry]
 		game.base.restore_turrets()
 		var back: Node = null
 		for s in game.base.structures:
@@ -93,7 +96,7 @@ func _process(_dt: float) -> bool:
 		persist_ok = snap_ok and gone and back != null and back.ammo == ammo
 		game.base.persist = false
 		game.base._save_dirty = false
-		Save.meta["turrets"] = []
+		root.get_node("Save").meta["turrets"] = []
 		game.player.global_position = Vector3(-150, game.world.ground_y(-150, 150) + 0.3, 150)
 	if frames == 760:
 		slow_ok = is_instance_valid(trap_z) and trap_z.slow_mul < 1.0

@@ -13,9 +13,6 @@ var wall2: StaticBody3D
 
 func _initialize() -> void:
 	gd = root.get_node("GameData")
-	_test_drop()
-	_test_kick()
-	_test_data()
 	# 물리 광선 검사용 벽: z=-60 (두께 2) 과 그 앞 z=-30 (낮은 상자, 위쪽 y<0 에서만 막힘)
 	wall = _make_box(Vector3(0, 0, -60), Vector3(40, 40, 2))
 	wall2 = _make_box(Vector3(0, -10.5, -30), Vector3(40, 20, 2)) # 윗면 y=-0.5
@@ -117,7 +114,7 @@ func _test_kick() -> void:
 
 func _test_data() -> void:
 	# 6종 모두 recoil 이 있고 kind 가 있다 (kick_after_shot 이 읽는 값)
-	var all6 := gd.gun_order.size() == 6
+	var all6: bool = gd.gun_order.size() == 6
 	for id in gd.gun_order:
 		all6 = all6 and float(gd.guns[id].recoil) > 0.0 and String(gd.guns[id].kind) != ""
 	ok.guns_have_recoil = all6
@@ -126,6 +123,10 @@ func _test_data() -> void:
 
 func _process(_dt: float) -> bool:
 	frames += 1
+	if frames == 1: # 자동 로드(GameData)가 데이터를 읽은 뒤에 수치 검사
+		_test_drop()
+		_test_kick()
+		_test_data()
 	if frames == 4: # 벽이 물리 서버에 올라간 뒤
 		var space := root.world_3d.direct_space_state
 		var bd: float = gd.player.bulletDrop

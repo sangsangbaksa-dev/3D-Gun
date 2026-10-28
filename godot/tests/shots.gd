@@ -18,7 +18,7 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	game = load("res://scenes/game.tscn").instantiate()
 	root.add_child(game)
-	game.roamers.enabled = false # 구역 배회 좀비는 roamers_test 에서만
+	game.ready.connect(func(): game.roamers.enabled = false) # 구역 배회 좀비는 roamers_test 에서만
 	game.rng.seed = 2
 	# [이름, 플레이어 위치 오프셋(xz, 시작점 기준), 바라볼 방향(yaw 도), 피치(도), 대기 프레임, 할 일]
 	shots = [

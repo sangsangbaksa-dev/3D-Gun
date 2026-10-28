@@ -26,7 +26,7 @@ func _initialize() -> void:
 	gd = root.get_node("GameData")
 	game = load("res://scenes/game.tscn").instantiate()
 	root.add_child(game)
-	game.roamers.enabled = false # 구역 배회 좀비는 roamers_test 에서만
+	game.ready.connect(func(): game.roamers.enabled = false) # 구역 배회 좀비는 roamers_test 에서만
 	game.rng.seed = 7
 	game.prep_left = 9999.0 # 웨이브는 직접 부른다
 
