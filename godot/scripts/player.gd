@@ -10,6 +10,7 @@ signal died
 
 const EYE_HEIGHT := 1.65
 const BASE_FOV := 70.0
+const DASH_CD := 2.0 # calcStats().dashCd 기본값 (스킬 감소는 허브 이식 때)
 
 var P: Dictionary
 var gun_id := "pistol"
@@ -26,6 +27,7 @@ var cooldown := 0.0
 var bloom := 0.0
 var since_shot := 9.0
 var dash_left := 0.0
+var dash_cd := 0.0
 var dash_dir := Vector3.ZERO
 var iframes := 0.0
 var aiming := false
@@ -155,9 +157,11 @@ func _physics_process(dt: float) -> void:
 func _move(dt: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var wish := (transform.basis * Vector3(input.x, 0, input.y)).normalized()
-	if Input.is_action_just_pressed("dash") and dash_left <= 0.0:
+	dash_cd = maxf(0.0, dash_cd - dt)
+	if Input.is_action_just_pressed("dash") and dash_left <= 0.0 and dash_cd <= 0.0:
 		dash_dir = wish if wish.length() > 0.1 else -transform.basis.z
 		dash_left = P.dashTime
+		dash_cd = DASH_CD
 		iframes = maxf(iframes, P.dashIframes)
 	var speed: float = P.speed * (P.aimSpeedMul if aiming else 1.0)
 	if dash_left > 0.0:
