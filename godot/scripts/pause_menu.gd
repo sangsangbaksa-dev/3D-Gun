@@ -74,6 +74,7 @@ func _build() -> void:
 		[I18n.t("pause.resume"), resume, true],
 		[I18n.t("title.settings"), _open_settings.bind("settings"), false],
 		[I18n.t("title.controls"), _open_settings.bind("controls"), false],
+		[I18n.t("pause.hub"), _to_hub, false],
 		[I18n.t("death.back"), _to_title, false],
 	]
 	for it in items:
@@ -88,6 +89,11 @@ func _open_settings(page: String) -> void:
 	add_child(_settings)
 	_settings.show_page(page)
 	_settings.closed.connect(func(): _settings = null)
+
+func _to_hub() -> void:
+	open = false
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/hub.tscn")
 
 func _to_title() -> void:
 	open = false

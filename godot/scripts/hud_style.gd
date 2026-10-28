@@ -83,6 +83,9 @@ func _ready() -> void:
 	_bar_style(game.core_bar, TEAL, 6)
 	_bar_style(game.boss_bar, RED, 14)
 	_bar_style(game.gather_bar, Color8(0xff, 0xd2, 0x5a), 8)
+	if game.prep_bar:
+		_bar_style(game.prep_bar, TEAL, 5)
+		game.prep_bar.size = Vector2(300, 5)
 	game.hp_bar.size = Vector2(260, 12)
 	game.core_bar.size = Vector2(260, 6)
 	game.lbl_core.add_theme_font_size_override("font_size", 12)

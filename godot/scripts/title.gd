@@ -16,6 +16,7 @@ var btn: Button
 var hint: Label
 var lang: Button
 var hub: Button
+var classic_btn: Button
 var settings_btn: Button
 var controls_btn: Button
 var embers: CPUParticles2D
@@ -171,6 +172,8 @@ func _menu_block() -> void:
 		I18n.toggle()
 		Save.settings.locale = I18n.locale
 		Save.save_settings())
+	classic_btn = _menu_button(row)
+	classic_btn.pressed.connect(_open_classic)
 	hub = _menu_button(row)
 	hub.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/hub.tscn"))
 
@@ -262,12 +265,17 @@ func _refresh() -> void:
 	lang.text = I18n.t("title.lang")
 	slice.text = I18n.t("title.slice")
 	hub.text = I18n.t("title.hub")
+	classic_btn.text = I18n.t("title.classic")
 	settings_btn.text = I18n.t("title.settings")
 	controls_btn.text = I18n.t("title.controls")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
 		_launch()
+
+func _open_classic() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.open('/classic','_blank')", true)
 
 func _launch() -> void:
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
