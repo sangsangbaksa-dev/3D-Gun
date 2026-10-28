@@ -142,3 +142,7 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
   게임이 첫 화면을 그려 `window.__gdReady()` 를 부를 때까지 로딩 화면을 유지합니다(신호가 없으면 15초 뒤 해제).
   이 셸은 새로 내보낼 때(`build-web.sh`) 적용되므로, `godot-web/` 에 커밋된 예전 빌드를 새로 만들어 올려야 보입니다.
 - 게임 안: 모든 장면 전환은 `Loading.go(경로)`(자동 로드 `scripts/loading.gd`)를 씁니다. 검은 막과 "로딩 중"을 먼저 그린 뒤 전환합니다.
+
+## 채집 연출 (일부)
+
+`scripts/gather_fx.gd`: 타격 시점(스윙 위상)에 맞춘 종류별 파편·불꽃·먼지 파티클, 타격음, 카메라 미세 흔들림, 완료 시 나무 쓰러짐/바위 부서짐/약초 뽑힘/폐차 주저앉음 조각. `tests/gather_test.gd` 로 확인. 1인칭 도구 모션·진행 링·날아오는 아이콘은 아직 미구현.
