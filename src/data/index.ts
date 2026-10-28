@@ -186,6 +186,16 @@ export const PLAYER = {
   bulletDrop: 0.0008,
 };
 
+/** 약초 응급처치 (G): 약초를 써서 체력을 회복한다. 백신 재료와 겹치므로 아무 때나 쓰지 못하게 재사용 대기가 있다. */
+export const HERB_HEAL = {
+  /** 한 번에 쓰는 약초 수 */
+  cost: 3,
+  /** 회복량 = 최대 체력 × 이 비율 */
+  healPct: 0.4,
+  /** 다음 응급처치까지 대기(초) */
+  cooldown: 6,
+};
+
 export type BuildingId = 'lab' | 'barracks' | 'barricade' | 'tower' | 'shop' | 'mgtower' | 'trap';
 type Cost = Partial<Record<ResKey, number>>;
 /** 포탑 한 단계의 능력. 1단계가 기본, 이후는 업그레이드 */

@@ -14,6 +14,7 @@ src/player/
     camera.ts          cameraPose(위치·방향·fov), aimOrigin(조준 광선 시작점)
     hitscan.ts         rayCylinder/castRay: 세로 원기둥 vs 광선 (Three 레이캐스트 미사용)
     weapons.ts         WeaponState, tryFire, startReload, switchWeapon, currentSpread
+    heal.ts            planHerbHeal: 약초 응급처치 가능 여부와 회복량 계산 (순수 함수)
     controller.ts      PlayerController.update(dt, intent, env) → FrameOut. 이벤트 발행 담당
   view/                Three.js / DOM
     playerView.ts      휴머노이드+모자·배낭, 조준 자세, 반동, 총구 불꽃/조명, 재장전 동작
@@ -27,7 +28,7 @@ src/player/
 main 의 `playtest` 슬라이스가 자체 사격·체력·좀비 시뮬레이션을 쓰므로, `main.ts` 에서 `playerOptions.combat = false` 로 둔다. 이 상태에서 player 모듈은 **이동·대시·카메라(조준 줌)·모델**만 맡고, 전투(사격·재장전·피격·HUD)는 꺼진다. enemies(W2)가 `zombies` 목록을 채우고 playtest 가 빠지는 시점에 그 한 줄을 지우면 전투 전체가 켜진다. 조준은 언제나 **화면 중앙(카메라 광선)** 이다. 포인터 잠금은 선택 사항이라 잠금이 없어도 조작된다.
 
 ## 조작
-WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · **우클릭 조준**(이동 35% 감속, 퍼짐 절반, 카메라 당김·줌) · R 재장전 · 1~6 무기 교체(보유한 것만) · V 무기 강화창. 탄이 0이면 자동 재장전.
+WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · **우클릭 조준**(이동 35% 감속, 퍼짐 절반, 카메라 당김·줌) · R 재장전 · 1~6 무기 교체(보유한 것만) · **G 약초 응급처치** · V 무기 강화창. 탄이 0이면 자동 재장전.
 `state.mode !== 'play'`(건설/모달)이거나 포인터가 잠겨 있지 않으면 이동·사격이 멈춘다.
 
 ## 데이터 (`src/data/index.ts`, 직렬화 가능)
@@ -44,6 +45,16 @@ WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · *
 
 `PLAYER` 상수: `hp speed aimSpeedMul dashSpeed dashTime dashIframes hurtIframes radius sens respawnDelay headshotMul aimAssist`.
 최종 수치는 `state.stats`(`dmgMul`, `reloadMul`, `magMul`, `dashCd`, `maxHp`)로 보정된다. 시작 위치는 `MAP.playerStart`.
+
+## 약초 응급처치 (G)
+기획서 4장의 "약초 → 회복약"을 구현했다. 약초 `HERB_HEAL.cost`(3)개를 내고 최대 체력의 `healPct`(40%)를 회복하며, 성공하면 `cooldown`(6초) 동안 다시 쓸 수 없다.
+- 데이터: `HERB_HEAL { cost, healPct, cooldown }` (`data/index.ts`, 숫자만).
+- 규칙: `logic/heal.ts` 의 `planHerbHeal(hp, maxHp, dead, cdLeft, herb)` → `{ok:true, healed}` 또는 `{ok:false, reason:'dead'|'full'|'cooldown'|'herb'}`. 약초 차감은 `controller.ts` 가 `spend()`로 한다. 대기시간은 `PlayerController.healCd`(런 시작 때 0).
+- 막히는 경우: 체력이 가득 / 대기 중 / 약초 부족 / 사망 / `canShoot` 가 아닐 때(건설·창·일시정지) 는 회복하지 않고, 사유를 토스트로 알린다.
+- 이벤트: 성공 시 `player:healed { amount }` 발행 + 토스트. view(`CombatHud.healed()`)는 화면 가장자리를 초록빛으로 0.6초 밝힌다. `FrameOut.healed` 로도 전달된다.
+- 약초는 백신 재료이기도 해서, 대기시간과 비용으로 남용을 막는다. 수치 조정은 `HERB_HEAL` 한 곳.
+- C#: `HERB_HEAL` → ScriptableObject, `planHerbHeal` → 정적 메서드, `player:healed` → C# event.
+- 테스트 빌드(`?playtest`)는 자체 규칙(H, 약초 5개로 완전 회복)을 쓰므로 이 기능과 별개다.
 
 ## 상태
 
@@ -66,7 +77,7 @@ WASD 이동 · Shift 대시 · 좌클릭(누르고 있으면 연사) 사격 · *
 - 최대 체력이 스킬로 늘면 늘어난 만큼 현재 체력도 오른다.
 
 ## 이벤트
-발행: `weapon:fired {weapon, ammo, mag}`, `weapon:ammo {weapon, ammo, mag, reloading}`(교체·재장전·발사 후), `weapon:reload {weapon, duration}`, `weapon:switched {weapon}`, `player:dead`, `player:hp {hp, maxHp}`(변할 때만), `player:respawn {x, z}`, `toast`.
+발행: `player:healed {amount}`, `weapon:fired {weapon, ammo, mag}`, `weapon:ammo {weapon, ammo, mag, reloading}`(교체·재장전·발사 후), `weapon:reload {weapon, duration}`, `weapon:switched {weapon}`, `player:dead`, `player:hp {hp, maxHp}`(변할 때만), `player:respawn {x, z}`, `toast`.
 구독: `player:hit {dmg, x, z}`, `weapon:unlock {weapon}`(loot 등이 무기를 주려면 이 이벤트를 낸다. `state.weapons` 에 넣고 토스트).
 
 ## UI 메모 (W7 참고)

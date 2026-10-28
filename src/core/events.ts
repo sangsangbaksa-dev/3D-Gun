@@ -19,6 +19,7 @@ export interface GameEvents {
   'player:hit': { dmg: number; x: number; z: number }; // 누군가 플레이어를 공격 → player 가 무적/체력 처리
   'weapon:fired': { weapon: string; ammo: number; mag: number };
   'player:hp': { hp: number; maxHp: number };          // 체력이 바뀔 때마다 (HUD)
+  'player:healed': { amount: number };                 // 약초 응급처치로 체력을 회복했을 때 (HUD 연출)
   'player:respawn': { x: number; z: number };          // 되살아남 (자동 부활 또는 enemies 가 hp 를 채웠을 때)
   'weapon:ammo': { weapon: string; ammo: number; mag: number; reloading: boolean }; // 교체/재장전/발사 후 탄약 표시용
   'weapon:reload': { weapon: string; duration: number };
