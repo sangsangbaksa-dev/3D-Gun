@@ -54,12 +54,27 @@ func _vertex_colors_to_srgb(mi: MeshInstance3D) -> void:
 		var cols = arr[Mesh.ARRAY_COLOR]
 		if cols is PackedColorArray and not (cols as PackedColorArray).is_empty():
 			var pc := cols as PackedColorArray
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var is_terrain := vs.size() > 20000 # 지형 한 장 (221x221 정점)
 			for k in pc.size():
 				pc[k] = pc[k].linear_to_srgb()
+				if is_terrain:
+					pc[k] = _tame_pad(pc[k], vs[k])
 			arr[Mesh.ARRAY_COLOR] = pc
 		out.add_surface_from_arrays(src.surface_get_primitive_type(i), arr)
 		out.surface_set_material(i, mat)
 	mi.mesh = out
+
+## 기지 바닥(반지름 16 m)은 웹에서 짙은 청록 바탕인데, 여기서는 밝은 청록 판처럼 떠서 하늘 아래 지면이 어색하게 푸르다.
+## 채도를 빼고 따뜻한 콘크리트 회색으로 당긴다 (가장자리는 모래 쪽으로 부드럽게 이어진다).
+static func _tame_pad(c: Color, v: Vector3) -> Color:
+	var r0 := Vector2(v.x, v.z).length()
+	if r0 > 17.0:
+		return c
+	var w := 1.0 - smoothstep(12.0, 17.0, r0)
+	var lum := c.r * 0.3 + c.g * 0.55 + c.b * 0.15
+	var warm := Color(lum * 1.08, lum * 0.98, lum * 0.86)
+	return c.lerp(warm, w * 0.85)
 
 # ── 높이 ─────────────────────────────────────────────────────────────
 

@@ -61,7 +61,7 @@ func _process(_dt: float) -> bool:
 		if wait < 4:
 			g.harvest(cur, 0.1) # 완료 → 자원 아이콘이 날아간다
 		if wait == 30:
-			print("SHOT ", s[0])
+			_snap(s[0])
 		if wait > 150:
 			idx += 1
 			cur = null
@@ -73,8 +73,18 @@ func _process(_dt: float) -> bool:
 	g.swing = float(s[2]) # harvest 가 조금 더했으므로 되돌려 고정
 	cur.progress = float(s[3])
 	if wait == 40:
-		print("SHOT ", s[0])
+		_snap(s[0])
 	if wait > 160:
 		idx += 1
 		cur = null
 	return false
+
+## 웹이면 "SHOT 이름" 을 출력(브라우저 스크립트가 캡처), 데스크톱이면 OUT 폴더에 PNG 로 저장
+func _snap(n: String) -> void:
+	if OS.has_feature("web"):
+		print("SHOT ", n)
+		return
+	var out := OS.get_environment("OUT") if OS.has_environment("OUT") else ProjectSettings.globalize_path("user://shots")
+	DirAccess.make_dir_recursive_absolute(out)
+	root.get_texture().get_image().save_png(out.path_join(n + ".png"))
+	print("shot ", n)
