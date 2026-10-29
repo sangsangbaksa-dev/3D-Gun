@@ -71,6 +71,7 @@ var _wander := Vector3.ZERO
 var _wander_t := 0.0
 
 func _ready() -> void:
+	add_to_group("zombies") # 플레이어 조준 보정(Ballistics.assist_pick)이 찾는다
 	var s := GameData.zombie_stats(wave, type)
 	tune = GameData.zombie_tuning[type]
 	is_boss = type == "king" or type in GameData.boss_types

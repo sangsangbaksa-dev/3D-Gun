@@ -112,6 +112,40 @@ func _test_kick() -> void:
 	ok.recover_full = r < 0.03
 	ok.recover_nonneg = Ballistics.kick_recover(0.0, dt) == 0.0
 
+func _test_assist() -> void:
+	var bd: float = gd.player.bulletDrop
+	var pad: float = float(gd.player.aimAssist)
+	ok.assist_val = _near(pad, 0.15)
+	var o := Vector3(0, 1.6, 0)
+	var d := Vector3(0, 0, -1)
+	# 원기둥 규칙: 정면 20m, 반지름 0.4, 높이 1.8 -> 19.6m 에서 닿는다. 옆 0.5 는 빗나가고 pad 0.15 를 더하면(0.55) 닿는다
+	ok.cyl_front = _near(Ballistics.ray_cylinder(o, d, 0, -20, 0.4, 1.8, 0.0), 19.6, 1e-3)
+	ok.cyl_miss = Ballistics.ray_cylinder(o, d, 0.5, -20, 0.4, 1.8, 0.0) < 0.0
+	ok.cyl_pad = Ballistics.ray_cylinder(o, d, 0.5, -20, 0.4 + pad, 1.8, 0.0) > 0.0
+	var src := GDScript.new()
+	src.source_code = "extends CharacterBody3D\nvar radius := 0.4\nvar height := 1.8\nvar dead := false\n"
+	src.reload()
+	var z: CharacterBody3D = src.new()
+	root.add_child(z)
+	z.global_position = Vector3(0.5, 0, -20)
+	var arr := [z]
+	var none := Array([], TYPE_RID, "", null)
+	var pick := Ballistics.assist_pick(arr, o, d, 1.0, bd, pad, 0.0, 100.0, none)
+	ok.assist_edge = not pick.is_empty() and pick.collider == z and float(pick.t) > 19.0 and float(pick.t) < 20.5
+	# 보정 없이는 못 맞힌다
+	ok.assist_off = Ballistics.assist_pick(arr, o, d, 1.0, bd, 0.0, 0.0, 100.0, none).is_empty()
+	# 더 가까운 물리 충돌(t_limit 10) 뒤에 있으면 무시, 이미 맞힌 좀비(exclude)도 무시, 죽은 좀비도 무시
+	ok.assist_blocked = Ballistics.assist_pick(arr, o, d, 1.0, bd, pad, 0.0, 10.0, none).is_empty()
+	var ex: Array[RID] = [z.get_rid()]
+	ok.assist_excl = Ballistics.assist_pick(arr, o, d, 1.0, bd, pad, 0.0, 100.0, ex).is_empty()
+	z.dead = true
+	ok.assist_dead = Ballistics.assist_pick(arr, o, d, 1.0, bd, pad, 0.0, 100.0, none).is_empty()
+	z.dead = false
+	# 낙차 때문에 머리 위로 지나가는(저격 아닌 총 100m) 탄은 높이 범위 밖이면 거른다: 60m 낙차 2.88m -> 1.6-2.88 < -0.2
+	z.global_position = Vector3(0.5, 0, -60)
+	ok.assist_drop = Ballistics.assist_pick(arr, o, d, 1.0, bd, pad, 0.0, 100.0, none).is_empty()
+	z.queue_free()
+
 func _test_data() -> void:
 	# 6종 모두 recoil 이 있고 kind 가 있다 (kick_after_shot 이 읽는 값)
 	var all6: bool = gd.gun_order.size() == 6
@@ -127,6 +161,7 @@ func _process(_dt: float) -> bool:
 		_test_drop()
 		_test_kick()
 		_test_data()
+		_test_assist()
 	if frames == 4: # 벽이 물리 서버에 올라간 뒤
 		var space := root.world_3d.direct_space_state
 		var bd: float = gd.player.bulletDrop

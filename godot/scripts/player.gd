@@ -387,6 +387,12 @@ func _try_fire() -> void:
 		# 관통: 좀비를 맞히면 그 좀비를 빼고 그 자리부터 다시 쏜다. 맞힐 때마다 피해 70%
 		while hits < maxi(1, int(gun.pierce)):
 			var hit := Ballistics.trace(space, origin, dir, range_m, drop_mul, bullet_drop, 1 | 4, exclude, t_from)
+			# 조준 보정(웹 PLAYER.aimAssist): 물리 캡슐을 스친 탄도 판정 반경 + pad 안이면 맞힌 걸로 친다.
+			# 물리 광선이 더 가까운 것(벽·다른 좀비)을 먼저 맞혔다면 그쪽이 우선
+			var assist := Ballistics.assist_pick(get_tree().get_nodes_in_group("zombies"), origin, dir, drop_mul, bullet_drop,
+				float(P.aimAssist), t_from, float(hit.t) if not hit.is_empty() else range_m, exclude)
+			if not assist.is_empty():
+				hit = assist
 			if hit.is_empty():
 				break
 			var target: Object = hit.collider
