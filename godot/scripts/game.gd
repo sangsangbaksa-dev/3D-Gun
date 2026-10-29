@@ -174,6 +174,7 @@ func _build_world() -> void:
 	# 핵 모양은 웹 게임의 buildCoreModel 그대로
 	var lib: Node = (load("res://assets/models/buildings.glb") as PackedScene).instantiate()
 	core_visual = lib.get_node("core_0").duplicate()
+	lib.free() # 라이브러리 장면은 트리 밖이라 직접 해제해야 판마다 쌓이지 않는다
 	core.add_child(core_visual)
 	for n in core_visual.find_children("shield*", "MeshInstance3D", true, false):
 		n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -558,7 +559,13 @@ func tracer(from: Vector3, to: Vector3, col: Color = Color(0, 0, 0, 0)) -> void:
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.08)
 	tw.tween_callback(mi.queue_free)
 
+const MAX_BURSTS := 24 # 동시에 살아 있는 피·먼지 파티클 상한 (연사·산탄 때 폭증 방지)
+var _burst_meshes := {} # 색 → 공유 BoxMesh (발사마다 메시·재질을 새로 만들지 않는다)
+var _burst_live := 0
+
 func _burst(at: Vector3, col: Color, n: int, spd: float) -> void:
+	if _burst_live >= MAX_BURSTS:
+		return
 	var p := CPUParticles3D.new()
 	p.one_shot = true
 	p.emitting = true
@@ -570,14 +577,19 @@ func _burst(at: Vector3, col: Color, n: int, spd: float) -> void:
 	p.initial_velocity_min = spd * 0.5
 	p.initial_velocity_max = spd
 	p.gravity = Vector3(0, -12, 0)
-	var m := BoxMesh.new()
-	m.size = Vector3.ONE * 0.06
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.material = mat
+	var m: BoxMesh = _burst_meshes.get(col)
+	if m == null:
+		m = BoxMesh.new()
+		m.size = Vector3.ONE * 0.06
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = col
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.material = mat
+		_burst_meshes[col] = m
 	p.mesh = m
 	p.position = at
+	_burst_live += 1
+	p.tree_exited.connect(func(): _burst_live -= 1)
 	add_child(p)
 	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
 
@@ -729,12 +741,17 @@ func _refresh_hud() -> void:
 	crosshair.visible = not scoped
 	hp_bar.max_value = player.max_hp
 	hp_bar.value = player.hp
-	_refresh_base_hud()
+	_base_hud_t -= get_process_delta_time()
+	if _base_hud_t <= 0.0: # 자원·안내·건설 패널은 문자열을 많이 만들어서 20Hz 로만 갱신
+		_base_hud_t = 0.05
+		_refresh_base_hud()
 	var help := I18n.t("help") + " · " + I18n.t("help.build")
 	lbl_hint.text = help if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else I18n.t("hud.click") + "  ·  " + help
 	crosshair.queue_redraw()
 	if scoped:
 		scope.queue_redraw()
+
+var _base_hud_t := 0.0
 
 func _refresh_base_hud() -> void:
 	var parts := []
