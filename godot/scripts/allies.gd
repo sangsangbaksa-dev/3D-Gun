@@ -241,6 +241,47 @@ func active_tier() -> int:
 				break
 	return tier
 
+## C: 다음 보유 등급으로 순환 (vaccine.ts nextOwnedTier). 없으면 -1
+func next_owned_tier(from: int) -> int:
+	var n := vaccines.size()
+	for i in range(1, n + 1):
+		var t := (from + i + n) % n
+		if int(vaccines[t]) > 0:
+			return t
+	return -1
+
+func cycle_tier() -> void:
+	var t := next_owned_tier(tier)
+	if t < 0:
+		game.toast(I18n.t("toast.vacNone"))
+		return
+	tier = t
+	game.toast(I18n.t("toast.vacPick", {"v": _vac_name(t), "n": int(vaccines[t])}))
+
+## Q: 가장 가까운(6m 안) 아군의 역할을 다음 빈 역할로 바꾼다 (allies/index.ts)
+func cycle_nearest_role(from: Vector3) -> void:
+	var best: Node = null
+	var bd := 36.0
+	for a in list():
+		if a.dead:
+			continue
+		var d: float = (a.global_position.x - from.x) ** 2 + (a.global_position.z - from.z) ** 2
+		if d < bd:
+			bd = d
+			best = a
+	if best == null:
+		game.toast(I18n.t("toast.noAlly"))
+		return
+	var order: Array = data.allyRoleOrder
+	var i := order.find(best.role)
+	for k in range(1, order.size() + 1):
+		var r: String = order[(i + k) % order.size()]
+		if best.role == r or count_role(r) < int(data.allyRoles[r].max):
+			if r != best.role:
+				best.set_role(r)
+			game.toast(I18n.t("toast.allyRole", {"role": _role_name(r)}))
+			return
+
 ## conversionChance(): vaccine rate + low-HP bonus + vaccine research, bosses harder, clamped.
 func chance_for(z: Node) -> float:
 	var t := active_tier()

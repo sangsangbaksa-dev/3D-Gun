@@ -8,7 +8,7 @@ import {
   ENEMY_RULES, MAX_ALIVE, zombieStats, waveCount, waveRoster, eliteChance, laneSpawnDist,
   BOSS_KIT, BOSS_MOVE, BOSS_TYPES, ELITE, FINAL_WAVE, CORE, type ZType,
   RES_KEYS, RES_LABEL, RES_PRICE, RES_BUY_PRICE, GATHER_NODES, GATHER_REACH, GATHER_IDLE_GRACE, GATHER_DECAY, GATHER_LAYOUT,
-  BUILDINGS, BUILDING_ORDER, GRID, CORE_CLEARANCE, DEMOLISH_REFUND, CORE_REPAIR, CORE_UPGRADES,
+  HERB_HEAL, BUILDINGS, BUILDING_ORDER, GRID, CORE_CLEARANCE, DEMOLISH_REFUND, CORE_REPAIR, CORE_UPGRADES,
 } from '../../src/data';
 import { MAP, LANDMARKS, SCATTER_ROCKS, ZONE_DECOR } from '../../src/data/map';
 import { BASE_START } from '../../src/data/tycoon2d';
@@ -44,6 +44,7 @@ const out = {
   elite: ELITE,
   finalWave: FINAL_WAVE,
   core: CORE,
+  herbHeal: HERB_HEAL,
   map: {
     half: MAP.half, core: MAP.core, playerStart: MAP.playerStart, buildRadius: MAP.buildRadius,
     lanes: MAP.lanes, zones: MAP.zones, props: MAP.props,

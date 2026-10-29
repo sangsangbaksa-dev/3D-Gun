@@ -15,6 +15,7 @@ var boss_kit: Dictionary
 var boss_move: Dictionary
 var boss_types: Array
 var elite: Dictionary
+var herb_heal: Dictionary
 var final_wave: int
 var core: Dictionary
 var map: Dictionary
@@ -48,6 +49,7 @@ func _ready() -> void:
 	boss_move = d.bossMove
 	boss_types = d.bossTypes
 	elite = d.elite
+	herb_heal = d.herbHeal
 	final_wave = int(d.finalWave)
 	core = d.core
 	map = d.map

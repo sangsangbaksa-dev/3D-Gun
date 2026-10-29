@@ -7759,6 +7759,11 @@
    1800
   ]
  },
+ "herbHeal": {
+  "cost": 3,
+  "healPct": 0.4,
+  "cooldown": 6
+ },
  "map": {
   "half": 200,
   "core": {

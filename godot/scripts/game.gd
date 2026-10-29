@@ -299,8 +299,34 @@ func _near_core() -> bool:
 
 # ── 웨이브 ───────────────────────────────────────────────────────────
 
+var herb_cd := 0.0
+
+## G: 약초 응급처치 (player/logic/heal.ts planHerbHeal). 약초 cost 개를 써서 최대 체력 healPct 만큼 회복, 재사용 대기 cooldown 초.
+func herb_heal() -> bool:
+	var rules: Dictionary = GameData.herb_heal
+	var hp: float = player.hp
+	var mx: float = player.max_hp
+	if player.dead:
+		return false
+	if hp >= mx - 0.5:
+		toast(I18n.t("toast.herbFull"))
+		return false
+	if herb_cd > 0.0:
+		toast(I18n.t("toast.herbWait", {"s": ceili(herb_cd)}))
+		return false
+	if int(res.get("herb", 0)) < int(rules.cost):
+		toast(I18n.t("toast.herbNeed", {"n": int(rules.cost)}))
+		return false
+	var healed := minf(mx - hp, mx * float(rules.healPct))
+	res["herb"] = int(res["herb"]) - int(rules.cost)
+	player.hp = minf(mx, hp + healed)
+	herb_cd = float(rules.cooldown)
+	toast(I18n.t("toast.herbHeal", {"n": roundi(healed)}))
+	return true
+
 func _process(dt: float) -> void:
 	_t += dt
+	herb_cd = maxf(0.0, herb_cd - dt)
 	_process_core_visual(_t)
 	hitmark = maxf(0.0, hitmark - dt)
 	if not _pending_dmg.is_empty(): # 사격이 아닌 피해(아군·포탑·함정·폭발)
@@ -343,6 +369,15 @@ func _unhandled_input(event: InputEvent) -> void:
 						base.repair_core()
 					elif a.get("kind") == "upgrade" and base.upgrade_core():
 						set_core_level(base.core_level)
+			KEY_G:
+				if captured:
+					herb_heal()
+			KEY_C:
+				if captured:
+					allies.cycle_tier()
+			KEY_Q:
+				if captured:
+					allies.cycle_nearest_role(player.global_position)
 			KEY_X:
 				if base.building and base.hover:
 					_demolish(base.hover)
