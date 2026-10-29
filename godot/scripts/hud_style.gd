@@ -23,6 +23,7 @@ var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
 var _gun_panel: Panel
+var _core_pulse := 0.0
 
 static func apply(g: Node) -> void:
 	var s = (load("res://scripts/hud_style.gd") as GDScript).new()
@@ -207,6 +208,25 @@ func _process(_dt: float) -> void:
 	game.boss_bar.size.x = minf(560.0, w - 24.0)
 	game.lbl_boss.size.x = minf(560.0, w - 24.0)
 	game.lbl_boss.position.x = (w - game.lbl_boss.size.x) * 0.5
+	_core_pulse += _dt
+	var core_frac: float = game.core.hp / maxf(game.core.max_hp, 1.0)
+	var core_low: bool = core_frac > 0.0 and core_frac < 0.28
+	var fill_col := TEAL
+	if core_low:
+		var flick := 0.65 + 0.35 * sin(_core_pulse * 8.0)
+		fill_col = ORANGE.lerp(RED, 1.0 - core_frac / 0.28) * Color(1, 1, 1, flick)
+	_bar_style(game.core_bar, fill_col, 6)
+	var hp_frac: float = game.player.hp / maxf(game.player.max_hp, 1.0)
+	var hp_low: bool = hp_frac > 0.0 and hp_frac < 0.3
+	_bar_style(game.hp_bar, RED if hp_low else RED, 10)
+	if hp_low:
+		game.hp_bar.modulate = Color(1.0, 0.85 + 0.15 * sin(_core_pulse * 6.0), 0.85, 1.0)
+	else:
+		game.hp_bar.modulate = Color.WHITE
+	if game.boss_bar.visible and game.boss_bar.max_value > 0.0:
+		var boss_frac: float = game.boss_bar.value / game.boss_bar.max_value
+		var rage: bool = boss_frac > 0.0 and boss_frac < 0.5
+		_bar_style(game.boss_bar, RED.lerp(Color8(0xff, 0x55, 0x33), 0.35) if rage else RED, 14)
 	# 아래 왼쪽 HP 패널: HP 글자, 체력 막대, 핵 막대와 이름
 	_hp_label.text = "HP %d / %d" % [ceili(maxf(0.0, game.player.hp)), int(game.player.max_hp)]
 	_hp_label.size.x = 260
