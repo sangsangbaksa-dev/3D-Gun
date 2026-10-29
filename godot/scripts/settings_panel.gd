@@ -5,6 +5,7 @@ extends CanvasLayer
 signal closed
 
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Text := preload("res://scripts/tutorial_text.gd")
 
 ## [keys, action string, group]. A key starting with "@" is looked up in I18n.
 const BINDS := [
@@ -109,6 +110,26 @@ func _settings() -> void:
 		Save.settings.locale = I18n.locale
 		Save.save_settings())
 	row.add_child(lang)
+	var trow := UiKit.row_card(body)
+	trow.add_child(_expand_label(Text.t("settings.tutorial")))
+	var tcheck := CheckButton.new()
+	tcheck.button_pressed = bool(Save.settings.get("tutorial", true))
+	tcheck.toggled.connect(func(on: bool):
+		Save.settings.tutorial = on
+		Save.save_settings())
+	trow.add_child(tcheck)
+	var rrow := UiKit.row_card(body)
+	var rlabel := _expand_label(Text.t("settings.replay"))
+	rrow.add_child(rlabel)
+	var replay := UiKit.button("▶", Vector2(150, 38))
+	replay.pressed.connect(func():
+		Save.settings.intro_seen = false
+		Save.settings.intro_force = true
+		Save.settings.tutorial = true
+		Save.settings.tutorial_force = true
+		Save.save_settings()
+		replay.text = Text.t("settings.replayDone"))
+	rrow.add_child(replay)
 	_buttons([
 		[I18n.t("settings.reset"), _reset],
 		[I18n.t("title.controls"), show_page.bind("controls")],

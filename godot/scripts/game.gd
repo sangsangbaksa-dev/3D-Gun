@@ -125,6 +125,7 @@ func _ready() -> void:
 		if n.has_signal("damaged"):
 			n.damaged.connect(_on_zombie_damaged))
 	preload("res://scripts/core_pointer.gd").apply(self) # 핵 위치 화살표와 피격 알림
+	preload("res://scripts/tutorial_hud.gd").apply(self) # 첫 출격 단계형 힌트 (끄기: 설정)
 	BuildOverlay.apply(self) # 건설 구역 테두리·격자, 레인 입구 표식
 	I18n.locale_changed.connect(_refresh_hud)
 	shop = ShopScript.new()

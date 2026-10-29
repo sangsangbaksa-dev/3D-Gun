@@ -9,6 +9,7 @@ const RED := Color("e0303a")
 const PANEL := Color("121a20b3")
 const SettingsScript := preload("res://scripts/settings_panel.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Intro := preload("res://scripts/intro.gd")
 
 var logo: Control
 var sub: Label
@@ -274,5 +275,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
 		_launch()
 
+var _launching := false
+
 func _launch() -> void:
-	Loading.go("res://scenes/game.tscn")
+	if _launching:
+		return
+	_launching = true
+	var go := func(): Loading.go("res://scenes/game.tscn")
+	if Intro.should_play(): # 첫 출격: 도입 컷 (intro.gd)
+		Intro.play(self, go)
+	else:
+		go.call()
