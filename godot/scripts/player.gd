@@ -237,12 +237,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode >= KEY_1 and event.keycode <= KEY_6 and not build_mode:
 		switch_weapon(GameData.gun_order[event.keycode - KEY_1])
 
+## 방향키 시점 (웹 input.ts pollKeyLook: 초당 650px 상당, 상하는 0.7배). 마우스 감도·조준 감도를 같이 따른다
+func _arrow_look(dt: float, captured: bool) -> void:
+	if not captured:
+		return
+	var v := 650.0 * dt
+	var dx := 0.0
+	var dy := 0.0
+	if Input.is_physical_key_pressed(KEY_LEFT):
+		dx -= v
+	if Input.is_physical_key_pressed(KEY_RIGHT):
+		dx += v
+	if Input.is_physical_key_pressed(KEY_UP):
+		dy -= v * 0.7
+	if Input.is_physical_key_pressed(KEY_DOWN):
+		dy += v * 0.7
+	if dx == 0.0 and dy == 0.0:
+		return
+	var sens: float = P.sens * float(Save.settings.sensitivity) * (0.6 if aiming else 1.0)
+	rotate_y(-dx * sens)
+	camera.rotation.x = clampf(camera.rotation.x - dy * sens, -1.45, 1.45)
+
 func _physics_process(dt: float) -> void:
 	if dead:
 		return
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	aiming = captured and not build_mode and Input.is_action_pressed("aim")
 	iframes = maxf(0.0, iframes - dt)
+	_arrow_look(dt, captured)
 	_move(dt)
 	_tick_weapon(dt)
 	var trigger := captured and not build_mode and not tool_active and Input.is_action_pressed("fire")
