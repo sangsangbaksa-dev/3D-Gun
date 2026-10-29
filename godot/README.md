@@ -178,3 +178,20 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 - `audio_director.gd`: 구역별 발소리(조준 시 작게), 재장전 진행도별 단계음(`RELOAD_STAGES`), 좀비 종류별 목소리·공격음, 보스 포효, 웨이브 시작 8초 전 경고, 코어 경보 직후 피격음 감쇠, 앰비언트 일회음.
 - `sfx.gd`: 동시 재생 상한 24 + sfx.json `group` 상한, 효과음/앰비언트 볼륨(`set_mix`, 설정창 슬라이더), 긴장감 루프.
 - 시험: `tests/sfx_test.gd`. 청감 검증은 못 함(헤드리스): 음색·음량은 실기 조정 필요.
+## 성능
+
+측정: `tests/perf_bench.gd` (좀비 50 + 건물 + 아군 6, 헤드리스 프레임 시간 중앙값·스크립트별 비용 순위, `-- 60` 으로 마릿수 변경),
+`tests/leak_check.gd` (game 장면을 5번 만들고 해제하며 객체 수 증가 확인). 웹은 `build-web.sh` + playwright(swiftshader).
+
+| 항목 | 전 | 후 |
+|---|---|---|
+| 판마다 객체 증가(누수) | +1174 노드/판, 약 +4MB/판 (buildings.glb 라이브러리 미해제) | 0 |
+| index.pck | 12.55MB (미사용 sky.webp ctex 408KB 포함) | 약 12.1MB |
+| index.wasm / gzip | 43.7MB / 9.4MB | 같음 |
+| pck gzip | 11.8MB | - |
+| 웹 첫 화면(canvas) | 약 7.9초 (로컬, swiftshader) | - |
+| 좀비 50 프레임(로직, 헤드리스) | 중앙값 약 11~13ms | 비슷 |
+
+좀비 한 프레임 비용의 대부분은 `move_and_slide`(50마리 약 5.3ms), 판단 `_think` 약 0.9ms, 포즈 `_animate` 약 0.5ms 이다.
+최적화: 판마다 새던 건물 라이브러리 해제, 피/먼지 파티클 동시 24개 상한 + 메시·재질 색별 공유, 자원/안내/건설 HUD 문자열 갱신을 20Hz 로,
+미사용 `sky.webp` 제거. 남은 과제: 먼 좀비의 물리 틱 줄이기(동작이 바뀔 수 있어 보류), world.glb(4.1MB 임포트) 경량화, 글꼴(2MB) 부분 추출.
