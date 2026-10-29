@@ -93,6 +93,14 @@ func _settings() -> void:
 		Sfx.set_volume(x)
 		vol_val.text = "%d%%" % roundi(x * 100.0)
 		Save.save_settings())
+	for key in ["sfx_vol", "amb_vol"]:
+		var mx := _slider_row(I18n.t("settings." + key), 0.0, 1.0, float(Save.settings.get(key, 1.0)))
+		mx[1].text = "%d%%" % roundi(mx[0].value * 100.0)
+		mx[0].value_changed.connect(func(x: float):
+			Save.settings[key] = x
+			Sfx.set_mix(float(Save.settings.get("sfx_vol", 1.0)), float(Save.settings.get("amb_vol", 1.0)))
+			mx[1].text = "%d%%" % roundi(x * 100.0)
+			Save.save_settings())
 	var s := _slider_row(I18n.t("settings.sensitivity"), 0.3, 3.0, float(Save.settings.sensitivity))
 	sens_slider = s[0]
 	sens_val = s[1]
@@ -143,6 +151,9 @@ func _reset() -> void:
 	Save.settings.volume = 0.8
 	Save.settings.sensitivity = 1.0
 	Sfx.set_volume(0.8)
+	Save.settings.sfx_vol = 1.0
+	Save.settings.amb_vol = 1.0
+	Sfx.set_mix(1.0, 1.0)
 	Save.save_settings()
 	_rebuild()
 

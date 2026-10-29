@@ -9,6 +9,9 @@ const GUN_GAIN := 0.32 / 0.5   # sfx.ts master 0.32, recorded at 0.5
 const DRONE_REC := 0.2         # amb_drone recorded at 0.2
 const NEAR := 4.0
 const FAR := 45.0
+const SynthScript := preload("res://scripts/sfx_synth.gd")
+const MAX_VOICES := 24                # 동시에 울리는 일회성 소리 상한 (넘으면 새 소리는 건너뜀)
+const GROUP_MAX := {"voc": 4, "step": 2, "amb": 2, "rel": 3} # sfx.json 의 group: 좀비 목소리·발소리·앰비언트 일회음·재장전음
 
 var rules: Dictionary = {}
 var _streams := {}
@@ -19,7 +22,13 @@ var _drone_lp: AudioEffectLowPassFilter
 var _wind_v := 0.0
 var _drone_v := 0.0
 var _cut := 300.0
-var _amb := {"wind": 0.0, "drone": 0.0, "cutoff": 300.0}
+var _amb := {"wind": 0.0, "drone": 0.0, "cutoff": 300.0, "tension": 0.0}
+var _tens: AudioStreamPlayer
+var _tens_v := 0.0
+var sfx_scale := 1.0   # 설정창 효과음 슬라이더
+var amb_scale := 1.0   # 설정창 앰비언트 슬라이더
+var _voices := 0
+var _groups := {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -39,7 +48,13 @@ func _ready() -> void:
 	AudioServer.add_bus_effect(1, _drone_lp)
 	_wind = _loop("amb_wind", "Master")
 	_drone = _loop("amb_drone", "Drone")
+	_tens = AudioStreamPlayer.new() # 긴장감 저음 루프 (합성, 4초 하나)
+	_tens.stream = _stream("amb_tension")
+	_tens.volume_db = -80.0
+	add_child(_tens)
+	_tens.play()
 	set_volume(float(Save.settings.volume))
+	set_mix(float(Save.settings.get("sfx_vol", 1.0)), float(Save.settings.get("amb_vol", 1.0)))
 	_amb = ambient_target("prep", false, 0.0, true)
 	# UI 클릭: 버튼을 누르면 짧은 딸깍 (index.ts 의 pointerdown 리스너)
 	get_tree().node_added.connect(func(n: Node):
@@ -49,9 +64,17 @@ func _ready() -> void:
 func set_volume(v: float) -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.0001, v)))
 
+## 효과음(sfx)·앰비언트(amb) 음량 (0..1, 마스터와 별개로 곱해진다).
+func set_mix(sfx: float, amb: float) -> void:
+	sfx_scale = clampf(sfx, 0.0, 1.0)
+	amb_scale = clampf(amb, 0.0, 1.0)
+
 func _stream(id: String) -> AudioStreamWAV:
 	if not _streams.has(id):
-		_streams[id] = load("res://assets/sfx/%s.wav" % id)
+		if SynthScript.has(id):
+			_streams[id] = SynthScript.make(id)
+		else:
+			_streams[id] = load("res://assets/sfx/%s.wav" % id)
 	return _streams[id]
 
 ## 가져오기(--import)를 안 한 프로젝트에서는 wav 를 못 읽어 null 이 돌아온다. 그러면 루프 플레이어도 없다(_process 가 건너뜀).
@@ -70,6 +93,10 @@ func _loop(id: String, bus: String) -> AudioStreamPlayer:
 	add_child(p)
 	p.play()
 	return p
+
+## 방금(window 초 안에) 같은 소리가 울렸는지 — 경보와 피격음이 겹치지 않게 할 때 쓴다.
+func recently(id: String, window: float) -> bool:
+	return _last.has(id) and Time.get_ticks_msec() / 1000.0 - float(_last[id]) < window
 
 ## CueGate: the same sound can't restart within its cooldown.
 func _allow(id: String, cooldown: float) -> bool:
@@ -93,7 +120,9 @@ func play(id: String, at = null, gain := 1.0) -> void:
 	var st := _stream(id)
 	if st == null:
 		return
-	_emit(st, SFX_GAIN * gain, pitch, at if at is Vector3 and cam else null)
+	if r.has("group") and int(_groups.get(r.group, 0)) >= int(GROUP_MAX.get(r.group, 99)):
+		return
+	_emit(st, SFX_GAIN * gain, pitch, at if at is Vector3 and cam else null, str(r.get("group", "")))
 
 ## Gun sounds (sfx.ts): fire per gun, plus dry / switch / reload / reloadDone / hit / headshot / kill.
 func gun(kind: String) -> void:
@@ -103,7 +132,12 @@ func gun(kind: String) -> void:
 	if st != null:
 		_emit(st, GUN_GAIN, 1.0, null)
 
-func _emit(s: AudioStream, gain: float, pitch: float, at) -> void:
+func _emit(s: AudioStream, gain: float, pitch: float, at, group := "") -> void:
+	if _voices >= MAX_VOICES:
+		return
+	gain *= amb_scale if group == "amb" else sfx_scale
+	if gain < 0.002:
+		return
 	var p: Node
 	if at is Vector3:
 		# 거리 감쇠는 위에서 직접 계산했으니 고도의 감쇠는 끄고 좌우 위치만 쓴다 (panFor 의 0.8 배)
@@ -125,7 +159,14 @@ func _emit(s: AudioStream, gain: float, pitch: float, at) -> void:
 		p2.stream = s
 		add_child(p2)
 		p = p2
-	p.finished.connect(p.queue_free)
+	_voices += 1
+	if group != "":
+		_groups[group] = int(_groups.get(group, 0)) + 1
+	p.finished.connect(func():
+		_voices -= 1
+		if group != "":
+			_groups[group] = int(_groups.get(group, 0)) - 1
+		p.queue_free())
 	p.play()
 
 ## distanceGain(): 1 inside 4 m, 0 past 45 m, squared falloff between.
@@ -141,13 +182,13 @@ static func distance_gain(d: float) -> float:
 static func ambient_target(phase: String, boss: bool, tension: float, paused: bool) -> Dictionary:
 	var duck := 0.45 if paused else 1.0
 	if phase == "ended":
-		return {"wind": 0.05 * duck, "drone": 0.02 * duck, "cutoff": 260.0}
+		return {"wind": 0.05 * duck, "drone": 0.02 * duck, "cutoff": 260.0, "tension": 0.0}
 	var t := clampf(tension, 0.0, 1.0)
 	if boss:
-		return {"wind": 0.1 * duck, "drone": 0.1 * duck, "cutoff": 700.0}
+		return {"wind": 0.1 * duck, "drone": 0.1 * duck, "cutoff": 700.0, "tension": 0.9 * duck}
 	if phase == "combat":
-		return {"wind": (0.08 + 0.03 * t) * duck, "drone": (0.04 + 0.05 * t) * duck, "cutoff": 380.0 + 260.0 * t}
-	return {"wind": 0.07 * duck, "drone": 0.025 * duck, "cutoff": 300.0}
+		return {"wind": (0.08 + 0.03 * t) * duck, "drone": (0.04 + 0.05 * t) * duck, "cutoff": 380.0 + 260.0 * t, "tension": (0.15 + 0.6 * t) * duck}
+	return {"wind": 0.07 * duck, "drone": 0.025 * duck, "cutoff": 300.0, "tension": 0.0}
 
 ## heartbeatInterval(): seconds between beats under 30% HP, 0 = none.
 static func heartbeat_interval(hp_frac: float) -> float:
@@ -164,8 +205,11 @@ func _process(dt: float) -> void:
 	_wind_v = lerpf(_wind_v, float(_amb.wind), k)
 	_drone_v = lerpf(_drone_v, float(_amb.drone), k)
 	_cut = lerpf(_cut, float(_amb.cutoff), k)
+	_tens_v = lerpf(_tens_v, float(_amb.get("tension", 0.0)), k)
 	if _wind:
-		_wind.volume_db = linear_to_db(maxf(0.0001, _wind_v))
+		_wind.volume_db = linear_to_db(maxf(0.0001, _wind_v * amb_scale))
 	if _drone:
-		_drone.volume_db = linear_to_db(maxf(0.0001, _drone_v / DRONE_REC))
+		_drone.volume_db = linear_to_db(maxf(0.0001, _drone_v * amb_scale / DRONE_REC))
+	if _tens:
+		_tens.volume_db = linear_to_db(maxf(0.0001, _tens_v * amb_scale * 0.5))
 	_drone_lp.cutoff_hz = _cut

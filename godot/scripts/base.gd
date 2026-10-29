@@ -296,6 +296,7 @@ func repair(s: Node) -> bool:
 	if s.hp >= s.max_hp or not game.spend(repair_cost(s)):
 		return false
 	s.hp = s.max_hp
+	Sfx.play("repair", s.global_position)
 	if s.def.has("turret"):
 		persist_turrets(true)
 	return true

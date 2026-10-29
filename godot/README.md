@@ -170,3 +170,9 @@ xvfb-run -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl
 - `scripts/gather_hud.gd`: 화면 중앙 진행 링, 완료 시 자원 아이콘(코드로 그린 통나무·돌·주괴·잎·톱니)이 상단 자원 칸으로 날아가고 칸이 반짝임. 기존 `gather_bar` 는 숨김.
 - 도구·HUD 는 `gathering.gd` 가 처음 채집할 때 만들어 붙이므로 `game.gd` 는 건드리지 않음 (`gather_bar` 표시만 제거). `gathering.current`/`is_gathering()` 이 "지금 채집 중" 상태.
 - `tests/gather_test.gd` 로 확인 (파티클·흔들림·도구 장착/해제·총 숨김·아이콘 도착·스윙 자세·노드 자세 복귀).
+
+## 소리 다듬기 (PORTING 7단계)
+- `scripts/sfx_synth.gd`: 런타임 합성 효과음(처음 쓸 때 만들어 캐시, 파일 없음). 발소리 4종(지면), 점프·착지·대시, 재장전 단계음, 좀비 목소리(신음/비명/침/도약/할퀴기), 보스 포효, 경고 스팅, 수리, 앰비언트(먼 신음/귀뚜라미/삐걱임), 긴장감 저음 루프.
+- `audio_director.gd`: 구역별 발소리(조준 시 작게), 재장전 진행도별 단계음(`RELOAD_STAGES`), 좀비 종류별 목소리·공격음, 보스 포효, 웨이브 시작 8초 전 경고, 코어 경보 직후 피격음 감쇠, 앰비언트 일회음.
+- `sfx.gd`: 동시 재생 상한 24 + sfx.json `group` 상한, 효과음/앰비언트 볼륨(`set_mix`, 설정창 슬라이더), 긴장감 루프.
+- 시험: `tests/sfx_test.gd`. 청감 검증은 못 함(헤드리스): 음색·음량은 실기 조정 필요.
