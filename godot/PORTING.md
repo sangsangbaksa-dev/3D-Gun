@@ -47,6 +47,7 @@
    (`allies.gd`, `ally.gd`, `station_panel.gd`; 테스트 `allies_test.gd`, `lab_test.gd`)
 6. ✅ **2D 본부와 영구 진행** — 업그레이드, 방치 생산 시설, 시작 웨이브 구매, 런 정산(시작 지급 제외), 저장/불러오기(`user://save.json`)
    스킬 트리·런 경험치·스킬 포인트(`skills.gd`, `skill_panel.gd`), 지갑 교환소(`hub_logic.gd` meta_sell/meta_buy), 사망/핵 파괴 연출(`death_card.gd`)까지.
+   7단계 일부 완료: 첫 출격 튜토리얼(`tutorial.gd`, `tutorial_hud.gd`)과 도입 컷(`intro.gd`). 남은 것: 효과음 보강, 3D 모델 교체.
 7. **연출과 소리** — 이야기 장면, 튜토리얼, 효과음, 진짜 3D 모델로 교체
 8. **배포** — 웹 빌드를 Vercel 에, 원하면 PC(Windows/Mac) 와 모바일 빌드
 
