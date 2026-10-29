@@ -120,6 +120,9 @@ func _ready() -> void:
 	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
+	preload("res://scripts/prep_hud.gd").apply(self)
+	preload("res://scripts/wave_clear_flash.gd").apply(self)
+	preload("res://scripts/combat_vignette.gd").apply(self)
 	floating = FloatingText.apply(self)
 	zombies_root.child_entered_tree.connect(func(n: Node):
 		if n.has_signal("damaged"):
@@ -294,6 +297,11 @@ func core_action() -> Dictionary:
 func _near_core() -> bool:
 	var p := player.global_position
 	return Vector2(p.x - core.global_position.x, p.z - core.global_position.z).length() < core.radius + 3.0
+
+func sync_prep_total() -> void:
+	var ph: Node = get_node_or_null("PrepHud")
+	if ph:
+		ph.set_prep_total(prep_left)
 
 # ── 웨이브 ───────────────────────────────────────────────────────────
 
@@ -496,7 +504,10 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	sync_prep_total()
+	var wcf: Node = get_node_or_null("WaveClearFlash")
+	if wcf:
+		wcf.show_wave(wave)
 
 func _on_core_destroyed() -> void:
 	core_dead = true
