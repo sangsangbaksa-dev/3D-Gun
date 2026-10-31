@@ -37,6 +37,7 @@ var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
 var prep_left := PREP_TIME
+var prep_span := PREP_TIME # prep bar max (includes meta bonus when prep starts)
 var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
@@ -120,6 +121,7 @@ func _ready() -> void:
 	add_child(roamers)
 	_build_hud()
 	HudStyle.apply(self) # 웹 HUD 모양(어두운 알약 패널, 로고)
+	preload("res://scripts/combat_vignette.gd").apply(self)
 	floating = FloatingText.apply(self)
 	zombies_root.child_entered_tree.connect(func(n: Node):
 		if n.has_signal("damaged"):
@@ -498,7 +500,10 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	prep_span = prep_left
+	var heal_pct := int(round(GameData.enemy_rules.waveClearStructPct * 100.0))
+	_banner(I18n.t("hud.waveClear", {"n": wave}), "clear", I18n.t("hud.waveClearBonus", {"coins": bonus, "heal": heal_pct}))
+	toast(I18n.t("toast.structHeal", {"p": heal_pct}))
 
 func _on_core_destroyed() -> void:
 	core_dead = true

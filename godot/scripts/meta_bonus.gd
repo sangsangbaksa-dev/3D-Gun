@@ -41,6 +41,7 @@ static func apply(game: Node) -> void:
 	game.coins += int(b.startGold)
 	p.dmg_mul = 1.0 + b.dmgMul
 	game.prep_left += b.prepBonus
+	game.prep_span = game.prep_left
 	# 본부에서 산 시작 웨이브: _start_wave() 가 wave += 1 부터 시작하므로 하나 모자라게 둔다
 	if save.pending_start_wave > 1:
 		game.wave = save.pending_start_wave - 1
