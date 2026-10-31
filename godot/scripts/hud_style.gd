@@ -23,6 +23,9 @@ var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
 var _gun_panel: Panel
+var _prep_track: Panel
+var _prep_bar: ProgressBar
+var _clock := 0.0
 
 static func apply(g: Node) -> void:
 	var s = (load("res://scripts/hud_style.gd") as GDScript).new()
@@ -60,6 +63,18 @@ func _ready() -> void:
 	game.lbl_res.add_theme_font_size_override("font_size", 14)
 	game.lbl_res.add_theme_color_override("font_color", TEXT)
 	_pill(game.lbl_top, box(PANEL, Color(TEAL, 0.25), 99), Vector2(22, 6))
+	_prep_track = Panel.new()
+	_prep_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_track.visible = false
+	hud.add_child(_prep_track)
+	hud.move_child(_prep_track, _first_label_index())
+	_prep_bar = ProgressBar.new()
+	_prep_bar.show_percentage = false
+	_prep_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_bar.visible = false
+	_bar_style(_prep_bar, TEAL, 4)
+	hud.add_child(_prep_bar)
+	hud.move_child(_prep_bar, _first_label_index())
 	_pill(game.lbl_res, box(PANEL, Color(TEAL, 0.2), 10), Vector2(14, 4))
 	_pill(game.lbl_hint, box(PANEL, Color(TEAL, 0.2), 8), Vector2(10, 4))
 	_pill(game.lbl_toast, box(PANEL_SOLID, Color(ORANGE, 0.55), 10), Vector2(18, 6))
@@ -180,15 +195,34 @@ static func text_rect(l: Label) -> Rect2:
 			x += w - sz.x
 	return Rect2(Vector2(x, l.position.y), Vector2(sz.x, maxf(sz.y, l.size.y if l.size.y < sz.y * 1.6 else sz.y)))
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
 	if hud == null:
 		return
+	_clock += dt
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
 	var tw := minf(900.0, w - 24.0)
 	lt.size.x = tw
 	lt.position = Vector2((w - tw) * 0.5, 14)
+	if _prep_bar and game.phase == "prep" and game.prep_span > 0.01:
+		var span: float = game.prep_span
+		var by := lt.position.y + lt.size.y + 6.0
+		_prep_track.visible = true
+		_prep_bar.visible = true
+		_prep_track.position = Vector2(lt.position.x, by)
+		_prep_track.size = Vector2(tw, 5)
+		_prep_bar.position = _prep_track.position
+		_prep_bar.size = _prep_track.size
+		_prep_bar.max_value = span
+		_prep_bar.value = clampf(game.prep_left, 0.0, span)
+		var urgent := game.prep_left <= 8.0
+		var col := ORANGE if urgent else TEAL
+		_prep_bar.add_theme_stylebox_override("fill", box(col, Color(col, 0.0), 3, 0))
+		_prep_track.add_theme_stylebox_override("panel", box(Color(0, 0, 0, 0.45), Color(TEAL, 0.15 if not urgent else 0.35), 3))
+	elif _prep_bar:
+		_prep_track.visible = false
+		_prep_bar.visible = false
 	var lr: Label = game.lbl_res
 	lr.size.x = tw
 	lr.position = Vector2((w - tw) * 0.5, 54)
@@ -207,6 +241,13 @@ func _process(_dt: float) -> void:
 	game.boss_bar.size.x = minf(560.0, w - 24.0)
 	game.lbl_boss.size.x = minf(560.0, w - 24.0)
 	game.lbl_boss.position.x = (w - game.lbl_boss.size.x) * 0.5
+	if game.boss_bar.visible:
+		var pulse := 0.86 + 0.14 * sin(_clock * 11.0)
+		game.boss_bar.modulate = Color(1.0, pulse, pulse)
+		game.lbl_boss.modulate = Color(1.0, 0.88 + 0.12 * sin(_clock * 8.0), 0.88)
+	else:
+		game.boss_bar.modulate = Color.WHITE
+		game.lbl_boss.modulate = Color.WHITE
 	# 아래 왼쪽 HP 패널: HP 글자, 체력 막대, 핵 막대와 이름
 	_hp_label.text = "HP %d / %d" % [ceili(maxf(0.0, game.player.hp)), int(game.player.max_hp)]
 	_hp_label.size.x = 260

@@ -8,8 +8,10 @@ const STRINGS := {
 	"en": {
 		"title.sub": "Zombie Tycoon 3D", "title.launch": "Deploy", "title.launchHint": "Enter or click",
 		"title.lang": "한국어", "title.slice": "Godot port · first playable slice",
+		"title.halloween": "🎃 All Hallows' sortie — the dead march tonight",
 		"hud.wave": "Wave {n}", "hud.kills": "Kills {n}", "hud.coins": "Coins {n}", "hud.reloading": "Reloading…",
 		"hud.prep": "Next wave in {n}s", "hud.click": "Click to lock the mouse",
+		"hud.waveClear": "Wave {n} cleared", "hud.waveClearBonus": "+{coins} coins · core +{heal}% · buildings healed",
 		"death.title": "You fell", "death.sub": "Reached wave {w} · {k} kills · {c} coins", "death.back": "Back to title", "death.bank": "+{g} gold to the wallet {best}", "death.best": "· New best!", "death.hub": "Headquarters", "title.hub": "Headquarters", "title.volume": "Volume",
 		"hud.left": "Left {n}", "hud.core": "Core", "toast.bossKing": "⚠ The Zombie King awakens!", "toast.bossWave": "⚠ Wave {n} boss {name} appears!",
 		"toast.newEnemy": "New enemy: {name}", "toast.kingDown": "The Zombie King has fallen!", "death.coreTitle": "Core destroyed",
@@ -60,8 +62,10 @@ const STRINGS := {
 	"ko": {
 		"title.sub": "좀비 타이쿤 3D", "title.launch": "출격", "title.launchHint": "Enter 또는 클릭",
 		"title.lang": "English", "title.slice": "Godot 이식 · 첫 플레이 버전",
+		"title.halloween": "🎃 할로윈 출격 — 오늘 밤은 시체들이 더 시끄럽다",
 		"hud.wave": "웨이브 {n}", "hud.kills": "처치 {n}", "hud.coins": "코인 {n}", "hud.reloading": "재장전 중…",
 		"hud.prep": "다음 웨이브까지 {n}초", "hud.click": "클릭하면 마우스가 고정돼요",
+		"hud.waveClear": "웨이브 {n} 클리어", "hud.waveClearBonus": "+{coins} 코인 · 핵 +{heal}% · 건물 회복",
 		"death.title": "쓰러졌습니다", "death.sub": "도달 웨이브 {w} · 처치 {k} · 코인 {c}", "death.back": "타이틀로", "death.bank": "지갑에 골드 +{g} {best}", "death.best": "· 최고 기록!", "death.hub": "본부로", "title.hub": "본부", "title.volume": "음량",
 		"hud.left": "남은 좀비 {n}", "hud.core": "핵", "toast.bossKing": "⚠ 좀비 왕이 깨어났다!", "toast.bossWave": "⚠ {n}웨이브 보스 {name} 등장!",
 		"toast.newEnemy": "새로운 적: {name}", "toast.kingDown": "좀비 왕을 쓰러뜨렸다!", "death.coreTitle": "핵이 파괴됐습니다",

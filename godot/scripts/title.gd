@@ -266,10 +266,14 @@ func _refresh() -> void:
 	btn.text = I18n.t("title.launch")
 	hint.text = I18n.t("title.launchHint")
 	lang.text = I18n.t("title.lang")
-	slice.text = I18n.t("title.slice")
+	slice.text = I18n.t("title.halloween") if _halloween() else I18n.t("title.slice")
 	hub.text = I18n.t("title.hub")
 	settings_btn.text = I18n.t("title.settings")
 	controls_btn.text = I18n.t("title.controls")
+
+static func _halloween() -> bool:
+	var d := Time.get_date_dict_from_system()
+	return d.month == 10 and d.day == 31
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
