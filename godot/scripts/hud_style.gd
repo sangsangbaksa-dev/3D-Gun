@@ -23,6 +23,12 @@ var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
 var _gun_panel: Panel
+var _prep_bar: ProgressBar
+var _core_vig: ColorRect
+var _pulse_t := 0.0
+var _hp_fill: StyleBoxFlat
+var _core_fill: StyleBoxFlat
+var _boss_fill: StyleBoxFlat
 
 static func apply(g: Node) -> void:
 	var s = (load("res://scripts/hud_style.gd") as GDScript).new()
@@ -89,6 +95,9 @@ func _ready() -> void:
 	_bar_style(game.hp_bar, RED, 10)
 	_bar_style(game.core_bar, TEAL, 6)
 	_bar_style(game.boss_bar, RED, 14)
+	_hp_fill = game.hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_core_fill = game.core_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_boss_fill = game.boss_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	_bar_style(game.gather_bar, Color8(0xff, 0xd2, 0x5a), 8)
 	game.hp_bar.size = Vector2(260, 12)
 	game.core_bar.size = Vector2(260, 6)
@@ -104,6 +113,18 @@ func _ready() -> void:
 	game.lbl_gun.add_theme_font_size_override("font_size", 15)
 	game.lbl_gun.add_theme_color_override("font_color", TEXT)
 	game.lbl_gun.modulate.a = 1.0
+	_prep_bar = ProgressBar.new()
+	_prep_bar.show_percentage = false
+	_prep_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_bar.visible = false
+	_bar_style(_prep_bar, TEAL, 5)
+	hud.add_child(_prep_bar)
+	_core_vig = ColorRect.new()
+	_core_vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_core_vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_core_vig.color = Color(RED, 0.0)
+	hud.add_child(_core_vig)
+	hud.move_child(_core_vig, hud.get_child_count() - 1)
 	_late.call_deferred()
 
 ## Labels other systems add to the HUD later (allies.gd's vaccine line) get the same pill.
@@ -180,9 +201,10 @@ static func text_rect(l: Label) -> Rect2:
 			x += w - sz.x
 	return Rect2(Vector2(x, l.position.y), Vector2(sz.x, maxf(sz.y, l.size.y if l.size.y < sz.y * 1.6 else sz.y)))
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
 	if hud == null:
 		return
+	_pulse_t += dt
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
@@ -192,6 +214,22 @@ func _process(_dt: float) -> void:
 	var lr: Label = game.lbl_res
 	lr.size.x = tw
 	lr.position = Vector2((w - tw) * 0.5, 54)
+	# 준비 시간 막대 (웹 #prepBar)
+	if _prep_bar:
+		var prep := game.phase == "prep" and game.prep_max > 0.0
+		_prep_bar.visible = prep
+		if prep:
+			var pct := clampf(game.prep_left / game.prep_max, 0.0, 1.0) * 100.0
+			_prep_bar.max_value = 100.0
+			_prep_bar.value = pct
+			var bar_w := minf(300.0, w * 0.88)
+			_prep_bar.size = Vector2(bar_w, 5)
+			_prep_bar.position = Vector2((w - bar_w) * 0.5, 88)
+			var urgent := game.prep_left > 0.0 and game.prep_left < 8.0
+			var paused := game.base != null and game.base.building
+			var col := ORANGE if urgent else (Color8(0x5a, 0x6a, 0x70) if paused else TEAL)
+			if _prep_bar.get_theme_stylebox("fill") is StyleBoxFlat:
+				(_prep_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color = col
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)
@@ -217,6 +255,34 @@ func _process(_dt: float) -> void:
 	game.lbl_core.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game.lbl_core.position = Vector2(26, h - 70)
 	game.core_bar.position = Vector2(26, h - 50)
+	var core_pct := game.core.hp / maxf(1.0, game.core.max_hp)
+	game.lbl_core.text = "%s  %d / %d" % [I18n.t("hud.core"), ceili(maxf(0.0, game.core.hp)), int(game.core.max_hp)]
+	var core_low := game.phase == "combat" and core_pct > 0.0 and core_pct < 0.28
+	if _core_fill:
+		_core_fill.bg_color = RED if core_low else TEAL
+		if core_low:
+			_core_fill.bg_color = RED.lerp(TEAL, 0.45 + 0.55 * sin(_pulse_t * 6.0))
+	if _core_vig:
+		var vig := core_low
+		_core_vig.visible = vig
+		if vig:
+			_core_vig.color = Color(RED, 0.22 + 0.18 * (0.5 + 0.5 * sin(_pulse_t * 4.5)))
+	var hp_pct := game.player.hp / maxf(1.0, game.player.max_hp)
+	var hp_low := hp_pct > 0.0 and hp_pct < 0.3
+	if _hp_fill:
+		if hp_low:
+			_hp_fill.bg_color = RED.lerp(Color(RED, 0.45), 0.5 + 0.5 * sin(_pulse_t * 5.0))
+		else:
+			_hp_fill.bg_color = RED
+	var show_boss: bool = is_instance_valid(game.boss) and not game.boss.dead
+	if show_boss and _boss_fill:
+		var bp := game.boss.hp / maxf(1.0, game.boss.max_hp)
+		var rage := bp > 0.0 and bp < 0.5
+		_boss_fill.bg_color = Color8(0xff, 0x1a, 0x1a) if rage else RED
+		if rage:
+			game.boss_bar.modulate = Color(1.0 + 0.2 * sin(_pulse_t * 8.0), 1.0, 1.0, 1.0)
+		else:
+			game.boss_bar.modulate = Color.WHITE
 	_hp_panel.position = Vector2(14, h - 120)
 	_hp_panel.size = Vector2(284, 86)
 	# 아래 오른쪽 총 패널

@@ -13,6 +13,7 @@ const Intro := preload("res://scripts/intro.gd")
 
 var logo: Control
 var sub: Label
+var event_line: Label
 var slice: Label
 var btn: Button
 var hint: Label
@@ -123,6 +124,13 @@ func _logo_block() -> void:
 	sub.add_theme_constant_override("shadow_offset_y", 1)
 	sub.add_theme_constant_override("shadow_outline_size", 4)
 	col.add_child(sub)
+	event_line = Label.new()
+	event_line.add_theme_font_size_override("font_size", 14)
+	event_line.add_theme_color_override("font_color", Color(ORANGE, 0.92))
+	event_line.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	event_line.add_theme_constant_override("shadow_offset_y", 1)
+	event_line.add_theme_constant_override("shadow_outline_size", 3)
+	col.add_child(event_line)
 	# 은은한 청록 빛 숨쉬기
 	var glow := create_tween().set_loops()
 	glow.tween_property(chip, "modulate", Color(1.12, 1.12, 1.12), 1.6).set_trans(Tween.TRANS_SINE)
@@ -263,6 +271,9 @@ func _label(parent: Control, font_size: int, col: Color) -> Label:
 
 func _refresh() -> void:
 	sub.text = I18n.t("title.sub").to_upper()
+	var ev := _seasonal_event_key()
+	event_line.text = I18n.t(ev) if ev != "" else ""
+	event_line.visible = ev != ""
 	btn.text = I18n.t("title.launch")
 	hint.text = I18n.t("title.launchHint")
 	lang.text = I18n.t("title.lang")
@@ -270,6 +281,14 @@ func _refresh() -> void:
 	hub.text = I18n.t("title.hub")
 	settings_btn.text = I18n.t("title.settings")
 	controls_btn.text = I18n.t("title.controls")
+
+func _seasonal_event_key() -> String:
+	var d := Time.get_datetime_dict_from_system()
+	if d.month == 10 and d.day >= 25:
+		return "title.event.halloween"
+	if d.month == 11 and d.day <= 7:
+		return "title.event.november"
+	return ""
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
