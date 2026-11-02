@@ -19,6 +19,13 @@ var game: Node
 var hud: Control
 var _banner_root: Control
 var _banner_tw: Tween
+var _prep_track: Panel
+var _prep_fill: Panel
+var _warn_vignette: ColorRect
+var _pulse_t := 0.0
+var _hp_fill_style: StyleBoxFlat
+var _core_fill_style: StyleBoxFlat
+var _boss_fill_style: StyleBoxFlat
 var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
@@ -75,6 +82,11 @@ func _ready() -> void:
 	game.lbl_center.add_theme_color_override("font_color", Color(1, 1, 1))
 	game.lbl_center.add_theme_color_override("font_outline_color", Color(RED, 0.6))
 	game.lbl_center.add_theme_constant_override("outline_size", 8)
+	_prep_bar()
+	_combat_vignette()
+	_hp_fill_style = game.hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_core_fill_style = game.core_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_boss_fill_style = game.boss_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	# 아래 왼쪽: HP·핵 패널
 	_hp_panel = Panel.new()
 	_hp_panel.add_theme_stylebox_override("panel", box(PANEL, Color(TEAL, 0.2), 10))
@@ -105,6 +117,26 @@ func _ready() -> void:
 	game.lbl_gun.add_theme_color_override("font_color", TEXT)
 	game.lbl_gun.modulate.a = 1.0
 	_late.call_deferred()
+
+func _prep_bar() -> void:
+	_prep_track = Panel.new()
+	_prep_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_track.add_theme_stylebox_override("panel", box(Color(0, 0, 0, 0.55), Color(TEAL, 0.2), 3, 1))
+	_prep_track.custom_minimum_size = Vector2(300, 5)
+	_prep_track.visible = false
+	hud.add_child(_prep_track)
+	_prep_fill = Panel.new()
+	_prep_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_fill.add_theme_stylebox_override("panel", box(TEAL, Color(TEAL, 0.0), 3, 0))
+	_prep_track.add_child(_prep_fill)
+
+func _combat_vignette() -> void:
+	_warn_vignette = ColorRect.new()
+	_warn_vignette.color = Color(RED, 0.0)
+	_warn_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_warn_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(_warn_vignette)
+	hud.move_child(_warn_vignette, game.hurt_flash.get_index() + 1)
 
 ## Labels other systems add to the HUD later (allies.gd's vaccine line) get the same pill.
 func _late() -> void:
@@ -183,6 +215,7 @@ static func text_rect(l: Label) -> Rect2:
 func _process(_dt: float) -> void:
 	if hud == null:
 		return
+	_pulse_t += _dt
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
@@ -232,6 +265,8 @@ func _process(_dt: float) -> void:
 	game.lbl_hint.position = Vector2((w - game.lbl_hint.size.x) * 0.5, h - 30)
 	game.lbl_center.position.y = 124
 	game.build_panel.position.y = 96 # 위쪽 웨이브·자원 알약 아래로
+	_refresh_prep_bar(w)
+	_refresh_combat_warn(w, h)
 	for e in _pills:
 		var l: Label = e[0]
 		var p: Panel = e[1]
@@ -243,6 +278,56 @@ func _process(_dt: float) -> void:
 			p.position = r.position - pad
 			p.size = r.size + pad * 2.0
 			p.modulate.a = l.modulate.a
+
+func _refresh_prep_bar(w: float) -> void:
+	if _prep_track == null:
+		return
+	var prep: bool = game.phase == "prep" and game.prep_total > 0.0
+	_prep_track.visible = prep
+	if not prep:
+		return
+	var tw := minf(300.0, w - 48.0)
+	_prep_track.size = Vector2(tw, 5)
+	_prep_track.position = Vector2((w - tw) * 0.5, 78)
+	var pct := clampf(game.prep_left / maxf(1.0, game.prep_total), 0.0, 1.0)
+	_prep_fill.size = Vector2(tw * pct, 5)
+	var urgent: bool = game.prep_left > 0.0 and game.prep_left <= 5.0
+	var paused: bool = game.base != null and game.base.building
+	var fill_col := Color8(0x5a, 0x6a, 0x70) if paused else (ORANGE if urgent else TEAL)
+	if urgent and not paused:
+		fill_col = fill_col.lerp(Color8(0xc4, 0x5a, 0x10), 0.35 + 0.25 * sin(_pulse_t * 8.0))
+	_prep_fill.add_theme_stylebox_override("panel", box(fill_col, Color(fill_col, 0.0), 3, 0))
+	var edge := Color(ORANGE, 0.55) if urgent else Color(TEAL, 0.2)
+	_prep_track.add_theme_stylebox_override("panel", box(Color(0, 0, 0, 0.55), edge, 3, 1))
+
+func _refresh_combat_warn(w: float, h: float) -> void:
+	var hp_frac: float = game.player.hp / maxf(1.0, game.player.max_hp)
+	var core_frac: float = game.core.hp / maxf(1.0, game.core.max_hp)
+	var low_hp: bool = hp_frac > 0.0 and hp_frac < 0.3 and game.phase != "ended"
+	var low_core: bool = game.phase == "combat" and core_frac > 0.0 and core_frac < 0.28
+	var a := 0.0
+	if low_hp:
+		a = maxf(a, 0.22 + 0.12 * sin(_pulse_t * 5.5))
+	if low_core:
+		a = maxf(a, 0.28 + 0.14 * sin(_pulse_t * 4.2))
+	_warn_vignette.color = Color(RED, a * 0.55)
+	if _hp_fill_style:
+		var hp_col := RED
+		if low_hp:
+			hp_col = hp_col.lerp(Color(1, 1, 1), 0.35 + 0.35 * sin(_pulse_t * 6.0))
+		_hp_fill_style.bg_color = hp_col
+	if _core_fill_style:
+		var cc := TEAL
+		if low_core:
+			cc = cc.lerp(RED, 0.55 + 0.35 * sin(_pulse_t * 5.0))
+		elif core_frac < 0.5:
+			cc = cc.lerp(ORANGE, clampf((0.5 - core_frac) / 0.22, 0.0, 1.0))
+		_core_fill_style.bg_color = cc
+	if game.boss_bar.visible and game.boss != null and is_instance_valid(game.boss):
+		var bf: float = game.boss.hp / maxf(1.0, game.boss.max_hp)
+		if _boss_fill_style and bf > 0.0 and bf < 0.5:
+			var rage := 0.65 + 0.35 * sin(_pulse_t * 9.0)
+			_boss_fill_style.bg_color = Color8(0xff, 0x60, 0x20).lerp(Color8(0xff, 0x1a, 0x1a), rage)
 
 # ── 명중 마커 ────────────────────────────────────────────────────────
 

@@ -37,6 +37,7 @@ var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
 var prep_left := PREP_TIME
+var prep_total := PREP_TIME
 var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
@@ -492,13 +493,21 @@ func _on_zombie_killed(z: Node, gold: int) -> void:
 func _wave_cleared() -> void:
 	var bonus: int = int(GameData.enemy_rules.waveClearGold) + wave * 2
 	coins += bonus
+	var core_pct: int = int(round(GameData.enemy_rules.waveClearCorePct * 100.0))
+	var struct_pct: int = int(round(GameData.enemy_rules.waveClearStructPct * 100.0))
 	core.heal_pct(GameData.enemy_rules.waveClearCorePct)
 	var sp: float = GameData.enemy_rules.waveClearStructPct
 	for b in base.structures:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	prep_total = prep_left
+	var heal := I18n.t("waveClear.heal", {"corePct": core_pct, "structPct": struct_pct})
+	var sub := I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal})
+	if GameData.is_boss_wave(wave + 1) and wave + 1 <= GameData.final_wave:
+		sub += I18n.t("waveClear.nextBoss")
+	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", sub)
+	toast(I18n.t("toast.structHeal", {"p": struct_pct}))
 
 func _on_core_destroyed() -> void:
 	core_dead = true
