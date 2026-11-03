@@ -8,6 +8,11 @@ const STRINGS := {
 	"en": {
 		"title.sub": "Zombie Tycoon 3D", "title.launch": "Deploy", "title.launchHint": "Enter or click",
 		"title.lang": "한국어", "title.slice": "Godot port · first playable slice",
+		"seasonal.october": "October · hold the line in the long nights",
+		"seasonal.november": "November · fortify before the frost",
+		"seasonal.december": "December · last stand at year’s end",
+		"waveClear.title": "Wave {n} cleared!", "waveClear.rewards": "Gold +{gold} · {heal}",
+		"waveClear.heal": "Core +{corePct}% · Structures +{structPct}%",
 		"hud.wave": "Wave {n}", "hud.kills": "Kills {n}", "hud.coins": "Coins {n}", "hud.reloading": "Reloading…",
 		"hud.prep": "Next wave in {n}s", "hud.click": "Click to lock the mouse",
 		"death.title": "You fell", "death.sub": "Reached wave {w} · {k} kills · {c} coins", "death.back": "Back to title", "death.bank": "+{g} gold to the wallet {best}", "death.best": "· New best!", "death.hub": "Headquarters", "title.hub": "Headquarters", "title.volume": "Volume",
@@ -60,6 +65,11 @@ const STRINGS := {
 	"ko": {
 		"title.sub": "좀비 타이쿤 3D", "title.launch": "출격", "title.launchHint": "Enter 또는 클릭",
 		"title.lang": "English", "title.slice": "Godot 이식 · 첫 플레이 버전",
+		"seasonal.october": "10월 · 긴 밤, 기지를 지켜라",
+		"seasonal.november": "11월 · 한파 전에 기지를 단단히",
+		"seasonal.december": "12월 · 한 해의 마지막 방어",
+		"waveClear.title": "웨이브 {n} 클리어!", "waveClear.rewards": "골드 +{gold} · {heal}",
+		"waveClear.heal": "핵 +{corePct}% · 시설 +{structPct}%",
 		"hud.wave": "웨이브 {n}", "hud.kills": "처치 {n}", "hud.coins": "코인 {n}", "hud.reloading": "재장전 중…",
 		"hud.prep": "다음 웨이브까지 {n}초", "hud.click": "클릭하면 마우스가 고정돼요",
 		"death.title": "쓰러졌습니다", "death.sub": "도달 웨이브 {w} · 처치 {k} · 코인 {c}", "death.back": "타이틀로", "death.bank": "지갑에 골드 +{g} {best}", "death.best": "· 최고 기록!", "death.hub": "본부로", "title.hub": "본부", "title.volume": "음량",

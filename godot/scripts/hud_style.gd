@@ -23,6 +23,11 @@ var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
 var _gun_panel: Panel
+var _prep_bar: ProgressBar
+var _prep_fill_teal: StyleBoxFlat
+var _prep_fill_orange: StyleBoxFlat
+var _core_vignette: ColorRect
+var _fx_t := 0.0
 
 static func apply(g: Node) -> void:
 	var s = (load("res://scripts/hud_style.gd") as GDScript).new()
@@ -104,7 +109,32 @@ func _ready() -> void:
 	game.lbl_gun.add_theme_font_size_override("font_size", 15)
 	game.lbl_gun.add_theme_color_override("font_color", TEXT)
 	game.lbl_gun.modulate.a = 1.0
+	_prep_countdown()
+	_core_warn_layer()
 	_late.call_deferred()
+
+func _prep_countdown() -> void:
+	_prep_bar = ProgressBar.new()
+	_prep_bar.show_percentage = false
+	_prep_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_bar.min_value = 0.0
+	_prep_bar.max_value = 100.0
+	_prep_fill_teal = box(Color8(0x1a, 0x8a, 0x82), Color(TEAL, 0.0), 3, 0)
+	_prep_fill_orange = box(ORANGE, Color(ORANGE, 0.0), 3, 0)
+	_prep_bar.add_theme_stylebox_override("fill", _prep_fill_teal)
+	_prep_bar.add_theme_stylebox_override("background", box(Color(0, 0, 0, 0.55), Color(TEAL, 0.2), 3, 1))
+	_prep_bar.custom_minimum_size = Vector2(300, 5)
+	hud.add_child(_prep_bar)
+	hud.move_child(_prep_bar, _first_label_index())
+
+func _core_warn_layer() -> void:
+	_core_vignette = ColorRect.new()
+	_core_vignette.color = Color(RED, 0.0)
+	_core_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_core_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_core_vignette.visible = false
+	hud.add_child(_core_vignette)
+	hud.move_child(_core_vignette, game.hurt_flash.get_index() + 1)
 
 ## Labels other systems add to the HUD later (allies.gd's vaccine line) get the same pill.
 func _late() -> void:
@@ -180,9 +210,10 @@ static func text_rect(l: Label) -> Rect2:
 			x += w - sz.x
 	return Rect2(Vector2(x, l.position.y), Vector2(sz.x, maxf(sz.y, l.size.y if l.size.y < sz.y * 1.6 else sz.y)))
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
 	if hud == null:
 		return
+	_fx_t += dt
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
@@ -192,6 +223,12 @@ func _process(_dt: float) -> void:
 	var lr: Label = game.lbl_res
 	lr.size.x = tw
 	lr.position = Vector2((w - tw) * 0.5, 54)
+	if _prep_bar:
+		var pb_w := minf(300.0, w * 0.88)
+		_prep_bar.size = Vector2(pb_w, 5)
+		_prep_bar.position = Vector2((w - pb_w) * 0.5, 78)
+		_refresh_prep_bar()
+	_refresh_combat_fx()
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)
@@ -243,6 +280,44 @@ func _process(_dt: float) -> void:
 			p.position = r.position - pad
 			p.size = r.size + pad * 2.0
 			p.modulate.a = l.modulate.a
+
+func _refresh_prep_bar() -> void:
+	if _prep_bar == null:
+		return
+	var show: bool = game.phase == "prep" and game.prep_total > 0.0
+	_prep_bar.visible = show
+	if not show:
+		return
+	var pct := clampf(game.prep_left / game.prep_total, 0.0, 1.0)
+	_prep_bar.value = pct * 100.0
+	var urgent: bool = game.prep_left > 0.0 and game.prep_left <= 5.0
+	var paused: bool = game.base != null and game.base.building
+	_prep_bar.add_theme_stylebox_override("fill", _prep_fill_orange if urgent else _prep_fill_teal)
+	if paused:
+		_prep_bar.modulate = Color(0.72, 0.78, 0.82, 0.85)
+	else:
+		_prep_bar.modulate = Color.WHITE
+
+func _refresh_combat_fx() -> void:
+	var p: Node = game.player
+	var hp_pct: float = p.hp / p.max_hp if p.max_hp > 0.0 else 1.0
+	var hp_low: bool = hp_pct > 0.0 and hp_pct < 0.3
+	var pulse: float = 0.55 + 0.45 * (0.5 + 0.5 * sin(_fx_t * TAU * 1.2))
+	game.hp_bar.modulate.a = pulse if hp_low else 1.0
+	var core_pct: float = game.core.hp / game.core.max_hp if game.core.max_hp > 0.0 else 1.0
+	var core_low: bool = game.phase == "combat" and core_pct > 0.0 and core_pct < 0.28
+	if _core_vignette:
+		_core_vignette.visible = core_low
+		if core_low:
+			var edge: float = 0.35 + 0.25 * (0.5 + 0.5 * sin(_fx_t * TAU * 0.9))
+			_core_vignette.color = Color(RED, edge * 0.4)
+	game.core_bar.modulate.a = pulse if core_low else 1.0
+	if game.boss_bar.visible and is_instance_valid(game.boss):
+		var bp: float = game.boss.hp / game.boss.max_hp if game.boss.max_hp > 0.0 else 1.0
+		var rage: bool = bp > 0.0 and bp < 0.5
+		game.boss_bar.modulate = Color(1.0 + (0.25 if rage else 0.0), 1.0 - (0.15 if rage else 0.0), 1.0 - (0.15 if rage else 0.0), 1.0)
+		if rage:
+			game.boss_bar.modulate *= 0.85 + 0.15 * (0.5 + 0.5 * sin(_fx_t * TAU * 2.2))
 
 # ── 명중 마커 ────────────────────────────────────────────────────────
 
