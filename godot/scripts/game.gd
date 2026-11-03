@@ -37,6 +37,7 @@ var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
 var prep_left := PREP_TIME
+var prep_total := PREP_TIME # 준비 막대(HudStyle) 분모
 var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
@@ -148,6 +149,7 @@ func _ready() -> void:
 	add_child(audio)
 	preload("res://scripts/meta_bonus.gd").apply(self) # 본부 영구 업그레이드
 	Skills.apply(self) # 스킬 트리 (런 경험치 포함)
+	prep_total = prep_left
 
 # ── 월드 ─────────────────────────────────────────────────────────────
 
@@ -498,7 +500,12 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	prep_total = prep_left
+	var struct_pct := int(roundf(sp * 100.0))
+	var core_pct := int(roundf(float(GameData.enemy_rules.waveClearCorePct) * 100.0))
+	var heal_line := I18n.t("waveClear.heal", {"corePct": core_pct, "structPct": struct_pct})
+	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal_line}))
+	toast(I18n.t("toast.structHeal", {"p": struct_pct}))
 
 func _on_core_destroyed() -> void:
 	core_dead = true
