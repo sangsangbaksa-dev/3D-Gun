@@ -498,7 +498,14 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	var struct_pct := int(round(sp * 100.0))
+	var core_pct := int(round(float(GameData.enemy_rules.waveClearCorePct) * 100.0))
+	var heal := I18n.t("waveClear.heal", {"corePct": core_pct, "structPct": struct_pct})
+	var sub := I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal})
+	if GameData.is_boss_wave(wave + 1) and wave + 1 <= GameData.final_wave:
+		sub += I18n.t("waveClear.nextBoss")
+	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", sub)
+	toast(I18n.t("toast.structHeal", {"p": struct_pct}))
 
 func _on_core_destroyed() -> void:
 	core_dead = true
