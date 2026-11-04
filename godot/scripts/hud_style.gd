@@ -23,6 +23,10 @@ var _pills: Array = [] # [label, panel, pad]
 var _hp_label: Label
 var _hp_panel: Panel
 var _gun_panel: Panel
+var _prep_track: ColorRect
+var _prep_fill: ColorRect
+var _combat_vig: Control
+var _fx_t := 0.0
 
 static func apply(g: Node) -> void:
 	var s = (load("res://scripts/hud_style.gd") as GDScript).new()
@@ -75,6 +79,8 @@ func _ready() -> void:
 	game.lbl_center.add_theme_color_override("font_color", Color(1, 1, 1))
 	game.lbl_center.add_theme_color_override("font_outline_color", Color(RED, 0.6))
 	game.lbl_center.add_theme_constant_override("outline_size", 8)
+	_prep_bar()
+	_combat_vignette()
 	# 아래 왼쪽: HP·핵 패널
 	_hp_panel = Panel.new()
 	_hp_panel.add_theme_stylebox_override("panel", box(PANEL, Color(TEAL, 0.2), 10))
@@ -180,9 +186,108 @@ static func text_rect(l: Label) -> Rect2:
 			x += w - sz.x
 	return Rect2(Vector2(x, l.position.y), Vector2(sz.x, maxf(sz.y, l.size.y if l.size.y < sz.y * 1.6 else sz.y)))
 
+func _prep_bar() -> void:
+	_prep_track = ColorRect.new()
+	_prep_track.color = Color(0, 0, 0, 0.55)
+	_prep_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_track.visible = false
+	hud.add_child(_prep_track)
+	hud.move_child(_prep_track, game.crosshair.get_index())
+	_prep_fill = ColorRect.new()
+	_prep_fill.color = TEAL
+	_prep_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prep_track.add_child(_prep_fill)
+
+func _combat_vignette() -> void:
+	var gt := GradientTexture2D.new()
+	var gr := Gradient.new()
+	gr.offsets = PackedFloat32Array([0.45, 0.72, 1.0])
+	gr.colors = PackedColorArray([Color(0, 0, 0, 0), Color(RED, 0.22), Color(RED, 0.55)])
+	gt.gradient = gr
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.5)
+	_combat_vig = TextureRect.new()
+	_combat_vig.texture = gt
+	_combat_vig.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_combat_vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_combat_vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_combat_vig.modulate.a = 0.0
+	hud.add_child(_combat_vig)
+	hud.move_child(_combat_vig, game.hurt_flash.get_index() + 1)
+
+func _prep_total() -> float:
+	return maxf(1.0, float(game.PREP_TIME) + float(game.meta.get("prepBonus", 0.0)))
+
+func _update_prep_bar(w: float, h: float) -> void:
+	if _prep_track == null:
+		return
+	var prep: bool = game.phase == "prep"
+	_prep_track.visible = prep
+	if not prep:
+		return
+	var bar_w := minf(300.0, w - 48.0)
+	var x := (w - bar_w) * 0.5
+	var y := 88.0
+	_prep_track.position = Vector2(x, y)
+	_prep_track.size = Vector2(bar_w, 5.0)
+	var pct := clampf(game.prep_left / _prep_total(), 0.0, 1.0)
+	_prep_fill.size = Vector2(bar_w * pct, 5.0)
+	var urgent: bool = game.prep_left > 0.0 and game.prep_left <= 5.0
+	var building: bool = game.base != null and game.base.building
+	if building:
+		_prep_fill.color = Color(0.35, 0.42, 0.44, 0.85)
+	elif urgent:
+		_prep_fill.color = ORANGE
+	else:
+		_prep_fill.color = TEAL
+	_prep_track.color = Color(0, 0, 0, 0.55) if not building else Color(0, 0, 0, 0.45)
+
+func _update_combat_fx(dt: float) -> void:
+	_fx_t += dt
+	if game.phase == "ended" or game.player.dead:
+		_combat_vig.modulate.a = 0.0
+		game.hp_bar.modulate = Color.WHITE
+		game.core_bar.modulate = Color.WHITE
+		game.boss_bar.modulate = Color.WHITE
+		return
+	var pulse := 0.5 + 0.5 * sin(_fx_t * TAU * 1.2)
+	var vig := 0.0
+	if game.phase == "combat" and game.player.max_hp > 0.0:
+		var hp_frac: float = game.player.hp / game.player.max_hp
+		if hp_frac > 0.0 and hp_frac < 0.3:
+			vig = maxf(vig, 0.28 + 0.18 * pulse)
+			game.hp_bar.modulate = Color(1.0, 0.55 + 0.45 * pulse, 0.55 + 0.45 * pulse)
+		else:
+			game.hp_bar.modulate = Color.WHITE
+	if game.core.max_hp > 0.0:
+		var core_frac: float = game.core.hp / game.core.max_hp
+		var core_low: bool = game.phase == "combat" and core_frac > 0.0 and core_frac < 0.28
+		if core_low:
+			vig = maxf(vig, 0.32 + 0.22 * pulse)
+			game.core_bar.modulate = Color(1.0, 0.5 + 0.5 * pulse, 0.5 + 0.5 * pulse)
+		else:
+			game.core_bar.modulate = Color.WHITE
+	var cp: Node = game.get_node_or_null("CorePointer")
+	if cp != null and cp.get("alert") != null:
+		var al: Variant = cp.alert
+		if al.active and game.phase == "combat":
+			vig = maxf(vig, al.pulse() * 0.45)
+	if is_instance_valid(game.boss) and not game.boss.dead and game.boss.max_hp > 0.0:
+		var bf: float = game.boss.hp / game.boss.max_hp
+		if bf > 0.0 and bf < 0.5:
+			var rp := 0.5 + 0.5 * sin(_fx_t * TAU * 2.2)
+			game.boss_bar.modulate = Color(1.0 + 0.2 * rp, 0.75 + 0.25 * rp, 0.75 + 0.25 * rp)
+		else:
+			game.boss_bar.modulate = Color.WHITE
+	elif game.boss_bar != null:
+		game.boss_bar.modulate = Color.WHITE
+	_combat_vig.modulate.a = clampf(vig, 0.0, 0.72)
+
 func _process(_dt: float) -> void:
 	if hud == null:
 		return
+	_update_combat_fx(_dt)
 	var w := hud.size.x
 	var h := hud.size.y
 	var lt: Label = game.lbl_top
@@ -192,6 +297,7 @@ func _process(_dt: float) -> void:
 	var lr: Label = game.lbl_res
 	lr.size.x = tw
 	lr.position = Vector2((w - tw) * 0.5, 54)
+	_update_prep_bar(w, h)
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)
