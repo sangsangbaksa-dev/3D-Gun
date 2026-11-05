@@ -90,6 +90,9 @@ func _ready() -> void:
 	_bar_style(game.core_bar, TEAL, 6)
 	_bar_style(game.boss_bar, RED, 14)
 	_bar_style(game.gather_bar, Color8(0xff, 0xd2, 0x5a), 8)
+	if game.prep_bar:
+		_bar_style(game.prep_bar, TEAL, 5)
+		game.prep_bar.custom_minimum_size.y = 5
 	game.hp_bar.size = Vector2(260, 12)
 	game.core_bar.size = Vector2(260, 6)
 	game.lbl_core.add_theme_font_size_override("font_size", 12)
@@ -192,6 +195,21 @@ func _process(_dt: float) -> void:
 	var lr: Label = game.lbl_res
 	lr.size.x = tw
 	lr.position = Vector2((w - tw) * 0.5, 54)
+	if game.prep_bar:
+		var pbw := minf(300.0, w - 48.0)
+		game.prep_bar.size.x = pbw
+		game.prep_bar.position = Vector2((w - pbw) * 0.5, 78)
+	var hp_pct: float = game.player.hp / game.player.max_hp if game.player.max_hp > 0.0 else 1.0
+	var core_pct: float = game.core.hp / game.core.max_hp if game.core.max_hp > 0.0 else 1.0
+	var pulse := 0.5 + 0.5 * sin(game._t * 3.2)
+	if hp_pct > 0.0 and hp_pct < 0.30:
+		game.hp_bar.modulate = Color(1.0, 0.72 + 0.18 * pulse, 0.72 + 0.18 * pulse)
+	else:
+		game.hp_bar.modulate = Color.WHITE
+	if core_pct > 0.0 and core_pct < 0.28 and game.phase == "combat":
+		game.core_bar.modulate = Color(1.0, 0.65 + 0.25 * pulse, 0.65 + 0.25 * pulse)
+	else:
+		game.core_bar.modulate = Color.WHITE
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)

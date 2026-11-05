@@ -10,6 +10,7 @@ const PANEL := Color("121a20b3")
 const SettingsScript := preload("res://scripts/settings_panel.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
 const Intro := preload("res://scripts/intro.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 var logo: Control
 var sub: Label
@@ -266,7 +267,7 @@ func _refresh() -> void:
 	btn.text = I18n.t("title.launch")
 	hint.text = I18n.t("title.launchHint")
 	lang.text = I18n.t("title.lang")
-	slice.text = I18n.t("title.slice")
+	slice.text = I18n.t("title.slice") + Seasonal.title_slice_extra(I18n.locale)
 	hub.text = I18n.t("title.hub")
 	settings_btn.text = I18n.t("title.settings")
 	controls_btn.text = I18n.t("title.controls")

@@ -37,6 +37,9 @@ var spawn_gap := 0.5
 var alive := 0
 var spawn_timer := 0.0
 var prep_left := PREP_TIME
+var prep_total := PREP_TIME
+var prep_bar: ProgressBar
+var combat_vignette: TextureRect
 var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
@@ -147,6 +150,7 @@ func _ready() -> void:
 	audio.game = self
 	add_child(audio)
 	preload("res://scripts/meta_bonus.gd").apply(self) # 본부 영구 업그레이드
+	prep_total = prep_left
 	Skills.apply(self) # 스킬 트리 (런 경험치 포함)
 
 # ── 월드 ─────────────────────────────────────────────────────────────
@@ -306,6 +310,7 @@ func _process(dt: float) -> void:
 	if not _pending_dmg.is_empty(): # 사격이 아닌 피해(아군·포탑·함정·폭발)
 		_flush_damage(false)
 	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
+	_update_combat_vignette()
 	if phase == "ended":
 		return
 	if phase == "prep":
@@ -498,7 +503,17 @@ func _wave_cleared() -> void:
 		b.hp = minf(b.max_hp, b.hp + b.max_hp * sp)
 	phase = "prep"
 	prep_left = PREP_TIME + float(meta.get("prepBonus", 0.0)) # 웹 prepTime(): 매 웨이브 영구 보너스 포함
-	_banner(I18n.t("hud.wave", {"n": wave}) + "  ✓", "clear", "+%d" % bonus)
+	prep_total = prep_left
+	var struct_pct := int(round(sp * 100.0))
+	var heal := I18n.t("waveClear.heal", {
+		"corePct": int(round(GameData.enemy_rules.waveClearCorePct * 100.0)),
+		"structPct": struct_pct,
+	})
+	var sub := I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal})
+	if GameData.is_boss_wave(wave + 1) and wave + 1 <= GameData.final_wave:
+		sub += I18n.t("waveClear.nextBoss")
+	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", sub)
+	toast(I18n.t("toast.structHeal", {"p": struct_pct}))
 
 func _on_core_destroyed() -> void:
 	core_dead = true
@@ -603,6 +618,26 @@ func _puff(at: Vector3) -> void:
 func _on_hurt(_hp: float) -> void:
 	hurt_flash.color.a = 0.45
 
+func _update_combat_vignette() -> void:
+	if combat_vignette == null or phase != "combat" or player.dead:
+		if combat_vignette:
+			combat_vignette.modulate.a = 0.0
+		return
+	var hp_pct: float = player.hp / player.max_hp if player.max_hp > 0.0 else 1.0
+	var core_pct: float = core.hp / core.max_hp if core.max_hp > 0.0 else 1.0
+	var low_hp: bool = hp_pct > 0.0 and hp_pct < 0.30
+	var low_core: bool = core_pct > 0.0 and core_pct < 0.28
+	if not low_hp and not low_core:
+		combat_vignette.modulate.a = 0.0
+		return
+	var pulse := 0.5 + 0.5 * sin(_t * 3.6)
+	var severity := 0.0
+	if low_hp:
+		severity = maxf(severity, (0.30 - hp_pct) / 0.30)
+	if low_core:
+		severity = maxf(severity, (0.28 - core_pct) / 0.28)
+	combat_vignette.modulate.a = 0.14 + 0.26 * severity * pulse
+
 # ── HUD ──────────────────────────────────────────────────────────────
 
 func _build_hud() -> void:
@@ -617,6 +652,24 @@ func _build_hud() -> void:
 	hurt_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hurt_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(hurt_flash)
+	combat_vignette = TextureRect.new()
+	combat_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	combat_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	combat_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	combat_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	combat_vignette.modulate = Color(1, 1, 1, 0)
+	hud.add_child(combat_vignette)
+	var vig_tex := GradientTexture2D.new()
+	var vig_grad := Gradient.new()
+	vig_grad.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	vig_grad.colors = PackedColorArray([Color(0, 0, 0, 0), Color(0, 0, 0, 0), Color(0.85, 0.05, 0.08, 0.95)])
+	vig_tex.gradient = vig_grad
+	vig_tex.fill = GradientTexture2D.FILL_RADIAL
+	vig_tex.fill_from = Vector2(0.5, 0.5)
+	vig_tex.fill_to = Vector2(1.0, 0.5)
+	combat_vignette.texture = vig_tex
+	prep_bar = _bar(Vector2.ZERO, Vector2(300, 5), Color(0.18, 0.9, 0.84))
+	prep_bar.visible = false
 	scope = Control.new()
 	scope.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scope.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -720,7 +773,17 @@ func _refresh_hud() -> void:
 	lbl_top.text += "    Lv %d (+%d)" % [Skills.run_level(self), Skills.run_points(self)] # 런 레벨과 이번 판에 번 스킬 포인트
 	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
+		if prep_bar and prep_total > 0.0:
+			prep_bar.visible = true
+			prep_bar.max_value = prep_total
+			prep_bar.value = maxf(0.0, prep_left)
+			var urgent := prep_left > 0.0 and prep_left <= 5.0
+			var fill := prep_bar.get_theme_stylebox("fill") as StyleBoxFlat
+			if fill:
+				fill.bg_color = Color(1.0, 0.54, 0.16) if urgent else Color(0.18, 0.9, 0.84)
 	elif phase == "combat":
+		if prep_bar:
+			prep_bar.visible = false
 		lbl_top.text += "    " + I18n.t("hud.left", {"n": remaining()})
 	core_bar.position = Vector2(24, hud.size.y - 92)
 	lbl_core.position = Vector2(312, hud.size.y - 90)
@@ -735,6 +798,11 @@ func _refresh_hud() -> void:
 		boss_bar.max_value = boss.max_hp
 		boss_bar.value = maxf(0.0, boss.hp)
 		lbl_boss.text = I18n.zombie_name(boss.type)
+		var boss_pct: float = boss.hp / boss.max_hp if boss.max_hp > 0.0 else 1.0
+		var rage: bool = boss_pct > 0.0 and boss_pct < 0.5
+		var pulse := 0.65 + 0.35 * sin(_t * 7.0) if rage else 1.0
+		boss_bar.modulate = Color(1.0, 0.55 + 0.25 * pulse, 0.45 + 0.2 * pulse) if rage else Color.WHITE
+		lbl_boss.modulate = boss_bar.modulate
 	lbl_ammo.text = I18n.t("hud.reloading") if player.is_reloading() else "%d / %d" % [player.ammo, player.mag_size(player.gun_id)]
 	lbl_gun.text = "%s  Lv %d" % [I18n.gun_name(player.gun_id), player.lv[player.gun_id]]
 	var scoped: bool = player.aiming and bool(player.gun.scope)
