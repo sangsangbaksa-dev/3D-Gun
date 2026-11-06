@@ -5,6 +5,20 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 		<meta name="description" content="Zombie Tycoon 3D (3D-GUN) — wave defense, base building, and permanent HQ upgrades in the browser.">
 		<title>3D-GUN</title>
+		<script>
+(function () {
+	const ko = (navigator.language || '').toLowerCase().startsWith('ko');
+	const m = new Date().getMonth() + 1;
+	let extra = '';
+	if (m === 11) extra = ko ? '11월, 기지 밖 안개' : 'November fog over the base';
+	else if (m === 12) extra = ko ? '12월, 차가운 밤' : 'December cold nights';
+	const base = ko
+		? '좀비 타이쿤 3D — 웨이브 방어, 기지 건설, 본부 영구 성장.'
+		: 'Zombie Tycoon 3D — wave defense, base building, permanent HQ upgrades.';
+	const meta = document.querySelector('meta[name="description"]');
+	if (meta) meta.content = extra ? base + ' ' + extra : base;
+})();
+		</script>
 		<style>
 html, body, #canvas {
 	margin: 0;
@@ -140,7 +154,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14317376,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14342720,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 

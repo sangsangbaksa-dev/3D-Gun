@@ -17,3 +17,29 @@ static func meta_description(locale: String) -> String:
 	if extra.begins_with("·"):
 		extra = extra.substr(1).strip_edges()
 	return base if extra == "" else "%s %s" % [base, extra]
+
+## Title-screen ember palette (monthly mood; defaults match warm orange sparks).
+static func ember_hot() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.72, 0.82, 0.95, 1.0)
+		12:
+			return Color(0.85, 0.78, 0.95, 1.0)
+		_:
+			return Color(1.0, 0.75, 0.4, 1.0)
+
+static func ember_fade() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.35, 0.55, 0.62, 0.0)
+		12:
+			return Color(0.45, 0.38, 0.62, 0.0)
+		_:
+			return Color(1.0, 0.54, 0.16, 0.0)
+
+static func ember_amount() -> int:
+	match Time.get_datetime_dict_from_system().month:
+		11, 12:
+			return 48
+		_:
+			return 60
