@@ -204,8 +204,10 @@ func _embers() -> void:
 	embers = CPUParticles2D.new()
 	var dot := GradientTexture2D.new()
 	var dg := Gradient.new()
-	dg.set_color(0, Color(1, 0.75, 0.4, 1))
-	dg.set_color(1, Color(ORANGE, 0.0))
+	var hot := Seasonal.ember_hot()
+	var tail := Seasonal.ember_fade()
+	dg.set_color(0, hot)
+	dg.set_color(1, tail)
 	dot.gradient = dg
 	dot.fill = GradientTexture2D.FILL_RADIAL
 	dot.fill_from = Vector2(0.5, 0.5)
@@ -213,7 +215,7 @@ func _embers() -> void:
 	dot.width = 16
 	dot.height = 16
 	embers.texture = dot
-	embers.amount = 60
+	embers.amount = Seasonal.ember_amount()
 	embers.lifetime = 9.0
 	embers.preprocess = 9.0
 	embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -226,7 +228,7 @@ func _embers() -> void:
 	embers.scale_amount_max = 0.6
 	var fade := Gradient.new()
 	fade.offsets = PackedFloat32Array([0.0, 0.1, 1.0])
-	fade.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 1), Color(1, 0.6, 0.4, 0)])
+	fade.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 1), Color(hot.r, hot.g * 0.85, hot.b * 0.7, 0)])
 	embers.color_ramp = fade
 	var mat := CanvasItemMaterial.new()
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD

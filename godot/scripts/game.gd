@@ -777,10 +777,6 @@ func _refresh_hud() -> void:
 			prep_bar.visible = true
 			prep_bar.max_value = prep_total
 			prep_bar.value = maxf(0.0, prep_left)
-			var urgent := prep_left > 0.0 and prep_left <= 5.0
-			var fill := prep_bar.get_theme_stylebox("fill") as StyleBoxFlat
-			if fill:
-				fill.bg_color = Color(1.0, 0.54, 0.16) if urgent else Color(0.18, 0.9, 0.84)
 	elif phase == "combat":
 		if prep_bar:
 			prep_bar.visible = false

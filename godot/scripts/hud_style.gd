@@ -188,6 +188,7 @@ func _process(_dt: float) -> void:
 		return
 	var w := hud.size.x
 	var h := hud.size.y
+	var pulse := 0.5 + 0.5 * sin(game._t * 3.2)
 	var lt: Label = game.lbl_top
 	var tw := minf(900.0, w - 24.0)
 	lt.size.x = tw
@@ -199,17 +200,38 @@ func _process(_dt: float) -> void:
 		var pbw := minf(300.0, w - 48.0)
 		game.prep_bar.size.x = pbw
 		game.prep_bar.position = Vector2((w - pbw) * 0.5, 78)
+		var prep_paused: bool = game.get_tree().paused and game.phase == "prep"
+		var prep_urgent: bool = game.phase == "prep" and game.prep_left > 0.0 and game.prep_left <= 5.0
+		var prep_fill := game.prep_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		if prep_fill:
+			if prep_paused:
+				prep_fill.bg_color = Color(0.36, 0.42, 0.46)
+			elif prep_urgent:
+				prep_fill.bg_color = Color(1.0, 0.54, 0.16)
+			else:
+				prep_fill.bg_color = Color(TEAL)
+		if prep_paused:
+			game.prep_bar.modulate = Color(0.72, 0.76, 0.78)
+		elif prep_urgent:
+			game.prep_bar.modulate = Color(1.0, 0.88 + 0.12 * pulse, 0.78 + 0.22 * pulse)
+		else:
+			game.prep_bar.modulate = Color.WHITE
 	var hp_pct: float = game.player.hp / game.player.max_hp if game.player.max_hp > 0.0 else 1.0
 	var core_pct: float = game.core.hp / game.core.max_hp if game.core.max_hp > 0.0 else 1.0
-	var pulse := 0.5 + 0.5 * sin(game._t * 3.2)
 	if hp_pct > 0.0 and hp_pct < 0.30:
 		game.hp_bar.modulate = Color(1.0, 0.72 + 0.18 * pulse, 0.72 + 0.18 * pulse)
 	else:
 		game.hp_bar.modulate = Color.WHITE
 	if core_pct > 0.0 and core_pct < 0.28 and game.phase == "combat":
 		game.core_bar.modulate = Color(1.0, 0.65 + 0.25 * pulse, 0.65 + 0.25 * pulse)
+		var core_fill := game.core_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		if core_fill:
+			core_fill.bg_color = Color(RED)
 	else:
 		game.core_bar.modulate = Color.WHITE
+		var core_fill := game.core_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		if core_fill:
+			core_fill.bg_color = Color(TEAL)
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)
