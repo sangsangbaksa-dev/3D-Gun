@@ -1,5 +1,6 @@
 // 상자 3D 모델과 연출. 상자 상태(Chest)를 읽어 그리기만 한다. 로직은 모른다.
 import * as THREE from 'three';
+import { getGroundY } from '../../core/world';
 import { CHEST_ANIM, RARITY_COLORS } from '../../data';
 import type { Chest } from '../logic/chests';
 
@@ -110,7 +111,7 @@ export function makeChestView(c: Chest): ChestView {
     sparks.push(s);
   }
 
-  group.position.set(c.x, 0, c.z); // TODO: getGroundY(c.x, c.z) 가 생기면 여기서 높이를 쓴다
+  group.position.set(c.x, getGroundY(c.x, c.z), c.z);
   group.rotation.y = c.yaw;
   return { id: c.id, group, body, lid, glow, beam, ring, sparks, burstDone: false, tier: c.tier, lastRarity: -1 };
 }

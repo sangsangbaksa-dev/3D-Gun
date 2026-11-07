@@ -65,4 +65,4 @@ src/loot/
 - `RewardDef` 판별 유니온 → ScriptableObject `RewardEntry`(enum `Kind` + 필드)의 리스트, 등급마다 `RewardTable` 에셋 4개. `CHEST_TABLE` → `ChestTier` ScriptableObject(확률 4개, 열쇠 종류).
 - `view/chestMesh.ts` → 프리팹 + Animator(흔들림/뚜껑 키프레임), 빛기둥은 ParticleSystem 또는 메시, 파편은 ParticleSystem. `ui.ts` → UGUI 패널(확률표, 보상 카드).
 - 이벤트 → `EventBus` 의 `ChestOpened` struct, `E` 상호작용 → `IInteractable`.
-- 높이는 현재 0이다. `getGroundY(x, z)`가 생기면 `view/chestMesh.ts`의 TODO 한 곳만 바꾼다.
+- 바닥 높이는 `core/world`의 `getGroundY(x, z)`로 맞춘다(`view/chestMesh.ts`).
