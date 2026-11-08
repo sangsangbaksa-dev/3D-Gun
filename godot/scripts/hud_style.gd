@@ -232,6 +232,15 @@ func _process(_dt: float) -> void:
 		var core_fill := game.core_bar.get_theme_stylebox("fill") as StyleBoxFlat
 		if core_fill:
 			core_fill.bg_color = Color(TEAL)
+	var pl = game.player
+	if game.phase == "combat" and pl != null and not pl.dead and not pl.is_reloading():
+		var mag: int = pl.mag_size(pl.gun_id)
+		if mag > 0 and pl.ammo > 0 and float(pl.ammo) / float(mag) <= 0.2:
+			game.lbl_ammo.modulate = Color(1.0, 0.62 + 0.22 * pulse, 0.38 + 0.18 * pulse)
+		else:
+			game.lbl_ammo.modulate = Color.WHITE
+	else:
+		game.lbl_ammo.modulate = Color.WHITE
 	# 좁은 화면에서도 가운데 정렬 유지 (생성 때 앵커 기준 위치가 화면 폭을 따라가지 않으므로 매번 정한다)
 	var tl: Label = game.lbl_toast
 	tl.size.x = minf(900.0, w - 24.0)

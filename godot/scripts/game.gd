@@ -18,6 +18,7 @@ const GatheringScript := preload("res://scripts/gathering.gd")
 const RoamersScript := preload("res://scripts/roamers.gd")
 const LookScript := preload("res://scripts/look.gd")
 const HudStyle := preload("res://scripts/hud_style.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 const BuildOverlay := preload("res://scripts/build_overlay.gd")
 const UiKit := preload("res://scripts/ui_kit.gd")
 const FloatingText := preload("res://scripts/floating_text.gd")
@@ -636,7 +637,9 @@ func _update_combat_vignette() -> void:
 		severity = maxf(severity, (0.30 - hp_pct) / 0.30)
 	if low_core:
 		severity = maxf(severity, (0.28 - core_pct) / 0.28)
-	combat_vignette.modulate.a = 0.14 + 0.26 * severity * pulse
+	var alpha := 0.14 + 0.26 * severity * pulse
+	var tint := Seasonal.combat_vignette_tint(low_core, low_hp)
+	combat_vignette.modulate = Color(tint.r, tint.g, tint.b, alpha)
 
 # ── HUD ──────────────────────────────────────────────────────────────
 
