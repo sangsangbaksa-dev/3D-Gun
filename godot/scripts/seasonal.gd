@@ -43,3 +43,21 @@ static func ember_amount() -> int:
 			return 48
 		_:
 			return 60
+
+## Combat edge vignette RGB tint (alpha handled in game.gd).
+static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
+	if not low_core and not low_hp:
+		return Color.WHITE
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			if low_core:
+				return Color(0.62, 0.78, 0.95)
+			return Color(0.95, 0.38, 0.42)
+		12:
+			if low_core:
+				return Color(0.72, 0.68, 0.92)
+			return Color(0.95, 0.35, 0.45)
+		_:
+			if low_core:
+				return Color(1.0, 0.55, 0.55)
+			return Color(1.0, 0.45, 0.48)
