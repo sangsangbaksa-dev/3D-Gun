@@ -23,6 +23,7 @@ const ZONE_FOG := {
 const SUN_BASE := Vector3(0.55, 0.5, 0.45) # 해 방향 (하늘 셰이더와 햇빛이 같이 쓴다)
 const AmbienceScript := preload("res://scripts/ambience.gd")
 const ScatterScript := preload("res://scripts/scatter.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 const CoreFxScript := preload("res://scripts/core_fx.gd")
 const BOOST := 1.08
 const FADE := 2.5
@@ -239,7 +240,8 @@ func _apply() -> void:
 		sun.look_at_from_position(sp, Vector3.ZERO)
 	if ember_mat:
 		var e: float = s.ember
-		ember_mat.albedo_color.a = 0.05 + e * 0.2 * (0.85 + sin(t * 3.0) * 0.15)
+		var ec := Seasonal.world_ember_color()
+		ember_mat.albedo_color = Color(ec.r, ec.g, ec.b, 0.05 + e * 0.2 * (0.85 + sin(t * 3.0) * 0.15))
 
 func _build_extras() -> void:
 	var sc := ScatterScript.new()

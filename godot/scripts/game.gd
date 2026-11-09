@@ -628,7 +628,16 @@ func _update_combat_vignette() -> void:
 	var core_pct: float = core.hp / core.max_hp if core.max_hp > 0.0 else 1.0
 	var low_hp: bool = hp_pct > 0.0 and hp_pct < 0.30
 	var low_core: bool = core_pct > 0.0 and core_pct < 0.28
-	if not low_hp and not low_core:
+	var low_ammo := false
+	var ammo_sev := 0.0
+	if not player.is_reloading():
+		var mag: int = player.mag_size(player.gun_id)
+		if mag > 0 and player.ammo > 0:
+			var ratio := float(player.ammo) / float(mag)
+			if ratio <= 0.2:
+				low_ammo = true
+				ammo_sev = (0.2 - ratio) / 0.2
+	if not low_hp and not low_core and not low_ammo:
 		combat_vignette.modulate.a = 0.0
 		return
 	var pulse := 0.5 + 0.5 * sin(_t * 3.6)
@@ -638,7 +647,9 @@ func _update_combat_vignette() -> void:
 	if low_core:
 		severity = maxf(severity, (0.28 - core_pct) / 0.28)
 	var alpha := 0.14 + 0.26 * severity * pulse
-	var tint := Seasonal.combat_vignette_tint(low_core, low_hp)
+	if low_ammo:
+		alpha = maxf(alpha, Seasonal.low_ammo_vignette_cap() * ammo_sev * pulse)
+	var tint := Seasonal.combat_vignette_tint(low_core, low_hp, low_ammo)
 	combat_vignette.modulate = Color(tint.r, tint.g, tint.b, alpha)
 
 # ── HUD ──────────────────────────────────────────────────────────────

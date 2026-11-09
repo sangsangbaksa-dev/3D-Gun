@@ -11,6 +11,7 @@ const ORANGE := Color8(0xff, 0x8a, 0x2a)
 const RED := Color8(0xe0, 0x30, 0x3a)
 const TEXT := Color8(0xd6, 0xe4, 0xe8)
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 ## 명중 마커가 보이는 시간(초)
 const HIT_TIME := {"normal": 0.18, "head": 0.28, "kill": 0.42}
@@ -209,7 +210,7 @@ func _process(_dt: float) -> void:
 			elif prep_urgent:
 				prep_fill.bg_color = Color(1.0, 0.54, 0.16)
 			else:
-				prep_fill.bg_color = Color(TEAL)
+				prep_fill.bg_color = Seasonal.prep_bar_color()
 		if prep_paused:
 			game.prep_bar.modulate = Color(0.72, 0.76, 0.78)
 		elif prep_urgent:
@@ -236,7 +237,7 @@ func _process(_dt: float) -> void:
 	if game.phase == "combat" and pl != null and not pl.dead and not pl.is_reloading():
 		var mag: int = pl.mag_size(pl.gun_id)
 		if mag > 0 and pl.ammo > 0 and float(pl.ammo) / float(mag) <= 0.2:
-			game.lbl_ammo.modulate = Color(1.0, 0.62 + 0.22 * pulse, 0.38 + 0.18 * pulse)
+			game.lbl_ammo.modulate = Seasonal.low_ammo_hud_modulate(pulse)
 		else:
 			game.lbl_ammo.modulate = Color.WHITE
 	else:
