@@ -17,6 +17,11 @@
 		: 'Zombie Tycoon 3D — wave defense, base building, permanent HQ upgrades.';
 	const meta = document.querySelector('meta[name="description"]');
 	if (meta) meta.content = extra ? base + ' ' + extra : base;
+	const status = document.getElementById('status');
+	if (status) {
+		if (m === 11) status.style.backgroundColor = '#1e2830';
+		else if (m === 12) status.style.backgroundColor = '#1a1828';
+	}
 })();
 		</script>
 		<style>
@@ -154,7 +159,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14319344,"index.wasm":43699190},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14320656,"index.wasm":43682606},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 

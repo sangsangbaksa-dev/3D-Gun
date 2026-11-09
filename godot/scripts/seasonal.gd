@@ -44,8 +44,36 @@ static func ember_amount() -> int:
 		_:
 			return 60
 
+## In-world ember tint (look.gd); subtler than the title screen.
+static func world_ember_color() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.58, 0.72, 0.88, 1.0)
+		12:
+			return Color(0.72, 0.62, 0.9, 1.0)
+		_:
+			return Color(0.85, 0.5, 0.28, 1.0)
+
+## Prep-phase progress bar fill when not urgent (HudStyle).
+static func prep_bar_color() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.24, 0.72, 0.82)
+		12:
+			return Color(0.42, 0.58, 0.92)
+		_:
+			return Color(0.18, 0.9, 0.84)
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
-static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
+static func combat_vignette_tint(low_core: bool, low_hp: bool, low_ammo: bool = false) -> Color:
+	if low_ammo and not low_core and not low_hp:
+		match Time.get_datetime_dict_from_system().month:
+			11:
+				return Color(0.95, 0.72, 0.42)
+			12:
+				return Color(0.92, 0.68, 0.48)
+			_:
+				return Color(1.0, 0.65, 0.35)
 	if not low_core and not low_hp:
 		return Color.WHITE
 	match Time.get_datetime_dict_from_system().month:
@@ -61,3 +89,14 @@ static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 			if low_core:
 				return Color(1.0, 0.55, 0.55)
 			return Color(1.0, 0.45, 0.48)
+
+static func low_ammo_hud_modulate(pulse: float) -> Color:
+	return Color(1.0, 0.62 + 0.22 * pulse, 0.38 + 0.18 * pulse)
+
+## Max vignette alpha contribution for low ammo (game.gd scales by pulse and severity).
+static func low_ammo_vignette_cap() -> float:
+	match Time.get_datetime_dict_from_system().month:
+		11, 12:
+			return 0.11
+		_:
+			return 0.09
