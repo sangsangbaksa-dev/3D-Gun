@@ -4,6 +4,23 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>3D-GUN · 좀비 타이쿤 3D</title>
+<script>
+(function () {
+  var ko = (navigator.language || '').toLowerCase().indexOf('ko') === 0;
+  var m = new Date().getMonth() + 1;
+  var extra = m === 11 ? (ko ? '11월, 기지 밖 안개' : 'November fog over the base')
+    : m === 12 ? (ko ? '12월, 차가운 밤' : 'December cold nights') : '';
+  var base = ko
+    ? '좀비 타이쿤 3D — 웨이브 방어, 기지 건설, 본부 영구 성장.'
+  : 'Zombie Tycoon 3D — wave defense, base building, permanent HQ upgrades.';
+  var meta = document.createElement('meta');
+  meta.name = 'description';
+  meta.content = extra ? base + ' ' + extra : base;
+  document.head.appendChild(meta);
+  if (m === 11) document.documentElement.dataset.season = 'november';
+  else if (m === 12) document.documentElement.dataset.season = 'december';
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   /* HUD 팔레트: 배경 #10141a · 청록 #2EE6D6 · 주황 #FF8A2A · 빨강 #E0303A · 패널 #121A20 (빨간 배포판에서 옮겨 옴) */
@@ -51,6 +68,8 @@
   #banner.show { animation:waveBanner 2.1s ease-out forwards; }
   @keyframes waveBanner { 0% { opacity:0; transform:translate(-50%,-12px) scale(.92); } 12% { opacity:1; transform:translate(-50%,0) scale(1); } 78% { opacity:1; } 100% { opacity:0; transform:translate(-50%,6px) scale(.98); } }
   body.ztCoreLow #hud::after { content:""; position:fixed; inset:0; pointer-events:none; box-shadow:inset 0 0 120px 24px #E0303A66; animation:coreWarn 1.4s ease-in-out infinite; z-index:3; }
+  body.ztCoreLow[data-season="november"] #hud::after { box-shadow:inset 0 0 130px 28px rgba(88,148,210,.48); }
+  body.ztCoreLow[data-season="december"] #hud::after { box-shadow:inset 0 0 130px 28px rgba(118,98,168,.45); }
   @keyframes coreWarn { 50% { opacity:.55; } }
   #res { position:absolute; top:12px; right:14px; text-align:right; font-size:14px; line-height:1.6; text-shadow:0 1px 3px #000; background:#121A20B3; border:1px solid #2EE6D6; padding:8px 12px; border-radius:8px; font-variant-numeric:tabular-nums; max-width:min(560px,40vw); }
   #ammo { position:absolute; right:20px; bottom:16px; text-align:right; text-shadow:0 2px 4px #000; }

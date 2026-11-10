@@ -44,6 +44,16 @@ static func ember_amount() -> int:
 		_:
 			return 60
 
+## Subtle full-screen cool mist during November combat (alpha scaled in game.gd).
+static func combat_mist_tint() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.38, 0.52, 0.68, 0.07)
+		12:
+			return Color(0.42, 0.38, 0.58, 0.06)
+		_:
+			return Color(0.5, 0.55, 0.6, 0.0)
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:

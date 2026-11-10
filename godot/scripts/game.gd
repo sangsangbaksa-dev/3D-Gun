@@ -41,6 +41,7 @@ var prep_left := PREP_TIME
 var prep_total := PREP_TIME
 var prep_bar: ProgressBar
 var combat_vignette: TextureRect
+var combat_mist: ColorRect
 var res := {}
 var meta := {} # 본부 영구 업그레이드 보너스 (meta_bonus.gd)
 var base: Node3D
@@ -312,6 +313,7 @@ func _process(dt: float) -> void:
 		_flush_damage(false)
 	hurt_flash.color.a = maxf(0.0, hurt_flash.color.a - dt * 1.5)
 	_update_combat_vignette()
+	_update_combat_mist()
 	if phase == "ended":
 		return
 	if phase == "prep":
@@ -641,6 +643,16 @@ func _update_combat_vignette() -> void:
 	var tint := Seasonal.combat_vignette_tint(low_core, low_hp)
 	combat_vignette.modulate = Color(tint.r, tint.g, tint.b, alpha)
 
+func _update_combat_mist() -> void:
+	if combat_mist == null:
+		return
+	var base := Seasonal.combat_mist_tint()
+	if base.a <= 0.0 or phase != "combat" or player.dead:
+		combat_mist.modulate.a = 0.0
+		return
+	var pulse := 0.85 + 0.15 * sin(_t * 1.1)
+	combat_mist.modulate = Color(base.r, base.g, base.b, base.a * pulse)
+
 # ── HUD ──────────────────────────────────────────────────────────────
 
 func _build_hud() -> void:
@@ -671,6 +683,13 @@ func _build_hud() -> void:
 	vig_tex.fill_from = Vector2(0.5, 0.5)
 	vig_tex.fill_to = Vector2(1.0, 0.5)
 	combat_vignette.texture = vig_tex
+	combat_mist = ColorRect.new()
+	combat_mist.set_anchors_preset(Control.PRESET_FULL_RECT)
+	combat_mist.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	combat_mist.color = Color.WHITE
+	combat_mist.modulate = Color(1, 1, 1, 0)
+	hud.add_child(combat_mist)
+	hud.move_child(combat_mist, 0)
 	prep_bar = _bar(Vector2.ZERO, Vector2(300, 5), Color(0.18, 0.9, 0.84))
 	prep_bar.visible = false
 	scope = Control.new()

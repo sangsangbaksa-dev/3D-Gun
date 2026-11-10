@@ -38,6 +38,7 @@ const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
 const groundY = getGroundY;
 
 let view: PlayerView, fx: Effects, hud: CombatHud, panel: UpgradePanel | undefined, prevFire = false;
+let hudPulseT = 0;
 let shake = 0;
 let camFov = 70;
 const camPos = { x: 0, y: 0, z: 0 };
@@ -162,7 +163,13 @@ export const PlayerSystem: System = {
     hud.setScope(p.aimT, GUNS[w.current].scope);
     hud.setSpread(Math.min(80, px), !p.dead);
     hud.setReload(w.reloadLeft > 0 ? 1 - w.reloadLeft / w.reloadTotal : null);
-    hud.setLowHp(!p.dead && p.hp / p.maxHp <= 0.3);
+    const hpPct = p.maxHp > 0 ? p.hp / p.maxHp : 1;
+    const corePct = state.coreMaxHp > 0 ? state.coreHp / state.coreMaxHp : 1;
+    const lowHp = !p.dead && hpPct > 0 && hpPct < 0.3;
+    const lowCore = state.phase === 'combat' && corePct > 0 && corePct < 0.28;
+    hud.setLowHp(lowHp);
+    hudPulseT += dt;
+    hud.tickCombatVignette(lowHp, lowCore, hudPulseT);
     hud.setDash(p.dashCd > 0 ? 1 - p.dashCd / state.stats.dashCd : 1);
   },
 };

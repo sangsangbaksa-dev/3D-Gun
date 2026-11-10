@@ -5,6 +5,7 @@ import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
+import { combatVignetteTint } from '../../ui/seasonal';
 
 export const SHOW_AMMO_PANEL = true;
 
@@ -46,6 +47,9 @@ const CSS = `
 .pv-hit i:nth-child(3){transform:rotate(225deg)}.pv-hit i:nth-child(4){transform:rotate(315deg)}
 .pv-heal{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(80,220,110,.5) 100%);opacity:0}
 .pv-vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(224,48,58,.65) 100%);opacity:0}
+.pv-cvig{position:absolute;inset:0;opacity:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(224,48,58,.55) 100%);transition:opacity .35s ease-out}
+.pv-ammo .n.pulse-low{animation:ammoLow 1.05s ease-in-out infinite}
+@keyframes ammoLow{50%{color:#ffb347;filter:brightness(1.15)}}
 .pv-low{position:absolute;inset:0;box-shadow:inset 0 0 120px 30px rgba(224,48,58,.45);opacity:0;transition:opacity .4s ease-out}
 .pv-low::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 90px 10px rgba(224,48,58,.35);animation:pvPulse 1.6s ease-in-out infinite}
 @keyframes pvPulse{50%{opacity:.25}}
@@ -67,7 +71,7 @@ const CSS = `
 @media (max-width:1400px){.pv-slots{gap:3px}.pv-slot{min-width:26px;padding:4px 6px;font-size:0}.pv-slot b{font-size:14px}}
 .pv-dash{position:absolute;left:50%;top:calc(50% + 46px);width:56px;height:4px;margin-left:-28px;background:#0007;border-radius:2px;overflow:hidden;opacity:0;transition:opacity .2s ease-out}
 .pv-dash div{height:100%;background:#2EE6D6;width:100%}
-@media (prefers-reduced-motion:reduce){.pv-low::after{animation:none}.pv-root *{transition-duration:.01s!important}}
+@media (prefers-reduced-motion:reduce){.pv-low::after{animation:none}.pv-ammo .n.pulse-low{animation:none}.pv-root *{transition-duration:.01s!important}}
 `;
 
 const el = (cls: string, html = '') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
@@ -77,6 +81,7 @@ export class CombatHud {
   private cross = el('pv-cross', '<i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i>');
   private hit = el('pv-hit', '<i></i><i></i><i></i><i></i>');
   private vig = el('pv-vig');
+  private cvig = el('pv-cvig');
   private low = el('pv-low');
   private heal = el('pv-heal');
   private healAnim?: Animation;
@@ -98,7 +103,7 @@ export class CombatHud {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
-    this.root.append(this.scope, this.vig, this.heal, this.low, this.cross, this.hit, this.dash);
+    this.root.append(this.scope, this.cvig, this.vig, this.heal, this.low, this.cross, this.hit, this.dash);
     if (SHOW_AMMO_PANEL) this.root.append(this.ammo);
     document.body.appendChild(this.root);
     this.nm = this.ammo.querySelector('.nm')!;
@@ -158,6 +163,26 @@ export class CombatHud {
 
   setLowHp(on: boolean) { this.low.style.opacity = on ? '1' : '0'; }
 
+  /** Low HP / low core danger ring — seasonal tint matches Godot combat vignette. */
+  setCombatVignette(lowHp: boolean, lowCore: boolean, pulse01: number) {
+    if (!lowHp && !lowCore) {
+      this.cvig.style.opacity = '0';
+      return;
+    }
+    const { r, g, b } = combatVignetteTint(lowCore, lowHp);
+    let severity = 0;
+    if (lowHp) severity = Math.max(severity, 0.55);
+    if (lowCore) severity = Math.max(severity, 0.65);
+    const alpha = (0.14 + 0.22 * severity) * (0.72 + 0.28 * pulse01);
+    this.cvig.style.background = `radial-gradient(ellipse at center,transparent 42%,rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},.58) 100%)`;
+    this.cvig.style.opacity = String(Math.min(0.75, alpha));
+  }
+
+  tickCombatVignette(lowHp: boolean, lowCore: boolean, t: number) {
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3.6);
+    this.setCombatVignette(lowHp, lowCore, pulse);
+  }
+
   setScope(amount: number, on: boolean) {
     const t = on ? smoothScope(amount) : 0;
     this.scope.style.opacity = String(t);
@@ -170,7 +195,9 @@ export class CombatHud {
     const name = gunName(id, GUNS[id].name);
     this.nm.innerHTML = `${name}${lv ? `<span class="pv-lv">Lv${lv}</span>` : ''}`;
     this.n.innerHTML = `${ammo}<small> / ${mag}</small>`;
-    this.n.classList.toggle('low', ammo <= Math.ceil(mag * 0.25));
+    const lowAmmo = mag > 0 && ammo > 0 && ammo / mag <= 0.2;
+    this.n.classList.toggle('low', lowAmmo);
+    this.n.classList.toggle('pulse-low', lowAmmo);
     for (const w of GUN_ORDER) {
       this.slotEls[w].classList.toggle('cur', w === id);
       this.slotEls[w].classList.toggle('lock', !owned.includes(w));
