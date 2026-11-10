@@ -11,6 +11,7 @@ import { structures } from './entities';
 import { onLocaleChange, resLabel, t, zombieName } from '../i18n';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
+import { bodySeasonAttr } from '../ui/seasonal';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
@@ -81,6 +82,9 @@ function refreshBossBar() {
 function refreshCoreWarn() {
   const low = state.phase === 'combat' && state.coreMaxHp > 0 && state.coreHp / state.coreMaxHp < 0.28;
   document.body.classList.toggle('ztCoreLow', low);
+  const season = bodySeasonAttr();
+  if (season) document.body.dataset.season = season;
+  else delete document.body.dataset.season;
 }
 
 function refreshCoreBar() {
@@ -166,6 +170,8 @@ export const HudSystem: System = {
     prepBar = document.getElementById('prepBar');
     prepFill = document.getElementById('prepFill');
     if (help) help.style.display = 'none';
+    const season = bodySeasonAttr();
+    if (season) document.body.dataset.season = season;
     mountKeyHelp(); // 아래 가운데 상황별 키 막대 + H/F1 도움말 창
     mountWaveClearFlash();
     events.on('toast', ({ text, kind }) => {
