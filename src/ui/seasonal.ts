@@ -50,3 +50,31 @@ export function bodySeasonAttr(): string {
       return '';
   }
 }
+
+/** Subtle full-screen cool mist during November/December combat (mirrors godot seasonal.gd). */
+export function combatMistTint(): { r: number; g: number; b: number; a: number } {
+  switch (month()) {
+    case 11:
+      return { r: 0.38, g: 0.52, b: 0.68, a: 0.07 };
+    case 12:
+      return { r: 0.42, g: 0.38, b: 0.58, a: 0.06 };
+    default:
+      return { r: 0.5, g: 0.55, b: 0.6, a: 0 };
+  }
+}
+
+function rgbCss(r: number, g: number, b: number) {
+  return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+}
+
+/** Title-screen ember palette (monthly mood; defaults match warm orange sparks). */
+export function titleEmberStyle(): { hot: string; glow: string; count: number } {
+  switch (month()) {
+    case 11:
+      return { hot: rgbCss(0.72, 0.82, 0.95), glow: rgbCss(0.35, 0.55, 0.62), count: 48 };
+    case 12:
+      return { hot: rgbCss(0.85, 0.78, 0.95), glow: rgbCss(0.45, 0.38, 0.62), count: 48 };
+    default:
+      return { hot: 'rgb(255,138,42)', glow: 'rgb(224,48,58)', count: 60 };
+  }
+}

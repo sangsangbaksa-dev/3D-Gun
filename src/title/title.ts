@@ -6,6 +6,7 @@ import { getSettings, loadSettings, resetSettings, setSettings } from './setting
 import { resetTutorial } from './tutorial';
 import { injectKeycapCss, keyTableHtml } from '../ui/keys';
 import { LOCALES, onLocaleChange, t, type Locale } from '../i18n';
+import { titleEmberStyle, titleSliceExtra } from '../ui/seasonal';
 
 /** TitleSystem 이 읽는다: 타이틀이 떠 있는 동안 카메라가 핵 주위를 돈다 */
 export const titleView = { orbiting: false };
@@ -185,8 +186,9 @@ export function mountTitle(onStart: () => void): TitleHandle {
   }
   const root = document.createElement('div');
   root.id = 'ztTitle';
-  const embers = Array.from({ length: 28 }, (_, i) =>
-    `<i class="ember" style="left:${(i * 37) % 100}%;animation-duration:${6 + (i % 7)}s;animation-delay:-${((i * 1.3) % 9).toFixed(1)}s;opacity:.8"></i>`).join('');
+  const { hot, glow, count } = titleEmberStyle();
+  const embers = Array.from({ length: count }, (_, i) =>
+    `<i class="ember" style="left:${(i * 37) % 100}%;animation-duration:${6 + (i % 7)}s;animation-delay:-${((i * 1.3) % 9).toFixed(1)}s;opacity:.8;background:${hot};box-shadow:0 0 6px ${hot},0 0 12px ${glow}"></i>`).join('');
   root.innerHTML = `${embers}<div class="vig"></div><div class="scan"></div>
 <div class="ui"><img src="${import.meta.env.BASE_URL}logo.svg" alt="3D-GUN"/><div class="sub" data-i18n-sub></div></div>
 <div class="go"><button type="button" data-i18n-launch></button><div class="hint" data-i18n-hint></div></div>`;
@@ -194,7 +196,10 @@ export function mountTitle(onStart: () => void): TitleHandle {
   const menu = mountMenu(root);
   const go = root.querySelector<HTMLButtonElement>('.go button')!;
   const paintTitle = () => {
-    root.querySelector('[data-i18n-sub]')!.textContent = t('title.sub');
+    const loc = getSettings().locale;
+    root.querySelector('[data-i18n-sub]')!.textContent = t('title.sub') + titleSliceExtra(loc);
+    const titleBase = loc === 'ko' ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
+    document.title = titleBase + titleSliceExtra(loc);
     go.textContent = t('title.launch');
     root.querySelector('[data-i18n-hint]')!.textContent = t('title.launchHint');
   };

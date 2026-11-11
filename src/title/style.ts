@@ -10,6 +10,8 @@ body.titleOn>:not(#c):not(#ztTitle):not(script):not(style){opacity:0!important;v
 body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s ease-out,visibility 0s}
 #ztTitle{position:fixed;inset:0;z-index:66;overflow:hidden;font-family:${FONT};color:#e6f2f1;user-select:none;
   background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#ff8a2a14,#0000 40%);transition:opacity .6s cubic-bezier(.4,0,.2,1)}
+html[data-season="november"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a9cc418,#253a5012 55%,#0000 70%)}
+html[data-season="december"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a5a9a18,#2a254012 55%,#0000 70%)}
 #ztTitle.hide{opacity:0;pointer-events:none}
 #ztTitle.hide .ui,#ztTitle.hide .go{transition:opacity .4s ease-out,transform .6s cubic-bezier(.4,0,.2,1);opacity:0}
 #ztTitle.hide .ui{transform:translateY(-8px)}#ztTitle.hide .go{transform:translate(-50%,10px)}
