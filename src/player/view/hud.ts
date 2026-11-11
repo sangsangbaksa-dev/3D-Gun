@@ -5,7 +5,7 @@ import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
-import { combatVignetteTint } from '../../ui/seasonal';
+import { combatMistTint, combatVignetteTint } from '../../ui/seasonal';
 
 export const SHOW_AMMO_PANEL = true;
 
@@ -47,6 +47,7 @@ const CSS = `
 .pv-hit i:nth-child(3){transform:rotate(225deg)}.pv-hit i:nth-child(4){transform:rotate(315deg)}
 .pv-heal{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(80,220,110,.5) 100%);opacity:0}
 .pv-vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(224,48,58,.65) 100%);opacity:0}
+.pv-mist{position:absolute;inset:0;opacity:0;pointer-events:none;mix-blend-mode:screen;transition:opacity .5s ease-out}
 .pv-cvig{position:absolute;inset:0;opacity:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(224,48,58,.55) 100%);transition:opacity .35s ease-out}
 .pv-ammo .n.pulse-low{animation:ammoLow 1.05s ease-in-out infinite}
 @keyframes ammoLow{50%{color:#ffb347;filter:brightness(1.15)}}
@@ -81,6 +82,7 @@ export class CombatHud {
   private cross = el('pv-cross', '<i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i>');
   private hit = el('pv-hit', '<i></i><i></i><i></i><i></i>');
   private vig = el('pv-vig');
+  private mist = el('pv-mist');
   private cvig = el('pv-cvig');
   private low = el('pv-low');
   private heal = el('pv-heal');
@@ -103,7 +105,7 @@ export class CombatHud {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
-    this.root.append(this.scope, this.cvig, this.vig, this.heal, this.low, this.cross, this.hit, this.dash);
+    this.root.append(this.scope, this.mist, this.cvig, this.vig, this.heal, this.low, this.cross, this.hit, this.dash);
     if (SHOW_AMMO_PANEL) this.root.append(this.ammo);
     document.body.appendChild(this.root);
     this.nm = this.ammo.querySelector('.nm')!;
@@ -181,6 +183,19 @@ export class CombatHud {
   tickCombatVignette(lowHp: boolean, lowCore: boolean, t: number) {
     const pulse = 0.5 + 0.5 * Math.sin(t * 3.6);
     this.setCombatVignette(lowHp, lowCore, pulse);
+  }
+
+  /** Ambient combat mist — visible only in seasonal months, mirrors Godot combat_mist overlay. */
+  tickCombatMist(inCombat: boolean, playerDead: boolean, t: number) {
+    const base = combatMistTint();
+    if (!inCombat || playerDead || base.a <= 0) {
+      this.mist.style.opacity = '0';
+      return;
+    }
+    const pulse = 0.85 + 0.15 * Math.sin(t * 1.1);
+    const { r, g, b, a } = base;
+    this.mist.style.background = `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+    this.mist.style.opacity = String(a * pulse);
   }
 
   setScope(amount: number, on: boolean) {

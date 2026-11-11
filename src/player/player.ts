@@ -170,6 +170,7 @@ export const PlayerSystem: System = {
     hud.setLowHp(lowHp);
     hudPulseT += dt;
     hud.tickCombatVignette(lowHp, lowCore, hudPulseT);
+    hud.tickCombatMist(state.phase === 'combat', p.dead, hudPulseT);
     hud.setDash(p.dashCd > 0 ? 1 - p.dashCd / state.stats.dashCd : 1);
   },
 };
