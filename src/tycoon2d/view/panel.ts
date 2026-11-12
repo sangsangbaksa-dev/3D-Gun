@@ -13,6 +13,7 @@ import {
 } from '../logic/economy';
 import { CSS } from './style';
 import { icon, iconOr, walletIconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
+import { titleEmberStyle } from '../../ui/seasonal';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -59,9 +60,14 @@ export class TycoonPanel {
       <main><nav></nav><div class="content"></div><aside></aside></main>
       <footer><div class="fl"><button class="ghost" data-act="refund"></button><button class="ghost" data-act="reset"></button></div><button class="launch" data-act="launch"><span class="chev">›››</span>${icon('sword', 'si')}<span data-i18n-launch></span><span class="chev r">‹‹‹</span></button></footer>`;
     const em = this.root.querySelector('.embers') as HTMLElement;
+    const { hot, glow } = titleEmberStyle();
     for (let i = 0; i < 18; i++) {
       const e = document.createElement('i');
-      e.style.left = `${(i * 53) % 100}%`; e.style.animationDuration = `${9 + (i * 7) % 9}s`; e.style.animationDelay = `${-(i * 1.7) % 12}s`;
+      e.style.left = `${(i * 53) % 100}%`;
+      e.style.animationDuration = `${9 + (i * 7) % 9}s`;
+      e.style.animationDelay = `${-(i * 1.7) % 12}s`;
+      e.style.background = hot;
+      e.style.boxShadow = `0 0 6px ${hot},0 0 12px ${glow}`;
       em.appendChild(e);
     }
     document.body.appendChild(this.root);

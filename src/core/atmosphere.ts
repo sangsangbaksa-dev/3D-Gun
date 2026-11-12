@@ -1,6 +1,7 @@
 // 종말 분위기: 붉은 하늘 셰이더, 안개·조명 페이즈 전환, 떠다니는 불씨, 지평선의 폐허 실루엣.
 // 시각 전용. game.ts 를 건드리지 않도록 하늘 메시의 onBeforeRender 에서 매 프레임 스스로 갱신한다.
 import * as THREE from 'three';
+import { atmosphereFogTint, combatEmberHex } from '../ui/seasonal';
 import { state } from './state';
 
 type Phase = 'prep' | 'combat' | 'ended';
@@ -167,16 +168,24 @@ export class Atmosphere {
 
   private apply() {
     const s = this.cur, u = this.sky.material.uniforms;
+    const fogTint = atmosphereFogTint();
     u.top.value.setHex(s.top);
     u.hor.value.setHex(s.horizon);
     u.sunCol.value.setHex(s.sunColor);
     u.t.value = this.t;
     u.paint.value = s.paint;
-    u.fogC.value.setHex(s.fog).multiplyScalar(BOOST);
+    this.ca.setHex(s.fog).multiplyScalar(BOOST);
+    this.cb.setRGB(fogTint.r, fogTint.g, fogTint.b);
+    this.ca.multiply(this.cb);
+    u.fogC.value.copy(this.ca);
     u.sunDir.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
     const fog = this.scene.fog;
-    if (fog instanceof THREE.Fog) { fog.color.setHex(s.fog).multiplyScalar(BOOST); fog.near = s.fogNear; fog.far = s.fogFar; }
-    (this.scene.background as THREE.Color).setHex(s.fog).multiplyScalar(BOOST);
+    if (fog instanceof THREE.Fog) {
+      fog.color.copy(this.ca);
+      fog.near = s.fogNear;
+      fog.far = s.fogFar * fogTint.farMul;
+    }
+    (this.scene.background as THREE.Color).copy(this.ca);
     this.sun.intensity = s.sun * BOOST;
     this.sun.color.setHex(s.sunColor);
     this.hemi.intensity = s.hemi * BOOST;
@@ -197,6 +206,7 @@ export class Atmosphere {
     }
     this.embers.geometry.attributes.position.needsUpdate = true;
     const m = this.embers.material, e = this.cur.ember;
+    m.color.setHex(combatEmberHex());
     m.opacity = 0.15 + e * 0.55 * (0.85 + Math.sin(this.t * 3) * 0.15);
     m.size = 0.25 + e * 0.2;
   }

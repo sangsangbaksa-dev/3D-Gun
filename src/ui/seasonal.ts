@@ -67,6 +67,30 @@ function rgbCss(r: number, g: number, b: number) {
   return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
 }
 
+/** Cool fog tint during November/December combat (multiplies atmosphere fog RGB). */
+export function atmosphereFogTint(): { r: number; g: number; b: number; farMul: number } {
+  switch (month()) {
+    case 11:
+      return { r: 0.78, g: 0.86, b: 0.94, farMul: 1.05 };
+    case 12:
+      return { r: 0.82, g: 0.76, b: 0.92, farMul: 1.04 };
+    default:
+      return { r: 1, g: 1, b: 1, farMul: 1 };
+  }
+}
+
+/** In-world ember sparks — matches titleEmberStyle hot tone. */
+export function combatEmberHex(): number {
+  switch (month()) {
+    case 11:
+      return 0xb8d1f2;
+    case 12:
+      return 0xd9c7f2;
+    default:
+      return 0xff8a2a;
+  }
+}
+
 /** Title-screen ember palette (monthly mood; defaults match warm orange sparks). */
 export function titleEmberStyle(): { hot: string; glow: string; count: number } {
   switch (month()) {

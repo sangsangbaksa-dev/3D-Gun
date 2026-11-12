@@ -21,6 +21,7 @@ const ZONE_FOG := {
 	"boss": [0x5a1a20, 0.45, 0.75],
 }
 const SUN_BASE := Vector3(0.55, 0.5, 0.45) # 해 방향 (하늘 셰이더와 햇빛이 같이 쓴다)
+const Seasonal := preload("res://scripts/seasonal.gd")
 const AmbienceScript := preload("res://scripts/ambience.gd")
 const ScatterScript := preload("res://scripts/scatter.gd")
 const CoreFxScript := preload("res://scripts/core_fx.gd")
@@ -215,6 +216,7 @@ func _apply() -> void:
 	var top_c := _c(s.top).lerp(Color(0.03, 0.02, 0.04), wf * 0.35)
 	var hor_c := _c(s.horizon).lerp(Color(0.62, 0.2, 0.18), wf * 0.22)
 	var fog_c := _c(s.fog).lerp(zone_col, zone_a).lerp(Color(0.3, 0.1, 0.1), wf * 0.15)
+	fog_c = fog_c * Seasonal.atmosphere_fog_tint()
 	var sun_c := _c(s.sun_color).lerp(Color(1.0, 0.5, 0.3), wf * 0.35)
 	sky_mat.set_shader_parameter("top", _lin_col(top_c))
 	sky_mat.set_shader_parameter("hor", _lin_col(hor_c))
@@ -229,7 +231,7 @@ func _apply() -> void:
 	env.fog_light_color = fog_c * BOOST
 	var fm := zone_mul * (1.0 - 0.15 * wf)
 	env.fog_depth_begin = s.fog_near * fm
-	env.fog_depth_end = s.fog_far * fm
+	env.fog_depth_end = s.fog_far * fm * Seasonal.atmosphere_fog_far_mul()
 	sun.light_energy = s.sun * BOOST * SUN_K * lerpf(1.0, 0.78, wf)
 	sun.light_color = sun_c
 	sun.light_specular = 0.0
@@ -239,6 +241,8 @@ func _apply() -> void:
 		sun.look_at_from_position(sp, Vector3.ZERO)
 	if ember_mat:
 		var e: float = s.ember
+		var hot := Seasonal.ember_hot()
+		ember_mat.albedo_color = Color(hot.r, hot.g, hot.b, ember_mat.albedo_color.a)
 		ember_mat.albedo_color.a = 0.05 + e * 0.2 * (0.85 + sin(t * 3.0) * 0.15)
 
 func _build_extras() -> void:
