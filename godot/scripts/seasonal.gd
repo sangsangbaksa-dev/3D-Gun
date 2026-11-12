@@ -18,6 +18,25 @@ static func meta_description(locale: String) -> String:
 		extra = extra.substr(1).strip_edges()
 	return base if extra == "" else "%s %s" % [base, extra]
 
+## Cool fog multiplier during November/December (look.gd can lerp fog toward this).
+static func atmosphere_fog_tint() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.78, 0.86, 0.94)
+		12:
+			return Color(0.82, 0.76, 0.92)
+		_:
+			return Color.WHITE
+
+static func atmosphere_fog_far_mul() -> float:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return 1.05
+		12:
+			return 1.04
+		_:
+			return 1.0
+
 ## Title-screen ember palette (monthly mood; defaults match warm orange sparks).
 static func ember_hot() -> Color:
 	match Time.get_datetime_dict_from_system().month:

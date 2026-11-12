@@ -17,8 +17,8 @@
   meta.name = 'description';
   meta.content = extra ? base + ' ' + extra : base;
   document.head.appendChild(meta);
-  if (m === 11) document.documentElement.dataset.season = 'november';
-  else if (m === 12) document.documentElement.dataset.season = 'december';
+  if (m === 11) { document.documentElement.dataset.season = 'november'; document.body.dataset.season = 'november'; }
+  else if (m === 12) { document.documentElement.dataset.season = 'december'; document.body.dataset.season = 'december'; }
   var titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
   var titleExtra = m === 11 ? (ko ? ' · 11월, 기지 밖 안개' : ' · November fog over the base')
     : m === 12 ? (ko ? ' · 12월, 차가운 밤' : ' · December cold nights') : '';
@@ -55,6 +55,16 @@
   #prepBar .fill { height:100%; width:100%; background:linear-gradient(90deg,#1a8a82,#2EE6D6); transition:width .12s linear; }
   #prepBar.urgent .fill { background:linear-gradient(90deg,#c45a10,#FF8A2A); }
   #prepBar.paused .fill { background:#5a6a70; opacity:.85; }
+  body[data-season="november"] #prepBar { border-color:#5a8cb044; }
+  body[data-season="november"] #prepBar .fill { background:linear-gradient(90deg,#1a5a72,#6a9cc4); }
+  body[data-season="november"] #prepBar.urgent .fill { background:linear-gradient(90deg,#8a5018,#d4a060); }
+  body[data-season="december"] #prepBar { border-color:#6a5a9a44; }
+  body[data-season="december"] #prepBar .fill { background:linear-gradient(90deg,#2a4a68,#7a8ac8); }
+  body[data-season="december"] #prepBar.urgent .fill { background:linear-gradient(90deg,#6a3818,#e8a070); }
+  body[data-season="november"] #coreBar.low .fill { background:linear-gradient(90deg,#4a6898,#7aa8d8); animation:coreBarLowNov 1.2s ease-in-out infinite; }
+  body[data-season="december"] #coreBar.low .fill { background:linear-gradient(90deg,#5a4898,#9a88d8); animation:coreBarLowDec 1.2s ease-in-out infinite; }
+  @keyframes coreBarLowNov { 50% { opacity:.48; } }
+  @keyframes coreBarLowDec { 50% { opacity:.48; } }
   #boss { display:none; margin:8px auto 0; width:min(420px,92vw); text-align:left; }
   #bossName { font-size:12px; font-weight:800; letter-spacing:.12em; color:#FF8A2A; margin-bottom:4px; text-shadow:0 1px 4px #000; }
   #boss .track { position:relative; height:14px; background:#000a; border:1px solid #E0303A88; border-radius:4px; overflow:hidden; box-shadow:0 0 12px #E0303A33 inset; }

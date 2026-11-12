@@ -12,6 +12,10 @@ const CSS = `
 #ztWaveClear b{display:block;font-size:26px;font-weight:800;color:#2EE6D6;text-shadow:0 2px 6px #000;letter-spacing:.04em}
 #ztWaveClear .sub{margin-top:4px;font-size:13px;color:#e6f2f1cc;line-height:1.45}
 #ztWaveClear .sub em{font-style:normal;color:#FF8A2A;font-weight:700}
+body[data-season="november"] #ztWaveClear .box{border-color:#6a9cc488;box-shadow:0 8px 32px #000a,0 0 28px #3a5a7844}
+body[data-season="november"] #ztWaveClear b{color:#8ec4e8;text-shadow:0 2px 8px #1a3048}
+body[data-season="december"] #ztWaveClear .box{border-color:#8a7ab888;box-shadow:0 8px 32px #000a,0 0 28px #4a3a6844}
+body[data-season="december"] #ztWaveClear b{color:#b8a8e0;text-shadow:0 2px 8px #2a2048}
 @keyframes ztWcDrop{from{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
 @media (prefers-reduced-motion:reduce){#ztWaveClear.on{animation:none}}
 `;

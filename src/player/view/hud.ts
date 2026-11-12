@@ -51,6 +51,12 @@ const CSS = `
 .pv-cvig{position:absolute;inset:0;opacity:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(224,48,58,.55) 100%);transition:opacity .35s ease-out}
 .pv-ammo .n.pulse-low{animation:ammoLow 1.05s ease-in-out infinite}
 @keyframes ammoLow{50%{color:#ffb347;filter:brightness(1.15)}}
+body[data-season="november"] .pv-ammo .n.low{color:#8ec4e8}
+body[data-season="november"] .pv-ammo .n.pulse-low{animation:ammoLowNov 1.05s ease-in-out infinite}
+@keyframes ammoLowNov{50%{color:#b8d8f8;filter:brightness(1.12)}}
+body[data-season="december"] .pv-ammo .n.low{color:#b8a8e0}
+body[data-season="december"] .pv-ammo .n.pulse-low{animation:ammoLowDec 1.05s ease-in-out infinite}
+@keyframes ammoLowDec{50%{color:#d8c8f8;filter:brightness(1.12)}}
 .pv-low{position:absolute;inset:0;box-shadow:inset 0 0 120px 30px rgba(224,48,58,.45);opacity:0;transition:opacity .4s ease-out}
 .pv-low::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 90px 10px rgba(224,48,58,.35);animation:pvPulse 1.6s ease-in-out infinite}
 @keyframes pvPulse{50%{opacity:.25}}
