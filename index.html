@@ -25,6 +25,9 @@
   document.title = titleBase + titleExtra;
 })();
 </script>
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="3D-GUN" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   /* HUD 팔레트: 배경 #10141a · 청록 #2EE6D6 · 주황 #FF8A2A · 빨강 #E0303A · 패널 #121A20 (빨간 배포판에서 옮겨 옴) */
@@ -47,6 +50,10 @@
   #wave { font-size:22px; font-weight:bold; letter-spacing:.5px; }
   #wave.pop { animation:wavePop .4s ease-out; }
   @keyframes wavePop { from { color:#FF8A2A; transform:scale(1.12); } to { color:#fff; transform:scale(1); } }
+  body[data-season="november"] #wave.pop { animation:wavePopNov .4s ease-out; }
+  body[data-season="december"] #wave.pop { animation:wavePopDec .4s ease-out; }
+  @keyframes wavePopNov { from { color:#8ec4e8; transform:scale(1.12); } to { color:#fff; transform:scale(1); } }
+  @keyframes wavePopDec { from { color:#b8a8e0; transform:scale(1.12); } to { color:#fff; transform:scale(1); } }
   @media (prefers-reduced-motion:reduce) { #wave.pop { animation:none; } .bar .fill, .bar .xp div, .bar .ghost { transition:none; } .bar.low .fill { animation:none; } }
   #sub { font-size:14px; opacity:.9; white-space:nowrap; transition:color .25s; }
   #sub.urgent { color:#FF8A2A; font-weight:700; animation:subPulse 1s ease-in-out infinite; }
@@ -86,6 +93,10 @@
   body.ztCoreLow[data-season="december"] #hud::after { box-shadow:inset 0 0 130px 28px rgba(118,98,168,.45); }
   @keyframes coreWarn { 50% { opacity:.55; } }
   #res { position:absolute; top:12px; right:14px; text-align:right; font-size:14px; line-height:1.6; text-shadow:0 1px 3px #000; background:#121A20B3; border:1px solid #2EE6D6; padding:8px 12px; border-radius:8px; font-variant-numeric:tabular-nums; max-width:min(560px,40vw); }
+  body[data-season="november"] #res { border-color:#5a8cb0; box-shadow:0 0 20px #3a5a7824; }
+  body[data-season="december"] #res { border-color:#7a6ab0; box-shadow:0 0 20px #4a3a6824; }
+  body[data-season="november"] #pauseBanner { border-color:#5a8cb0; box-shadow:0 8px 32px #000a,0 0 24px #3a5a7833; }
+  body[data-season="december"] #pauseBanner { border-color:#7a6ab0; box-shadow:0 8px 32px #000a,0 0 24px #4a3a6833; }
   #ammo { position:absolute; right:20px; bottom:16px; text-align:right; text-shadow:0 2px 4px #000; }
   #ammo b { font-size:30px; }
   #help { position:absolute; left:16px; top:50px; font-size:12px; line-height:1.6; opacity:.75; text-shadow:0 1px 2px #000; }

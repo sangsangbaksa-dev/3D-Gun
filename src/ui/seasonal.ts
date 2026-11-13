@@ -102,3 +102,52 @@ export function titleEmberStyle(): { hot: string; glow: string; count: number } 
       return { hot: 'rgb(255,138,42)', glow: 'rgb(224,48,58)', count: 60 };
   }
 }
+
+/** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */
+export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
+  switch (month()) {
+    case 11:
+      return { windMul: 1.2, droneMul: 0.88, cutoffAdd: 45 };
+    case 12:
+      return { windMul: 1.12, droneMul: 0.92, cutoffAdd: 32 };
+    default:
+      return { windMul: 1, droneMul: 1, cutoffAdd: 0 };
+  }
+}
+
+function metaContent(selector: string, attr: 'name' | 'property', key: string, value: string) {
+  let node = document.querySelector(selector) as HTMLMetaElement | null;
+  if (!node) {
+    node = document.createElement('meta');
+    node.setAttribute(attr, key);
+    document.head.appendChild(node);
+  }
+  node.setAttribute('content', value);
+}
+
+/** Keep document title + description + share cards in sync with locale and month. */
+export function applyShellMeta(locale: string) {
+  const desc = metaDescription(locale);
+  const ko = locale === 'ko';
+  const titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
+  const title = titleBase + titleSliceExtra(locale);
+  document.title = title;
+  metaContent('meta[name="description"]', 'name', 'description', desc);
+  metaContent('meta[property="og:title"]', 'property', 'og:title', title);
+  metaContent('meta[property="og:description"]', 'property', 'og:description', desc);
+  metaContent('meta[name="twitter:title"]', 'name', 'twitter:title', title);
+  metaContent('meta[name="twitter:description"]', 'name', 'twitter:description', desc);
+  try {
+    const img = new URL(`${import.meta.env.BASE_URL}art/splash.webp`, location.origin).href;
+    metaContent('meta[property="og:image"]', 'property', 'og:image', img);
+    metaContent('meta[name="twitter:image"]', 'name', 'twitter:image', img);
+  } catch { /* non-DOM */ }
+  const season = bodySeasonAttr();
+  if (season) {
+    document.documentElement.dataset.season = season;
+    document.body.dataset.season = season;
+  } else {
+    delete document.documentElement.dataset.season;
+    delete document.body.dataset.season;
+  }
+}

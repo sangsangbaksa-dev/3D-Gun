@@ -2,6 +2,7 @@ import { EN_DATA } from './data-en';
 import { EN_UI } from './ui-en';
 import { KO_UI } from './ui-ko';
 import { buildKoDataMessages } from './fromData';
+import { applyShellMeta } from '../ui/seasonal';
 
 export type Locale = 'en' | 'ko';
 export const LOCALES: Locale[] = ['en', 'ko'];
@@ -29,6 +30,7 @@ export function setLocale(next: Locale) {
   if (locale === next) return;
   locale = next;
   try { document.documentElement.lang = next === 'ko' ? 'ko' : 'en'; } catch { /* SSR */ }
+  try { applyShellMeta(next); } catch { /* ignore */ }
   try { dispatchEvent(new CustomEvent('zt:locale', { detail: { locale: next } })); } catch { /* ignore */ }
   listeners.forEach((fn) => fn());
 }
@@ -41,6 +43,7 @@ export function onLocaleChange(fn: () => void): () => void {
 export function initI18n(loc?: Locale) {
   if (loc && LOCALES.includes(loc)) locale = loc;
   try { document.documentElement.lang = locale === 'ko' ? 'ko' : 'en'; } catch { /* ignore */ }
+  try { applyShellMeta(locale); } catch { /* ignore */ }
 }
 
 /** Translate by key. Falls back to English, then optional `fb`, then the key. */

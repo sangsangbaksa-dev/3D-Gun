@@ -16,6 +16,10 @@ const CSS = `
 #zkBar .i.help{color:#2EE6D6}
 #zkDock.build{max-width:calc(100vw - 32px)}
 #zkBar kbd.zk{font-size:11px;padding:0 5px}
+body[data-season="november"] #zkBar{border-color:#5a8cb055;background:#121A20cc}
+body[data-season="november"] #zkBar .i.help{color:#8ec4e8}
+body[data-season="december"] #zkBar{border-color:#6a5a9a55;background:#121A20cc}
+body[data-season="december"] #zkBar .i.help{color:#b8a8e0}
 html.zk-build .bz-info{bottom:var(--zk-info-bottom,166px)!important}
 html.zk-build .bz-tip{top:auto!important;bottom:var(--zk-tip-bottom,50%)!important}
 @media (max-width:820px){#zkDock{max-width:calc(100vw - 32px);bottom:96px}}
