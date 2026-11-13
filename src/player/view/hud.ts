@@ -60,6 +60,14 @@ body[data-season="december"] .pv-ammo .n.pulse-low{animation:ammoLowDec 1.05s ea
 .pv-low{position:absolute;inset:0;box-shadow:inset 0 0 120px 30px rgba(224,48,58,.45);opacity:0;transition:opacity .4s ease-out}
 .pv-low::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 90px 10px rgba(224,48,58,.35);animation:pvPulse 1.6s ease-in-out infinite}
 @keyframes pvPulse{50%{opacity:.25}}
+body[data-season="november"] .pv-low{box-shadow:inset 0 0 128px 32px rgba(88,148,210,.42)}
+body[data-season="november"] .pv-low::after{box-shadow:inset 0 0 96px 12px rgba(72,128,184,.34)}
+body[data-season="december"] .pv-low{box-shadow:inset 0 0 128px 32px rgba(118,98,168,.4)}
+body[data-season="december"] .pv-low::after{box-shadow:inset 0 0 96px 12px rgba(98,78,148,.32)}
+body[data-season="november"] .pv-up .box{border-color:#5a8cb0aa;box-shadow:0 10px 40px #000,0 0 24px #3a5a7822}
+body[data-season="december"] .pv-up .box{border-color:#7a6ab0aa;box-shadow:0 10px 40px #000,0 0 24px #4a3a6822}
+body[data-season="november"] .pv-slot.cur{border-color:#6a9cc4;box-shadow:0 0 10px #6a9cc466,inset 0 0 6px #3a5a7844}
+body[data-season="december"] .pv-slot.cur{border-color:#8a7ac8;box-shadow:0 0 10px #8a7ac866,inset 0 0 6px #4a3a6844}
 .pv-ammo{position:absolute;right:12px;bottom:12px;text-align:right;text-shadow:0 2px 4px #000}
 .pv-ammo .nm{font-size:13px;opacity:.85;letter-spacing:.5px;margin-bottom:4px}
 .pv-ammo .n{font-size:34px;font-weight:bold;line-height:1;font-variant-numeric:tabular-nums;transition:color .25s ease-out}

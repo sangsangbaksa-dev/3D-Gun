@@ -2,6 +2,8 @@
 // Unity 이식: 레시피 → AudioClip/AudioSource 설정, CueGate/거리 감쇠 → 같은 규칙을 C# 으로.
 // PR #29(claude/project-thread-6k9xso) 의 src/audio 와 SFX 레시피를 옮겨 와 붉은 종말 분위기에 맞게 다듬었다.
 
+import { ambientSeasonAdjust } from '../../ui/seasonal';
+
 export interface SfxLayer {
   kind: 'osc' | 'noise';
   wave?: OscillatorType;
@@ -151,11 +153,18 @@ export function panFor(dx: number, dz: number, yaw: number): number {
 /** 배경 바람/드론 목표값. tension 0~1 (가까운 좀비 수 등) */
 export function ambientTarget(phase: 'prep' | 'combat' | 'ended', bossOnField: boolean, tension: number, paused: boolean): { wind: number; drone: number; cutoff: number } {
   const duck = paused ? 0.45 : 1;
+  const season = ambientSeasonAdjust();
   if (phase === 'ended') return { wind: 0.05 * duck, drone: 0.02 * duck, cutoff: 260 };
   const t = Math.max(0, Math.min(1, tension));
-  if (bossOnField) return { wind: 0.1 * duck, drone: 0.1 * duck, cutoff: 700 };
-  if (phase === 'combat') return { wind: (0.08 + 0.03 * t) * duck, drone: (0.04 + 0.05 * t) * duck, cutoff: 380 + 260 * t };
-  return { wind: 0.07 * duck, drone: 0.025 * duck, cutoff: 300 };
+  let out: { wind: number; drone: number; cutoff: number };
+  if (bossOnField) out = { wind: 0.1 * duck, drone: 0.1 * duck, cutoff: 700 };
+  else if (phase === 'combat') out = { wind: (0.08 + 0.03 * t) * duck, drone: (0.04 + 0.05 * t) * duck, cutoff: 380 + 260 * t };
+  else out = { wind: 0.07 * duck, drone: 0.025 * duck, cutoff: 300 };
+  return {
+    wind: out.wind * season.windMul,
+    drone: out.drone * season.droneMul,
+    cutoff: out.cutoff + season.cutoffAdd,
+  };
 }
 
 /** 체력 비율 → 심장 박동 간격(초). 위험하지 않으면 0 (박동 없음) */
