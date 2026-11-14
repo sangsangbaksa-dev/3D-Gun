@@ -103,6 +103,12 @@ export function titleEmberStyle(): { hot: string; glow: string; count: number } 
   }
 }
 
+/** Prep-phase mist uses a fraction of combat mist alpha (late-year months only). */
+export function prepMistAlphaMul(): number {
+  const m = month();
+  return m === 11 || m === 12 ? 0.42 : 0;
+}
+
 /** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {

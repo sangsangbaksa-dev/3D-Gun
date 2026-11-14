@@ -647,11 +647,12 @@ func _update_combat_mist() -> void:
 	if combat_mist == null:
 		return
 	var base := Seasonal.combat_mist_tint()
-	if base.a <= 0.0 or phase != "combat" or player.dead:
+	var prep_mul := Seasonal.prep_mist_alpha_mul() if phase == "prep" else (1.0 if phase == "combat" else 0.0)
+	if base.a <= 0.0 or prep_mul <= 0.0 or player.dead:
 		combat_mist.modulate.a = 0.0
 		return
 	var pulse := 0.85 + 0.15 * sin(_t * 1.1)
-	combat_mist.modulate = Color(base.r, base.g, base.b, base.a * pulse)
+	combat_mist.modulate = Color(base.r, base.g, base.b, base.a * pulse * prep_mul)
 
 # ── HUD ──────────────────────────────────────────────────────────────
 

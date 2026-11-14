@@ -5,7 +5,7 @@ import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
-import { combatMistTint, combatVignetteTint } from '../../ui/seasonal';
+import { combatMistTint, combatVignetteTint, prepMistAlphaMul } from '../../ui/seasonal';
 
 export const SHOW_AMMO_PANEL = true;
 
@@ -199,17 +199,18 @@ export class CombatHud {
     this.setCombatVignette(lowHp, lowCore, pulse);
   }
 
-  /** Ambient combat mist — visible only in seasonal months, mirrors Godot combat_mist overlay. */
-  tickCombatMist(inCombat: boolean, playerDead: boolean, t: number) {
+  /** Ambient combat mist — late-year prep/combat, mirrors Godot combat_mist overlay. */
+  tickCombatMist(phase: 'prep' | 'combat' | 'ended', playerDead: boolean, t: number) {
     const base = combatMistTint();
-    if (!inCombat || playerDead || base.a <= 0) {
+    const prepMul = phase === 'prep' ? prepMistAlphaMul() : phase === 'combat' ? 1 : 0;
+    if (prepMul <= 0 || playerDead || base.a <= 0) {
       this.mist.style.opacity = '0';
       return;
     }
     const pulse = 0.85 + 0.15 * Math.sin(t * 1.1);
     const { r, g, b, a } = base;
     this.mist.style.background = `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
-    this.mist.style.opacity = String(a * pulse);
+    this.mist.style.opacity = String(a * pulse * prepMul);
   }
 
   setScope(amount: number, on: boolean) {

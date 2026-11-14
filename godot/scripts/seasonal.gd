@@ -73,6 +73,24 @@ static func combat_mist_tint() -> Color:
 		_:
 			return Color(0.5, 0.55, 0.6, 0.0)
 
+## Prep-phase mist alpha fraction of combat mist (late-year months only).
+static func prep_mist_alpha_mul() -> float:
+	match Time.get_datetime_dict_from_system().month:
+		11, 12:
+			return 0.42
+		_:
+			return 0.0
+
+## Wind / drone bed tweaks for November–December (mirrors src/ui/seasonal.ts ambientSeasonAdjust).
+static func ambient_season_adjust() -> Dictionary:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return {"wind_mul": 1.2, "drone_mul": 0.88, "cutoff_add": 45.0}
+		12:
+			return {"wind_mul": 1.12, "drone_mul": 0.92, "cutoff_add": 32.0}
+		_:
+			return {"wind_mul": 1.0, "drone_mul": 1.0, "cutoff_add": 0.0}
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:

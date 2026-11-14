@@ -10,6 +10,7 @@ const DRONE_REC := 0.2         # amb_drone recorded at 0.2
 const NEAR := 4.0
 const FAR := 45.0
 const SynthScript := preload("res://scripts/sfx_synth.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 const MAX_VOICES := 24                # 동시에 울리는 일회성 소리 상한 (넘으면 새 소리는 건너뜀)
 const GROUP_MAX := {"voc": 4, "step": 2, "amb": 2, "rel": 3} # sfx.json 의 group: 좀비 목소리·발소리·앰비언트 일회음·재장전음
 
@@ -185,10 +186,24 @@ static func ambient_target(phase: String, boss: bool, tension: float, paused: bo
 		return {"wind": 0.05 * duck, "drone": 0.02 * duck, "cutoff": 260.0, "tension": 0.0}
 	var t := clampf(tension, 0.0, 1.0)
 	if boss:
-		return {"wind": 0.1 * duck, "drone": 0.1 * duck, "cutoff": 700.0, "tension": 0.9 * duck}
+		var boss_out := {"wind": 0.1 * duck, "drone": 0.1 * duck, "cutoff": 700.0, "tension": 0.9 * duck}
+		return _ambient_season_mul(boss_out)
 	if phase == "combat":
-		return {"wind": (0.08 + 0.03 * t) * duck, "drone": (0.04 + 0.05 * t) * duck, "cutoff": 380.0 + 260.0 * t, "tension": (0.15 + 0.6 * t) * duck}
+		var out := {"wind": (0.08 + 0.03 * t) * duck, "drone": (0.04 + 0.05 * t) * duck, "cutoff": 380.0 + 260.0 * t, "tension": (0.15 + 0.6 * t) * duck}
+		return _ambient_season_mul(out)
+	if phase == "prep":
+		var prep := {"wind": 0.07 * duck, "drone": 0.025 * duck, "cutoff": 300.0, "tension": 0.0}
+		return _ambient_season_mul(prep)
 	return {"wind": 0.07 * duck, "drone": 0.025 * duck, "cutoff": 300.0, "tension": 0.0}
+
+static func _ambient_season_mul(base: Dictionary) -> Dictionary:
+	var s := Seasonal.ambient_season_adjust()
+	return {
+		"wind": float(base.wind) * float(s.wind_mul),
+		"drone": float(base.drone) * float(s.drone_mul),
+		"cutoff": float(base.cutoff) + float(s.cutoff_add),
+		"tension": float(base.get("tension", 0.0)),
+	}
 
 ## heartbeatInterval(): seconds between beats under 30% HP, 0 = none.
 static func heartbeat_interval(hp_frac: float) -> float:
