@@ -29,6 +29,14 @@ html, body, #hud, #attract, #t2d, #box, #modal, .pv-root, .pv-up {
   word-break: keep-all;
   line-break: strict;
 }
+html[data-season="november"] {
+  --zt-info: #8ec4e8;
+  --zt-border-strong: rgba(106,156,196,.35);
+}
+html[data-season="december"] {
+  --zt-info: #b8a8e0;
+  --zt-border-strong: rgba(138,122,200,.35);
+}
 `;
 
 export function injectTheme() {
