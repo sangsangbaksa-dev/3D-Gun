@@ -29,6 +29,9 @@ html[data-season="december"] #ztTitle{background:linear-gradient(#0000 55%,#0a03
 #ztTitle .go button:disabled{cursor:default}
 #ztTitle .go .hint{margin-top:10px;font-size:13px;opacity:.6}
 @keyframes tbEmber{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(60px,-105vh);opacity:0}}
+#ztTitle .leaf{position:absolute;top:-18px;width:9px;height:5px;border-radius:55% 45% 60% 40%;opacity:.75;pointer-events:none;animation:tbLeaf linear infinite}
+@keyframes tbLeaf{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.75}100%{transform:translate(var(--dx,48px),108vh) rotate(320deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){#ztTitle .leaf{display:none}}
 @keyframes tbGlow{50%{filter:drop-shadow(0 0 26px ${TEAL}bb) drop-shadow(0 0 6px ${TEAL}55)}}
 @keyframes tbPulseBtn{50%{box-shadow:0 0 8px ${ORANGE}66}}
 

@@ -13,7 +13,7 @@ import {
 } from '../logic/economy';
 import { CSS } from './style';
 import { icon, iconOr, walletIconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
-import { titleEmberStyle } from '../../ui/seasonal';
+import { titleEmberStyle, titleLeafStyle } from '../../ui/seasonal';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -54,7 +54,7 @@ export class TycoonPanel {
     this.root = document.createElement('div');
     this.root.id = 't2d';
     this.root.innerHTML = `
-      <div class="bgimg"></div><div class="bgfx"></div><div class="embers"></div>
+      <div class="bgimg"></div><div class="bgfx"></div><div class="embers"></div><div class="leaves"></div>
       <header><div class="emblem">${icon('target', 'si big')}</div><h1><span class="kick" data-i18n-kicker></span><span data-i18n-hub-title></span><small data-i18n-hub-sub></small></h1><div class="report"></div></header>
       <div class="wallet"></div>
       <main><nav></nav><div class="content"></div><aside></aside></main>
@@ -69,6 +69,19 @@ export class TycoonPanel {
       e.style.background = hot;
       e.style.boxShadow = `0 0 6px ${hot},0 0 12px ${glow}`;
       em.appendChild(e);
+    }
+    const leafCfg = titleLeafStyle();
+    if (leafCfg) {
+      const lm = this.root.querySelector('.leaves') as HTMLElement;
+      for (let i = 0; i < 14; i++) {
+        const e = document.createElement('i');
+        e.style.left = `${(i * 47) % 100}%`;
+        e.style.background = leafCfg.hues[i % leafCfg.hues.length];
+        e.style.setProperty('--dx', `${28 + (i * 19) % 72}px`);
+        e.style.animationDuration = `${16 + (i % 8)}s`;
+        e.style.animationDelay = `${-(i * 2.4) % 14}s`;
+        lm.appendChild(e);
+      }
     }
     document.body.appendChild(this.root);
     this.reportEl = this.root.querySelector('.report') as HTMLElement;
