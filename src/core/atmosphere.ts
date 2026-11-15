@@ -1,7 +1,7 @@
 // 종말 분위기: 붉은 하늘 셰이더, 안개·조명 페이즈 전환, 떠다니는 불씨, 지평선의 폐허 실루엣.
 // 시각 전용. game.ts 를 건드리지 않도록 하늘 메시의 onBeforeRender 에서 매 프레임 스스로 갱신한다.
 import * as THREE from 'three';
-import { atmosphereFogTint, combatEmberHex } from '../ui/seasonal';
+import { atmosphereFogTint, combatEmberHex, combatLeafParticles, month } from '../ui/seasonal';
 import { state } from './state';
 
 type Phase = 'prep' | 'combat' | 'ended';
@@ -62,6 +62,9 @@ export class Atmosphere {
   private readonly sky: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   private readonly skyline = new THREE.Group();
   private readonly embers: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
+  private readonly leaves: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> | null;
+  private readonly leafN: number;
+  private leafSeeds = new Float32Array(0);
 
   constructor(private scene: THREE.Scene, private sun: THREE.DirectionalLight, private hemi: THREE.HemisphereLight) {
     scene.background = new THREE.Color(0x10141a);
@@ -80,7 +83,16 @@ export class Atmosphere {
     this.sky.onBeforeRender = (_r, _s, cam) => this.update(cam);
     this.buildSkyline();
     this.embers = this.buildEmbers();
+    const leafCfg = combatLeafParticles();
+    if (leafCfg) {
+      this.leafN = leafCfg.count;
+      this.leaves = this.buildLeaves(leafCfg.colors);
+    } else {
+      this.leafN = 0;
+      this.leaves = null;
+    }
     scene.add(this.sky, this.skyline, this.embers);
+    if (this.leaves) scene.add(this.leaves);
     this.apply();
   }
 
@@ -144,6 +156,40 @@ export class Atmosphere {
     return pts;
   }
 
+  private buildLeaves(colors: number[]) {
+    const n = this.leafN;
+    const pos = new Float32Array(n * 3);
+    const seeds = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 90;
+      pos[i * 3 + 1] = 8 + Math.random() * 22;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 90;
+      seeds[i] = Math.random() * 100;
+    }
+    this.leafSeeds = seeds;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const cv = document.createElement('canvas');
+    cv.width = 16;
+    cv.height = 10;
+    const g = cv.getContext('2d')!;
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.ellipse(8, 5, 7, 4.5, 0.35, 0, Math.PI * 2);
+    g.fill();
+    const mat = new THREE.PointsMaterial({
+      size: 0.55,
+      map: new THREE.CanvasTexture(cv),
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+      vertexColors: false,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+  return pts;
+  }
+
   private update(cam: THREE.Camera) {
     const now = performance.now() / 1000;
     const dt = this.last < 0 ? 0 : Math.min(0.1, now - this.last);
@@ -164,6 +210,7 @@ export class Atmosphere {
     this.skyline.updateMatrixWorld();
     this.apply();
     this.moveEmbers(dt, cp.x, cp.z);
+    if (this.leaves) this.moveLeaves(dt, cp.x, cp.z);
   }
 
   private apply() {
@@ -209,5 +256,30 @@ export class Atmosphere {
     m.color.setHex(combatEmberHex());
     m.opacity = 0.15 + e * 0.55 * (0.85 + Math.sin(this.t * 3) * 0.15);
     m.size = 0.25 + e * 0.2;
+  }
+
+  private moveLeaves(dt: number, cx: number, cz: number) {
+    const cfg = combatLeafParticles();
+    if (!cfg || !this.leaves) return;
+    const wind = month() === 11 ? 1.2 : 1;
+    const a = this.leaves.geometry.attributes.position.array as Float32Array;
+    const str = cfg.strength * this.cur.ember;
+    for (let i = 0; i < this.leafN; i++) {
+      const sd = this.leafSeeds[i], p = i * 3;
+      a[p] += (Math.sin(this.t * 0.35 + sd) * 0.35 + wind * 0.25) * dt;
+      a[p + 1] -= dt * (0.35 + (sd % 1) * 0.45);
+      a[p + 2] += Math.cos(this.t * 0.28 + sd * 1.3) * dt * 0.3;
+      if (a[p + 1] < 0) a[p + 1] = 10 + (sd % 1) * 18;
+      if (a[p] - cx > 45) a[p] -= 90;
+      else if (a[p] - cx < -45) a[p] += 90;
+      if (a[p + 2] - cz > 45) a[p + 2] -= 90;
+      else if (a[p + 2] - cz < -45) a[p + 2] += 90;
+    }
+    this.leaves.geometry.attributes.position.needsUpdate = true;
+    const m = this.leaves.material;
+    const hi = Math.floor(this.t * 2) % cfg.colors.length;
+    m.color.setHex(cfg.colors[hi]);
+    m.opacity = 0.12 + str * 0.38 * (0.9 + Math.sin(this.t * 1.8) * 0.1);
+    m.size = 0.42 + str * 0.22;
   }
 }

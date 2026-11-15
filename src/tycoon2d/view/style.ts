@@ -30,6 +30,10 @@ export const CSS = `
 #t2d .embers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #t2d .embers i{position:absolute;bottom:-12px;width:3px;height:3px;border-radius:50%;background:var(--or);box-shadow:0 0 6px var(--or),0 0 12px var(--rd);animation:t2dEmber linear infinite;opacity:0}
 @keyframes t2dEmber{0%{transform:translate(0,0);opacity:0}10%{opacity:.9}100%{transform:translate(80px,-104vh);opacity:0}}
+#t2d .leaves{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#t2d .leaves i{position:absolute;top:-16px;width:9px;height:5px;border-radius:55% 45% 60% 40%;opacity:.7;animation:t2dLeaf linear infinite}
+@keyframes t2dLeaf{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.72}100%{transform:translate(var(--dx,56px),108vh) rotate(300deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){#t2d .leaves{display:none}}
 
 /* 머리글 */
 #t2d header{position:relative;padding:14px 24px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:linear-gradient(#0a0507ee,#0a0507aa)}

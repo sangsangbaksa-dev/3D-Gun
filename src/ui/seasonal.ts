@@ -7,7 +7,7 @@ export function month(): number {
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
-      return locale === 'ko' ? ' · 11월, 기지 밖 안개' : ' · November fog over the base';
+      return locale === 'ko' ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog';
     case 12:
       return locale === 'ko' ? ' · 12월, 차가운 밤' : ' · December cold nights';
     default:
@@ -107,6 +107,22 @@ export function titleEmberStyle(): { hot: string; glow: string; count: number } 
 export function prepMistAlphaMul(): number {
   const m = month();
   return m === 11 || m === 12 ? 0.42 : 0;
+}
+
+/** Falling-leaf palette on title / HQ shell (November only). */
+export function titleLeafStyle(): { count: number; hues: string[] } | null {
+  if (month() !== 11) return null;
+  return { count: 24, hues: ['#c49050', '#a06838', '#8a5030', '#6a4828', '#d4a060'] };
+}
+
+/** In-world leaf drifts — November combat/prep only (mirrors godot/scripts/seasonal.gd leaf_particles). */
+export function combatLeafParticles(): { count: number; colors: number[]; strength: number } | null {
+  if (month() !== 11) return null;
+  return {
+    count: 130,
+    colors: [0xc49050, 0xa06838, 0x8a5030, 0x6a4828, 0xb87840],
+    strength: 0.58,
+  };
 }
 
 /** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */

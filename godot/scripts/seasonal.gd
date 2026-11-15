@@ -5,7 +5,7 @@ static func title_slice_extra(locale: String) -> String:
 	var dt := Time.get_datetime_dict_from_system()
 	match dt.month:
 		11:
-			return " · " + ("11월, 기지 밖 안개" if locale == "ko" else "November fog over the base")
+			return " · " + ("11월, 낙엽 사이의 안개" if locale == "ko" else "November leaves in the fog")
 		12:
 			return " · " + ("12월, 차가운 밤" if locale == "ko" else "December cold nights")
 		_:
@@ -80,6 +80,12 @@ static func prep_mist_alpha_mul() -> float:
 			return 0.42
 		_:
 			return 0.0
+
+## Drifting leaf particles (November only; mirrors src/ui/seasonal.ts combatLeafParticles).
+static func leaf_particles() -> Dictionary:
+	if Time.get_datetime_dict_from_system().month != 11:
+		return {}
+	return {"count": 55, "strength": 0.58}
 
 ## Wind / drone bed tweaks for November–December (mirrors src/ui/seasonal.ts ambientSeasonAdjust).
 static func ambient_season_adjust() -> Dictionary:

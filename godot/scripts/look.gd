@@ -89,6 +89,8 @@ var fill: DirectionalLight3D
 var skyline: Node3D
 var embers: CPUParticles3D
 var ember_mat: StandardMaterial3D
+var leaves: CPUParticles3D
+var leaf_mat: StandardMaterial3D
 var cur := {}
 var from := {}
 var phase := "prep"
@@ -109,6 +111,7 @@ func _ready() -> void:
 	_build_lights()
 	_build_skyline()
 	_build_embers()
+	_build_leaves()
 	_apply()
 	get_tree().node_added.connect(_on_node_added)
 	_lambert_all(get_tree().root)
@@ -193,6 +196,8 @@ func _process(dt: float) -> void:
 		var cp := cam.global_position
 		skyline.position = Vector3(cp.x * 0.85, 0, cp.z * 0.85)
 		embers.global_position = Vector3(cp.x, cp.y - 4.0, cp.z)
+		if leaves:
+			leaves.global_position = Vector3(cp.x, cp.y + 6.0, cp.z)
 		# 구역 안개: 들어선 구역의 색으로 서서히
 		var zk := clampf(dt * 0.7, 0.0, 1.0)
 		var zi: Array = ZONE_FOG.get(AmbienceScript.zone_at(cp), [])
@@ -348,6 +353,42 @@ func _build_embers() -> void:
 	embers.material_override = ember_mat
 	embers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(embers)
+
+## Brown leaves drifting down in November (atmosphere.ts combatLeafParticles).
+func _build_leaves() -> void:
+	var cfg := Seasonal.leaf_particles()
+	leaves = CPUParticles3D.new()
+	var n := int(cfg.get("count", 0)) if not cfg.is_empty() else 0
+	leaves.emitting = n > 0
+	leaves.amount = n
+	leaves.lifetime = 22.0
+	leaves.preprocess = 22.0
+	leaves.local_coords = false
+	leaves.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	leaves.emission_box_extents = Vector3(45, 4, 45)
+	leaves.direction = Vector3(0.45, -1, 0.15)
+	leaves.spread = 32.0
+	leaves.gravity = Vector3(0, -0.08, 0)
+	leaves.initial_velocity_min = 0.35
+	leaves.initial_velocity_max = 0.95
+	leaves.angular_velocity_min = -1.6
+	leaves.angular_velocity_max = 1.6
+	leaves.visibility_aabb = AABB(Vector3(-70, -15, -70), Vector3(140, 70, 140))
+	var q := QuadMesh.new()
+	q.size = Vector2(0.22, 0.14)
+	leaves.mesh = q
+	leaf_mat = StandardMaterial3D.new()
+	leaf_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	leaf_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	leaf_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	leaf_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	leaf_mat.no_depth_test = false
+	leaf_mat.disable_receive_shadows = true
+	var e := float(cfg.get("strength", 0.5)) if not cfg.is_empty() else 0.0
+	leaf_mat.albedo_color = Color(0.72, 0.45, 0.28, 0.08 + e * 0.22)
+	leaves.material_override = leaf_mat
+	leaves.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(leaves)
 
 # ── 재질: 웹의 MeshLambertMaterial 처럼 ─────────────────────────────
 

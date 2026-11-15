@@ -8,7 +8,7 @@
 (function () {
   var ko = (navigator.language || '').toLowerCase().indexOf('ko') === 0;
   var m = new Date().getMonth() + 1;
-  var extra = m === 11 ? (ko ? '11월, 기지 밖 안개' : 'November fog over the base')
+  var extra = m === 11 ? (ko ? '11월, 낙엽 사이의 안개' : 'November leaves in the fog')
     : m === 12 ? (ko ? '12월, 차가운 밤' : 'December cold nights') : '';
   var base = ko
     ? '좀비 타이쿤 3D — 웨이브 방어, 기지 건설, 본부 영구 성장.'
@@ -20,7 +20,7 @@
   if (m === 11) { document.documentElement.dataset.season = 'november'; document.body.dataset.season = 'november'; }
   else if (m === 12) { document.documentElement.dataset.season = 'december'; document.body.dataset.season = 'december'; }
   var titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
-  var titleExtra = m === 11 ? (ko ? ' · 11월, 기지 밖 안개' : ' · November fog over the base')
+  var titleExtra = m === 11 ? (ko ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog')
     : m === 12 ? (ko ? ' · 12월, 차가운 밤' : ' · December cold nights') : '';
   document.title = titleBase + titleExtra;
 })();
