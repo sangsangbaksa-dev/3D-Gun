@@ -13,7 +13,7 @@ import {
 } from '../logic/economy';
 import { CSS } from './style';
 import { icon, iconOr, walletIconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
-import { titleEmberStyle, titleLeafStyle } from '../../ui/seasonal';
+import { hubLeafCount, titleEmberStyle, titleLeafStyle } from '../../ui/seasonal';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -71,9 +71,10 @@ export class TycoonPanel {
       em.appendChild(e);
     }
     const leafCfg = titleLeafStyle();
-    if (leafCfg) {
+    const hubLeaves = hubLeafCount();
+    if (leafCfg && hubLeaves > 0) {
       const lm = this.root.querySelector('.leaves') as HTMLElement;
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < hubLeaves; i++) {
         const e = document.createElement('i');
         e.style.left = `${(i * 47) % 100}%`;
         e.style.background = leafCfg.hues[i % leafCfg.hues.length];

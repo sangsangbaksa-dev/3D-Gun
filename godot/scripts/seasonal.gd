@@ -81,11 +81,20 @@ static func prep_mist_alpha_mul() -> float:
 		_:
 			return 0.0
 
+## Late November (16th+): gustier leaves before December (mirrors src/ui/seasonal.ts lateNovemberLeafMul).
+static func late_november_leaf_mul() -> float:
+	var dt := Time.get_datetime_dict_from_system()
+	if dt.month != 11:
+		return 1.0
+	return 1.22 if dt.day >= 16 else 1.0
+
 ## Drifting leaf particles (November only; mirrors src/ui/seasonal.ts combatLeafParticles).
 static func leaf_particles() -> Dictionary:
 	if Time.get_datetime_dict_from_system().month != 11:
 		return {}
-	return {"count": 55, "strength": 0.58}
+	var mul := late_november_leaf_mul()
+	var strength := minf(0.72, 0.58 * mul)
+	return {"count": int(round(55.0 * mul)), "strength": strength}
 
 ## Wind / drone bed tweaks for November–December (mirrors src/ui/seasonal.ts ambientSeasonAdjust).
 static func ambient_season_adjust() -> Dictionary:

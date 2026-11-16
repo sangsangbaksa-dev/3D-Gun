@@ -4,6 +4,16 @@ export function month(): number {
   return new Date().getMonth() + 1;
 }
 
+export function dayOfMonth(): number {
+  return new Date().getDate();
+}
+
+/** Late November (16th+): gustier leaves before December snow prep (mirrors godot seasonal.gd). */
+export function lateNovemberLeafMul(): number {
+  if (month() !== 11) return 1;
+  return dayOfMonth() >= 16 ? 1.22 : 1;
+}
+
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
@@ -112,17 +122,28 @@ export function prepMistAlphaMul(): number {
 /** Falling-leaf palette on title / HQ shell (November only). */
 export function titleLeafStyle(): { count: number; hues: string[] } | null {
   if (month() !== 11) return null;
-  return { count: 24, hues: ['#c49050', '#a06838', '#8a5030', '#6a4828', '#d4a060'] };
+  const mul = lateNovemberLeafMul();
+  return {
+    count: Math.round(24 * mul),
+    hues: ['#c49050', '#a06838', '#8a5030', '#6a4828', '#d4a060'],
+  };
 }
 
 /** In-world leaf drifts — November combat/prep only (mirrors godot/scripts/seasonal.gd leaf_particles). */
 export function combatLeafParticles(): { count: number; colors: number[]; strength: number } | null {
   if (month() !== 11) return null;
+  const mul = lateNovemberLeafMul();
   return {
-    count: 130,
+    count: Math.round(130 * mul),
     colors: [0xc49050, 0xa06838, 0x8a5030, 0x6a4828, 0xb87840],
-    strength: 0.58,
+    strength: Math.min(0.72, 0.58 * mul),
   };
+}
+
+/** HQ shell leaf drifts (November only; fewer than title screen). */
+export function hubLeafCount(): number {
+  if (month() !== 11) return 0;
+  return Math.round(14 * lateNovemberLeafMul());
 }
 
 /** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */
