@@ -12,6 +12,10 @@ body.hudIn>:not(#c):not(#ztTitle):not(script):not(style){transition:opacity .45s
   background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#ff8a2a14,#0000 40%);transition:opacity .6s cubic-bezier(.4,0,.2,1)}
 html[data-season="november"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a9cc418,#253a5012 55%,#0000 70%)}
 html[data-season="december"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a5a9a18,#2a254012 55%,#0000 70%)}
+html[data-season="november"] #ztTitle .tmenu button,html[data-season="november"] #ztTitle .tpanel{border-color:#6a9cc4;box-shadow:0 0 12px #3a5a7822}
+html[data-season="november"] #ztTitle .go button:focus-visible{box-shadow:0 0 0 3px #07090d,0 0 0 5px #8ec4e8,0 0 28px #6a9cc488}
+html[data-season="december"] #ztTitle .tmenu button,html[data-season="december"] #ztTitle .tpanel{border-color:#8a7ac8;box-shadow:0 0 12px #4a3a6822}
+html[data-season="december"] #ztTitle .go button:focus-visible{box-shadow:0 0 0 3px #07090d,0 0 0 5px #b8a8e0,0 0 28px #8a7ac888}
 #ztTitle.hide{opacity:0;pointer-events:none}
 #ztTitle.hide .ui,#ztTitle.hide .go{transition:opacity .4s ease-out,transform .6s cubic-bezier(.4,0,.2,1);opacity:0}
 #ztTitle.hide .ui{transform:translateY(-8px)}#ztTitle.hide .go{transform:translate(-50%,10px)}

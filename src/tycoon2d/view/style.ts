@@ -183,5 +183,11 @@ export const CSS = `
 #t2d .content,#t2d aside,#t2d nav{scrollbar-width:thin;scrollbar-color:#FF8A2A55 transparent}
 @media(max-width:1100px){#t2d aside{width:250px}#t2d .wallet{gap:6px}#t2d .coin{min-width:0;padding-right:10px}#t2d .coin .lb{display:none}#t2d .coin .ic{width:26px;height:26px}}
 @media(max-width:900px){#t2d aside{display:none}#t2d nav{width:64px;padding-left:10px}#t2d nav .nl{display:none}#t2d .coin{min-width:0}}
+html[data-season="november"] #t2d .emblem{border-color:#6a9cc466;color:#8ec4e8;background:radial-gradient(#6a9cc422,#6a9cc405 70%);box-shadow:0 0 18px #3a5a7833,inset 0 0 12px #3a5a7822}
+html[data-season="november"] #t2d .launch{box-shadow:0 0 28px #3a5a7855,0 0 12px var(--or)}
+html[data-season="november"] #t2d nav button.on{border-color:#6a9cc4;box-shadow:0 0 18px #3a5a7844}
+html[data-season="december"] #t2d .emblem{border-color:#8a7ac866;color:#b8a8e0;background:radial-gradient(#8a7ac422,#8a7ac405 70%);box-shadow:0 0 18px #4a3a6833,inset 0 0 12px #4a3a6822}
+html[data-season="december"] #t2d .launch{box-shadow:0 0 28px #4a3a6855,0 0 12px var(--or)}
+html[data-season="december"] #t2d nav button.on{border-color:#8a7ac8;box-shadow:0 0 18px #4a3a6844}
 @media(prefers-reduced-motion:reduce){#t2d .bgimg,#t2d .embers i,#t2d .emblem .si,#t2d .launch,#t2d .launch .chev{animation:none}}
 `;

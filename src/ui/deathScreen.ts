@@ -74,6 +74,16 @@ body.ztDeathOn #lockHint,body.ztDeathOn #pauseBanner{display:none!important}
   60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes zdBest{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion: reduce){#ztDeath.card .art{animation:none}#ztDeath .ttl.show{animation:none;opacity:1}#ztDeath .pulse.beat{animation:none}}
+body[data-season="november"] #ztDeath .tint{background:radial-gradient(ellipse at 50% 55%,#5888b822 0%,#30486866 48%,#1a0810e8 100%)}
+body[data-season="november"] #ztDeath .ttl h1{color:#c8dce8;text-shadow:0 0 28px #6a9cc4aa,0 6px 0 #1a2838,0 0 2px #fff4}
+body[data-season="november"] #ztDeath .ttl p{color:#8ec4e8cc;text-shadow:0 0 10px #3a5878}
+body[data-season="november"] #ztDeath .cardBox{border-color:#6a9cc488;box-shadow:0 0 0 1px #0008,0 12px 48px #000b,0 0 32px #3a5a7844}
+body[data-season="november"] #ztDeath .pulse{box-shadow:inset 0 0 160px 40px #4a6898}
+body[data-season="december"] #ztDeath .tint{background:radial-gradient(ellipse at 50% 55%,#6a58a822 0%,#3a286866 48%,#1a0818e8 100%)}
+body[data-season="december"] #ztDeath .ttl h1{color:#d8cce8;text-shadow:0 0 28px #8a7ac8aa,0 6px 0 #281a38,0 0 2px #fff4}
+body[data-season="december"] #ztDeath .ttl p{color:#b8a8e0cc;text-shadow:0 0 10px #5a4878}
+body[data-season="december"] #ztDeath .cardBox{border-color:#8a7ab888;box-shadow:0 0 0 1px #0008,0 12px 48px #000b,0 0 32px #4a3a6844}
+body[data-season="december"] #ztDeath .pulse{box-shadow:inset 0 0 160px 40px #6a5898}
 `;
 
 const fmt = (n: number) => (n >= 10000 ? `${(n / 1000).toFixed(1)}k` : `${Math.floor(n)}`);
