@@ -13,7 +13,7 @@ import {
 } from '../logic/economy';
 import { CSS } from './style';
 import { icon, iconOr, walletIconOr, spriteIcon, ICON_OF, TONE_OF } from './icons';
-import { hubLeafCount, titleEmberStyle, titleLeafStyle } from '../../ui/seasonal';
+import { hubLeafCount, isLateNovember, titleEmberStyle, titleLeafStyle } from '../../ui/seasonal';
 
 export interface PanelHost { onLaunch(): void; onChanged(): void; onReset(): void }
 
@@ -79,7 +79,7 @@ export class TycoonPanel {
         e.style.left = `${(i * 47) % 100}%`;
         e.style.background = leafCfg.hues[i % leafCfg.hues.length];
         e.style.setProperty('--dx', `${28 + (i * 19) % 72}px`);
-        e.style.animationDuration = `${16 + (i % 8)}s`;
+        e.style.animationDuration = `${(16 + (i % 8)) * (isLateNovember() ? 0.82 : 1)}s`;
         e.style.animationDelay = `${-(i * 2.4) % 14}s`;
         lm.appendChild(e);
       }

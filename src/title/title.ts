@@ -6,7 +6,7 @@ import { getSettings, loadSettings, resetSettings, setSettings } from './setting
 import { resetTutorial } from './tutorial';
 import { injectKeycapCss, keyTableHtml } from '../ui/keys';
 import { LOCALES, onLocaleChange, t, type Locale } from '../i18n';
-import { titleEmberStyle, titleLeafStyle, titleSliceExtra } from '../ui/seasonal';
+import { isLateNovember, titleEmberStyle, titleLeafStyle, titleSliceExtra } from '../ui/seasonal';
 
 /** TitleSystem 이 읽는다: 타이틀이 떠 있는 동안 카메라가 핵 주위를 돈다 */
 export const titleView = { orbiting: false };
@@ -194,7 +194,8 @@ export function mountTitle(onStart: () => void): TitleHandle {
     ? Array.from({ length: leafCfg.count }, (_, i) => {
         const hue = leafCfg.hues[i % leafCfg.hues.length];
         const dx = 24 + (i * 17) % 80;
-        return `<i class="leaf" style="left:${(i * 41) % 100}%;background:${hue};--dx:${dx}px;animation-duration:${14 + (i % 9)}s;animation-delay:-${((i * 2.1) % 16).toFixed(1)}s"></i>`;
+        const dur = (14 + (i % 9)) * (isLateNovember() ? 0.82 : 1);
+        return `<i class="leaf" style="left:${(i * 41) % 100}%;background:${hue};--dx:${dx}px;animation-duration:${dur.toFixed(1)}s;animation-delay:-${((i * 2.1) % 16).toFixed(1)}s"></i>`;
       }).join('')
     : '';
   root.innerHTML = `${embers}${leaves}<div class="vig"></div><div class="scan"></div>
