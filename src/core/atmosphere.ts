@@ -1,7 +1,7 @@
 // 종말 분위기: 붉은 하늘 셰이더, 안개·조명 페이즈 전환, 떠다니는 불씨, 지평선의 폐허 실루엣.
 // 시각 전용. game.ts 를 건드리지 않도록 하늘 메시의 onBeforeRender 에서 매 프레임 스스로 갱신한다.
 import * as THREE from 'three';
-import { atmosphereFogTint, combatEmberHex, combatLeafParticles, month } from '../ui/seasonal';
+import { atmosphereFogTint, combatEmberHex, combatLeafParticles, combatLeafWindMul } from '../ui/seasonal';
 import { state } from './state';
 
 type Phase = 'prep' | 'combat' | 'ended';
@@ -261,7 +261,7 @@ export class Atmosphere {
   private moveLeaves(dt: number, cx: number, cz: number) {
     const cfg = combatLeafParticles();
     if (!cfg || !this.leaves) return;
-    const wind = month() === 11 ? 1.2 : 1;
+    const wind = combatLeafWindMul();
     const a = this.leaves.geometry.attributes.position.array as Float32Array;
     const str = cfg.strength * this.cur.ember;
     for (let i = 0; i < this.leafN; i++) {

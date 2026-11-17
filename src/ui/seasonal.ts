@@ -9,14 +9,21 @@ export function dayOfMonth(): number {
 }
 
 /** Late November (16th+): gustier leaves before December snow prep (mirrors godot seasonal.gd). */
+export function isLateNovember(): boolean {
+  return month() === 11 && dayOfMonth() >= 16;
+}
+
 export function lateNovemberLeafMul(): number {
   if (month() !== 11) return 1;
-  return dayOfMonth() >= 16 ? 1.22 : 1;
+  return isLateNovember() ? 1.22 : 1;
 }
 
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
+      if (isLateNovember()) {
+        return locale === 'ko' ? ' · 11월 막바지, 거센 안개' : ' · Late November gusts in the fog';
+      }
       return locale === 'ko' ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog';
     case 12:
       return locale === 'ko' ? ' · 12월, 차가운 밤' : ' · December cold nights';
@@ -65,7 +72,7 @@ export function bodySeasonAttr(): string {
 export function combatMistTint(): { r: number; g: number; b: number; a: number } {
   switch (month()) {
     case 11:
-      return { r: 0.38, g: 0.52, b: 0.68, a: 0.07 };
+      return { r: 0.38, g: 0.52, b: 0.68, a: isLateNovember() ? 0.085 : 0.07 };
     case 12:
       return { r: 0.42, g: 0.38, b: 0.58, a: 0.06 };
     default:
@@ -81,7 +88,7 @@ function rgbCss(r: number, g: number, b: number) {
 export function atmosphereFogTint(): { r: number; g: number; b: number; farMul: number } {
   switch (month()) {
     case 11:
-      return { r: 0.78, g: 0.86, b: 0.94, farMul: 1.05 };
+      return { r: 0.78, g: 0.86, b: 0.94, farMul: isLateNovember() ? 1.08 : 1.05 };
     case 12:
       return { r: 0.82, g: 0.76, b: 0.92, farMul: 1.04 };
     default:
@@ -105,7 +112,11 @@ export function combatEmberHex(): number {
 export function titleEmberStyle(): { hot: string; glow: string; count: number } {
   switch (month()) {
     case 11:
-      return { hot: rgbCss(0.72, 0.82, 0.95), glow: rgbCss(0.35, 0.55, 0.62), count: 48 };
+      return {
+        hot: rgbCss(0.72, 0.82, 0.95),
+        glow: rgbCss(0.35, 0.55, 0.62),
+        count: isLateNovember() ? 42 : 48,
+      };
     case 12:
       return { hot: rgbCss(0.85, 0.78, 0.95), glow: rgbCss(0.45, 0.38, 0.62), count: 48 };
     default:
@@ -146,11 +157,19 @@ export function hubLeafCount(): number {
   return Math.round(14 * lateNovemberLeafMul());
 }
 
+/** Horizontal leaf drift multiplier in 3D combat (November wind bed). */
+export function combatLeafWindMul(): number {
+  if (month() !== 11) return 1;
+  return 1.2 * (isLateNovember() ? 1.14 : 1);
+}
+
 /** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {
     case 11:
-      return { windMul: 1.2, droneMul: 0.88, cutoffAdd: 45 };
+      return isLateNovember()
+        ? { windMul: 1.32, droneMul: 0.84, cutoffAdd: 52 }
+        : { windMul: 1.2, droneMul: 0.88, cutoffAdd: 45 };
     case 12:
       return { windMul: 1.12, droneMul: 0.92, cutoffAdd: 32 };
     default:
@@ -185,12 +204,17 @@ export function applyShellMeta(locale: string) {
     metaContent('meta[property="og:image"]', 'property', 'og:image', img);
     metaContent('meta[name="twitter:image"]', 'name', 'twitter:image', img);
   } catch { /* non-DOM */ }
+  applySeasonDatasets();
+}
+
+/** `data-season` / `data-late-november` on html+body for shell CSS (combat HUD reads these too). */
+export function applySeasonDatasets() {
   const season = bodySeasonAttr();
-  if (season) {
-    document.documentElement.dataset.season = season;
-    document.body.dataset.season = season;
-  } else {
-    delete document.documentElement.dataset.season;
-    delete document.body.dataset.season;
+  const roots = [document.documentElement, document.body];
+  for (const el of roots) {
+    if (season) el.dataset.season = season;
+    else delete el.dataset.season;
+    if (isLateNovember()) el.dataset.lateNovember = '1';
+    else delete el.dataset.lateNovember;
   }
 }

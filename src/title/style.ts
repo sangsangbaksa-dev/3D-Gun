@@ -35,6 +35,9 @@ html[data-season="december"] #ztTitle .go button:focus-visible{box-shadow:0 0 0 
 @keyframes tbEmber{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(60px,-105vh);opacity:0}}
 #ztTitle .leaf{position:absolute;top:-18px;width:9px;height:5px;border-radius:55% 45% 60% 40%;opacity:.75;pointer-events:none;animation:tbLeaf linear infinite}
 @keyframes tbLeaf{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.75}100%{transform:translate(var(--dx,48px),108vh) rotate(320deg);opacity:0}}
+html[data-late-november="1"] #ztTitle .leaf{opacity:.82;animation-name:tbLeafGust}
+@keyframes tbLeafGust{0%{transform:translate(0,0) rotate(-8deg);opacity:0}10%{opacity:.82}100%{transform:translate(calc(var(--dx,48px) * 1.35),108vh) rotate(380deg);opacity:0}}
+html[data-late-november="1"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a9cc420,#253a5018 55%,#0000 70%),linear-gradient(105deg,#0000 70%,#3a587812 100%)}
 @media (prefers-reduced-motion:reduce){#ztTitle .leaf{display:none}}
 @keyframes tbGlow{50%{filter:drop-shadow(0 0 26px ${TEAL}bb) drop-shadow(0 0 6px ${TEAL}55)}}
 @keyframes tbPulseBtn{50%{box-shadow:0 0 8px ${ORANGE}66}}

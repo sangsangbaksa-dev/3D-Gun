@@ -1,10 +1,16 @@
 extends RefCounted
 ## Optional title / shell copy keyed off the real-world date (automation polish, not gameplay).
 
+static func is_late_november() -> bool:
+	var dt := Time.get_datetime_dict_from_system()
+	return dt.month == 11 and dt.day >= 16
+
 static func title_slice_extra(locale: String) -> String:
 	var dt := Time.get_datetime_dict_from_system()
 	match dt.month:
 		11:
+			if is_late_november():
+				return " · " + ("11월 막바지, 거센 안개" if locale == "ko" else "Late November gusts in the fog")
 			return " · " + ("11월, 낙엽 사이의 안개" if locale == "ko" else "November leaves in the fog")
 		12:
 			return " · " + ("12월, 차가운 밤" if locale == "ko" else "December cold nights")
@@ -31,7 +37,7 @@ static func atmosphere_fog_tint() -> Color:
 static func atmosphere_fog_far_mul() -> float:
 	match Time.get_datetime_dict_from_system().month:
 		11:
-			return 1.05
+			return 1.08 if is_late_november() else 1.05
 		12:
 			return 1.04
 		_:
@@ -58,7 +64,9 @@ static func ember_fade() -> Color:
 
 static func ember_amount() -> int:
 	match Time.get_datetime_dict_from_system().month:
-		11, 12:
+		11:
+			return 42 if is_late_november() else 48
+		12:
 			return 48
 		_:
 			return 60
@@ -67,7 +75,7 @@ static func ember_amount() -> int:
 static func combat_mist_tint() -> Color:
 	match Time.get_datetime_dict_from_system().month:
 		11:
-			return Color(0.38, 0.52, 0.68, 0.07)
+			return Color(0.38, 0.52, 0.68, 0.085 if is_late_november() else 0.07)
 		12:
 			return Color(0.42, 0.38, 0.58, 0.06)
 		_:
@@ -100,6 +108,8 @@ static func leaf_particles() -> Dictionary:
 static func ambient_season_adjust() -> Dictionary:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_late_november():
+				return {"wind_mul": 1.32, "drone_mul": 0.84, "cutoff_add": 52.0}
 			return {"wind_mul": 1.2, "drone_mul": 0.88, "cutoff_add": 45.0}
 		12:
 			return {"wind_mul": 1.12, "drone_mul": 0.92, "cutoff_add": 32.0}

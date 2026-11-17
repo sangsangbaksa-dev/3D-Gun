@@ -8,7 +8,11 @@
 (function () {
   var ko = (navigator.language || '').toLowerCase().indexOf('ko') === 0;
   var m = new Date().getMonth() + 1;
-  var extra = m === 11 ? (ko ? '11월, 낙엽 사이의 안개' : 'November leaves in the fog')
+  var d = new Date().getDate();
+  var lateNov = m === 11 && d >= 16;
+  var extra = m === 11 ? (lateNov
+      ? (ko ? '11월 막바지, 거센 안개' : 'Late November gusts in the fog')
+      : (ko ? '11월, 낙엽 사이의 안개' : 'November leaves in the fog'))
     : m === 12 ? (ko ? '12월, 차가운 밤' : 'December cold nights') : '';
   var base = ko
     ? '좀비 타이쿤 3D — 웨이브 방어, 기지 건설, 본부 영구 성장.'
@@ -19,8 +23,11 @@
   document.head.appendChild(meta);
   if (m === 11) { document.documentElement.dataset.season = 'november'; document.body.dataset.season = 'november'; }
   else if (m === 12) { document.documentElement.dataset.season = 'december'; document.body.dataset.season = 'december'; }
+  if (lateNov) { document.documentElement.dataset.lateNovember = '1'; document.body.dataset.lateNovember = '1'; }
   var titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
-  var titleExtra = m === 11 ? (ko ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog')
+  var titleExtra = m === 11 ? (lateNov
+      ? (ko ? ' · 11월 막바지, 거센 안개' : ' · Late November gusts in the fog')
+      : (ko ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog'))
     : m === 12 ? (ko ? ' · 12월, 차가운 밤' : ' · December cold nights') : '';
   document.title = titleBase + titleExtra;
 })();
@@ -129,6 +136,10 @@
   @keyframes ztToastIn { from { opacity:0; transform:translateX(-8px); } }
   #banner { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:42px; font-weight:bold; text-shadow:0 3px 8px #000; opacity:0; transition:opacity .4s; white-space:nowrap; }
   body[data-season="november"] #banner { text-shadow:0 3px 12px #0a1828,0 0 28px #3a5a7855; }
+  body[data-late-november="1"] #banner { text-shadow:0 3px 14px #0a1828,0 0 36px #4a6a8866; }
+  body[data-late-november="1"] #wave.pop { animation-duration:.32s; }
+  body[data-late-november="1"] #prepBar.urgent .fill { animation:prepUrgentLate 1s ease-in-out infinite; }
+  @keyframes prepUrgentLate { 50% { filter:brightness(1.12); opacity:.92; } }
   body[data-season="december"] #banner { text-shadow:0 3px 12px #1a1428,0 0 28px #4a3a6855; }
   #pauseBanner { position:fixed; left:50%; top:40%; transform:translateX(-50%) scale(.96); display:block; padding:16px 34px; font-size:22px; font-weight:800; background:#121A20E6; border:1px solid #2EE6D6; border-radius:10px; pointer-events:none; z-index:20; opacity:0; visibility:hidden; transition:opacity .22s ease-out,transform .22s ease-out,visibility .22s; }
   #pauseBanner.on { opacity:1; visibility:visible; transform:translateX(-50%) scale(1); }
