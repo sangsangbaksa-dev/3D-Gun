@@ -68,6 +68,18 @@ export function bodySeasonAttr(): string {
   }
 }
 
+/** Wave-clear banner accent — mirrors godot/scripts/seasonal.gd banner_clear_accent (CSS uses seasonal selectors). */
+export function bannerClearAccentHex(): string {
+  switch (month()) {
+    case 11:
+      return isLateNovember() ? '#8cc8eb' : '#72b8e0';
+    case 12:
+      return '#b8a8e0';
+    default:
+      return '#ffb347';
+  }
+}
+
 /** Subtle full-screen cool mist during November/December combat (mirrors godot seasonal.gd). */
 export function combatMistTint(): { r: number; g: number; b: number; a: number } {
   switch (month()) {

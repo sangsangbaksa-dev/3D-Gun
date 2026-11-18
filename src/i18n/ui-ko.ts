@@ -32,6 +32,7 @@ export const KO_UI: Record<string, string> = {
   'waveClear.rewards': '🪙 골드 +{gold} · {heal}',
   'waveClear.heal': '핵 +{corePct}% · 시설 +{structPct}%',
   'waveClear.nextBoss': ' · 다음 웨이브는 보스',
+  'waveClear.moodLateNov': '거센 바람 속 잠깐의 숨',
   'toast.bossKing': '⚠ 좀비 왕이 깨어났다!',
   'toast.bossWave': '⚠ {n}웨이브 보스 {name} 출현!',
   'toast.newEnemy': '새 적 등장: {name}',

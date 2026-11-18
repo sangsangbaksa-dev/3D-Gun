@@ -116,6 +116,18 @@ static func ambient_season_adjust() -> Dictionary:
 		_:
 			return {"wind_mul": 1.0, "drone_mul": 1.0, "cutoff_add": 0.0}
 
+## Wave / clear banner accent (mirrors src/ui/seasonal.ts bannerClearAccentHex).
+static func banner_clear_accent() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			if is_late_november():
+				return Color(0.55, 0.78, 0.92)
+			return Color(0.45, 0.72, 0.88)
+		12:
+			return Color(0.72, 0.68, 0.92)
+		_:
+			return Color(1.0, 0.7, 0.28)
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:
