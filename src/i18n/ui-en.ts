@@ -32,6 +32,7 @@ export const EN_UI: Record<string, string> = {
   'waveClear.rewards': '🪙 Gold +{gold} · {heal}',
   'waveClear.heal': 'Core +{corePct}% · Structures +{structPct}%',
   'waveClear.nextBoss': ' · Next wave is a boss',
+  'waveClear.moodLateNov': 'A breath in the gust',
   'toast.bossKing': '⚠ The Zombie King awakens!',
   'toast.bossWave': '⚠ Wave {n} boss {name} appears!',
   'toast.newEnemy': 'New enemy: {name}',

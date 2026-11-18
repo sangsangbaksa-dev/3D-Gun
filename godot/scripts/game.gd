@@ -515,6 +515,8 @@ func _wave_cleared() -> void:
 	var sub := I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal})
 	if GameData.is_boss_wave(wave + 1) and wave + 1 <= GameData.final_wave:
 		sub += I18n.t("waveClear.nextBoss")
+	if Seasonal.is_late_november():
+		sub += "\n" + I18n.t("waveClear.moodLateNov")
 	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", sub)
 	toast(I18n.t("toast.structHeal", {"p": struct_pct}))
 

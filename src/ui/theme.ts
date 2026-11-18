@@ -37,6 +37,10 @@ html[data-season="december"] {
   --zt-info: #b8a8e0;
   --zt-border-strong: rgba(138,122,200,.35);
 }
+html[data-late-november="1"] {
+  --zt-info: #9ed4f4;
+  --zt-border-strong: rgba(122,176,212,.42);
+}
 `;
 
 export function injectTheme() {

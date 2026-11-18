@@ -11,6 +11,7 @@ const ORANGE := Color8(0xff, 0x8a, 0x2a)
 const RED := Color8(0xe0, 0x30, 0x3a)
 const TEXT := Color8(0xd6, 0xe4, 0xe8)
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 ## 명중 마커가 보이는 시간(초)
 const HIT_TIME := {"normal": 0.18, "head": 0.28, "kill": 0.42}
@@ -333,7 +334,13 @@ func banner(text: String, kind := "wave", sub := "") -> void:
 	var w := hud.size.x
 	var k := clampf(w / 1280.0, 0.55, 1.0) # 좁은 화면에서는 글자를 줄인다
 	var boss := kind == "boss"
-	var accent: Color = RED if boss else (Color8(0xff, 0xb3, 0x47) if kind == "clear" else TEAL)
+	var accent: Color
+	if boss:
+		accent = RED
+	elif kind == "clear":
+		accent = Seasonal.banner_clear_accent()
+	else:
+		accent = TEAL
 	var h := (150.0 if boss else 118.0) * k
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE

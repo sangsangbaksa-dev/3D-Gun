@@ -2,22 +2,29 @@
 import { events } from '../core/events';
 import { ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
 import { onLocaleChange, t } from '../i18n';
+import { isLateNovember } from './seasonal';
 
 const CSS = `
 #ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:block;pointer-events:none;opacity:0;visibility:hidden;
   font-family:var(--zt-font,'Pretendard','Malgun Gothic',system-ui,sans-serif);text-align:center;transition:opacity .35s ease-out,visibility .35s}
 #ztWaveClear.on{opacity:1;visibility:visible;animation:ztWcDrop .32s ease-out}
+body[data-late-november="1"] #ztWaveClear.on{animation:ztWcGust .38s cubic-bezier(.2,.85,.25,1)}
 #ztWaveClear .box{background:#121A20e8;border:1px solid #2EE6D666;border-radius:10px;padding:10px 24px 12px;
   box-shadow:0 8px 32px #000a,0 0 24px #2EE6D622}
 #ztWaveClear b{display:block;font-size:26px;font-weight:800;color:#2EE6D6;text-shadow:0 2px 6px #000;letter-spacing:.04em}
 #ztWaveClear .sub{margin-top:4px;font-size:13px;color:#e6f2f1cc;line-height:1.45}
 #ztWaveClear .sub em{font-style:normal;color:#FF8A2A;font-weight:700}
+#ztWaveClear .mood{margin-top:6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#7aa8c8aa;opacity:0;animation:ztWcMood .55s ease-out .12s forwards}
+body[data-late-november="1"] #ztWaveClear .mood{color:#8ec4e8bb}
 body[data-season="november"] #ztWaveClear .box{border-color:#6a9cc488;box-shadow:0 8px 32px #000a,0 0 28px #3a5a7844}
 body[data-season="november"] #ztWaveClear b{color:#8ec4e8;text-shadow:0 2px 8px #1a3048}
 body[data-late-november="1"] #ztWaveClear .box{border-color:#7ab0d488;box-shadow:0 8px 32px #000a,0 0 36px #4a709055}
+body[data-late-november="1"] #ztWaveClear b{letter-spacing:.06em}
 body[data-season="december"] #ztWaveClear .box{border-color:#8a7ab888;box-shadow:0 8px 32px #000a,0 0 28px #4a3a6844}
 body[data-season="december"] #ztWaveClear b{color:#b8a8e0;text-shadow:0 2px 8px #2a2048}
 @keyframes ztWcDrop{from{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes ztWcGust{0%{opacity:0;transform:translate(calc(-50% + 8px),-14px) scale(.92)}55%{opacity:1;transform:translate(calc(-50% - 4px),2px) scale(1.02)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes ztWcMood{from{opacity:0;letter-spacing:.32em}to{opacity:1;letter-spacing:.22em}}
 @media (prefers-reduced-motion:reduce){#ztWaveClear.on{animation:none}}
 `;
 
@@ -39,7 +46,8 @@ function render() {
   });
   let extra = '';
   if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = t('waveClear.nextBoss');
-  el.innerHTML = `<div class="box"><b>${t('waveClear.title', { n: w })}</b><div class="sub">${t('waveClear.rewards', { gold, heal })}${extra}</div></div>`;
+  const mood = isLateNovember() ? `<div class="mood">${t('waveClear.moodLateNov')}</div>` : '';
+  el.innerHTML = `<div class="box"><b>${t('waveClear.title', { n: w })}</b><div class="sub">${t('waveClear.rewards', { gold, heal })}${extra}</div>${mood}</div>`;
 }
 
 function show(w: number) {
