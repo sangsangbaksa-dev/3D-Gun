@@ -136,6 +136,20 @@ export function titleEmberStyle(): { hot: string; glow: string; count: number } 
   }
 }
 
+/** Prep bar fill gradient start (CSS linear-gradient); mirrors godot seasonal.gd hud_prep_fill. */
+export function hudPrepFillCss(): string | null {
+  switch (month()) {
+    case 11:
+      return isLateNovember()
+        ? 'linear-gradient(90deg,#1a5a72,#7ab0d4)'
+        : 'linear-gradient(90deg,#1a5a72,#6a9cc4)';
+    case 12:
+      return 'linear-gradient(90deg,#2a4a68,#7a8ac8)';
+    default:
+      return null;
+  }
+}
+
 /** Prep-phase mist uses a fraction of combat mist alpha (late-year months only). */
 export function prepMistAlphaMul(): number {
   const m = month();

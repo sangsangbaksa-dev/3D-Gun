@@ -128,6 +128,28 @@ static func banner_clear_accent() -> Color:
 		_:
 			return Color(1.0, 0.7, 0.28)
 
+## Prep timer bar fill (mirrors index.html #prepBar seasonal fills).
+static func hud_prep_fill() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			if is_late_november():
+				return Color(0.48, 0.69, 0.83)
+			return Color(0.42, 0.61, 0.77)
+		12:
+			return Color(0.48, 0.54, 0.78)
+		_:
+			return Color(0.18, 0.9, 0.84)
+
+## Build HUD pill edge (mirrors src/base/view/panels.ts seasonal borders).
+static func hud_build_edge_alpha() -> float:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return 0.55 if is_late_november() else 0.45
+		12:
+			return 0.5
+		_:
+			return 0.35
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:

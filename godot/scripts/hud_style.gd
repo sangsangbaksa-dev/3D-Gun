@@ -66,7 +66,8 @@ func _ready() -> void:
 	_pill(game.lbl_toast, box(PANEL_SOLID, Color(ORANGE, 0.55), 10), Vector2(18, 6))
 	_pill(game.lbl_prompt, box(PANEL_SOLID, Color(ORANGE, 0.55), 8), Vector2(14, 5))
 	_pill(game.build_hover, box(PANEL_SOLID, Color(ORANGE, 0.4), 10), Vector2(14, 6))
-	_pill(game.build_panel, box(PANEL_SOLID, Color(TEAL, 0.35), 10), Vector2(14, 8))
+	var build_edge := Color(TEAL, Seasonal.hud_build_edge_alpha())
+	_pill(game.build_panel, box(PANEL_SOLID, build_edge, 10), Vector2(14, 8))
 	game.lbl_hint.modulate.a = 1.0
 	game.lbl_hint.add_theme_font_size_override("font_size", 12)
 	game.lbl_hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -210,7 +211,8 @@ func _process(_dt: float) -> void:
 			elif prep_urgent:
 				prep_fill.bg_color = Color(1.0, 0.54, 0.16)
 			else:
-				prep_fill.bg_color = Color(TEAL)
+				var m := Time.get_datetime_dict_from_system().month
+				prep_fill.bg_color = Seasonal.hud_prep_fill() if m == 11 or m == 12 else Color(TEAL)
 		if prep_paused:
 			game.prep_bar.modulate = Color(0.72, 0.76, 0.78)
 		elif prep_urgent:

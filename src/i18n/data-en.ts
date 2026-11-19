@@ -93,6 +93,7 @@ export const EN_DATA: Record<string, string> = {
   'build.demolish': '{name} demolished (refund {refund})',
   'build.refund.none': 'None',
   'build.banner.prep': '🏗 <b>Build</b> · prep timer paused · <b>1</b> watchtower <b>2</b> MG tower · <b>5</b> lab · <b>B</b> close',
+  'build.banner.moodLateNov': 'Tune the base between the leaves',
   'build.info.hp': 'HP {hp}',
   'build.info.turret': ' · dmg {dmg} · {rate}/s · range {range}m · durability {ammo} shots · permanent',
   'build.info.trap': ' · radius {radius}m · slow {slow}% · {dps} DPS',
