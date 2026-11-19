@@ -870,6 +870,8 @@ func _refresh_base_hud() -> void:
 	if base.building:
 		build_panel.position = Vector2(hud.size.x - 544, 18)
 		var lines := [I18n.t("build.title")]
+		if phase == "prep" and Seasonal.is_late_november():
+			lines.append(I18n.t("build.banner.moodLateNov"))
 		for i in base.BUILDABLE.size():
 			var k: String = base.BUILDABLE[i]
 			var mark := "> " if k == base.pick else "   "

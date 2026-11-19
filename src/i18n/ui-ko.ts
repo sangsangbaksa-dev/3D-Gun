@@ -89,6 +89,7 @@ export const KO_UI: Record<string, string> = {
   'build.demolish': '{name} 철거 (환급 {refund})',
   'build.refund.none': '없음',
   'build.banner.prep': '🏗 <b>건설</b> · 준비 시간 멈춤 · <b>1</b> 감시탑 <b>2</b> 기관포탑 · <b>5</b> 연구소 · <b>B</b> 종료',
+  'build.banner.moodLateNov': '낙엽 사이에 기지를 다듬는다',
   'build.info.hp': '체력 {hp}',
   'build.info.turret': ' · 피해 {dmg} · 연사 {rate}/s · 사거리 {range}m · 내구도 {ammo}발 · 영구',
   'build.info.trap': ' · 반경 {radius}m · 감속 {slow}% · 초당 {dps}',

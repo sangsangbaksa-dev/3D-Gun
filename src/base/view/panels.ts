@@ -4,6 +4,7 @@ import { state } from '../../core/state';
 import { costText, canAfford, type Building, type Cost } from '../logic/base';
 import { buy, sell, sellAll, sellValue } from '../logic/shop';
 import { bldDesc, bldName, onLocaleChange, placeReason, resLabel, t } from '../../i18n';
+import { isLateNovember } from '../../ui/seasonal';
 
 const CSS = `
 .bz-root{position:fixed;inset:0;pointer-events:none;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#eef3f6;z-index:4}
@@ -45,6 +46,25 @@ const CSS = `
 .bz-keybox{padding:10px;border-radius:10px;background:#101820;border:1px solid #ffffff14;margin-bottom:10px}
 .bz-keybox .t{font-weight:700}.bz-keybox .d{font-size:12px;color:#9fb3c0;margin:2px 0 8px}
 .bz-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.bz-mood{display:block;margin-top:4px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.85;color:#7aa8c8}
+body[data-season="november"] .bz-banner{background:linear-gradient(90deg,#0e2a36e6,#12384ae6);border-color:#6a9cc466}
+body[data-season="november"] .bz-banner b,body[data-season="november"] .bz-h{color:#8ec4e8}
+body[data-season="november"] .bz-pal{border-color:#6a9cc444;box-shadow:0 8px 30px #000a,0 0 22px #3a5a7828}
+body[data-season="november"] .bz-slot.sel{border-color:#6a9cc4;box-shadow:0 6px 18px #4a709033}
+body[data-season="november"] .bz-card{border-color:#6a9cc466;box-shadow:0 20px 60px #000c,0 0 32px #3a5a7844}
+body[data-season="november"] .bz-hover{border-color:#6a9cc466}
+body[data-season="november"] .bz-info{border-color:#6a9cc433}
+body[data-season="december"] .bz-banner{border-color:#8a7ac866}
+body[data-season="december"] .bz-banner b,body[data-season="december"] .bz-h{color:#b8a8e0}
+body[data-season="december"] .bz-pal{border-color:#8a7ac444;box-shadow:0 8px 30px #000a,0 0 22px #4a3a6828}
+body[data-season="december"] .bz-slot.sel{border-color:#8a7ac8;box-shadow:0 6px 18px #4a3a6833}
+body[data-season="december"] .bz-card{border-color:#8a7ac866;box-shadow:0 20px 60px #000c,0 0 32px #4a3a6844}
+body[data-late-november="1"] .bz-banner{border-color:#7ab0d477;box-shadow:0 0 24px #3a5a7828}
+body[data-late-november="1"] .bz-mood{color:#8ec4e8bb}
+body[data-late-november="1"] .bz-pal{box-shadow:0 8px 34px #000a,0 0 28px #4a709038}
+body[data-late-november="1"] .bz-card{border-color:#7ab0d477;box-shadow:0 20px 60px #000c,0 0 40px #4a709055}
+body[data-late-november="1"] .bz-slot{transition-duration:.14s}
+body[data-late-november="1"] .bz-ov{background:radial-gradient(ellipse at 50% 40%,#0a1828cc,#000d)}
 `;
 
 const ICON: Record<BuildingId, string> = { tower: '🗼', mgtower: '🔫', barricade: '🚧', trap: '🕸️', lab: '🧪', barracks: '🏠', shop: '🏪' };
@@ -100,7 +120,9 @@ export class BasePanels {
     this.show(this.tip, active && !!tip && !hover, 'block');
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
-    this.set(this.banner, phase === 'prep' ? t('build.banner.prep') : t('build.noCombat'));
+    const prep = phase === 'prep';
+    const mood = prep && isLateNovember() ? `<span class="bz-mood">${t('build.banner.moodLateNov')}</span>` : '';
+    this.set(this.banner, (prep ? t('build.banner.prep') : t('build.noCombat')) + mood);
     BUILDING_ORDER.forEach((id, i) => {
       const d = BUILDINGS[id];
       const ok = canAfford(d.cost);
