@@ -5,6 +5,8 @@ import { allies } from '../../core/entities';
 import { vaccineCost, canAfford, craftQueue, craftTime } from '../logic/vaccine';
 import { allyCap, countRole, canSetRole, type Ally } from '../logic/ally';
 import { injectStyle } from './injectHud';
+import { isLateNovember } from '../../ui/seasonal';
+import { t } from '../../i18n';
 
 const CSS = `
 .al-ov{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#0a1410cc,#000d);backdrop-filter:blur(3px);font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#e8f2ec;user-select:none}
@@ -50,6 +52,16 @@ const CSS = `
 .al-empty{padding:28px 12px;text-align:center;opacity:.65;font-size:13.5px;line-height:1.7;border:1px dashed #ffffff22;border-radius:12px}
 .al-card footer{padding:10px 22px;font-size:12px;opacity:.6;border-top:1px solid #ffffff10;background:#0004}
 @media (max-width:760px){.al-body{grid-template-columns:1fr}.al-col+.al-col{border-left:0;border-top:1px solid #ffffff10}}
+.al-mood{display:block;margin-top:4px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8ec4e8aa;font-weight:600}
+body[data-season="november"] .al-ov{background:radial-gradient(ellipse at 50% 42%,#0a1828d9,#000d)}
+body[data-season="november"] .al-card{border-color:#5a8cb055;box-shadow:0 20px 70px #000,0 0 32px #3a5a7844}
+body[data-season="november"] .al-card header{background:linear-gradient(90deg,#1e3a4a,#16212a);border-bottom-color:#5a8cb033}
+body[data-season="november"] .al-card h2{color:#c8dce8}
+body[data-season="december"] .al-ov{background:radial-gradient(ellipse at 50% 42%,#141028d9,#000d)}
+body[data-season="december"] .al-card{border-color:#7a6ab055;box-shadow:0 20px 70px #000,0 0 32px #4a3a6844}
+body[data-late-november="1"] .al-card{box-shadow:0 20px 70px #000,0 0 40px #4a709055}
+body[data-late-november="1"] .al-mood{color:#9ed4f4cc;letter-spacing:.2em}
+body[data-late-november="1"] .al-btn:not(:disabled){box-shadow:0 3px 0 #0f5a30,0 6px 14px #0006,0 0 14px #4a709033}
 `;
 const hex = (c: number) => '#' + c.toString(16).padStart(6, '0');
 const TIER_LBL = ['초', '중', '고'];
@@ -109,10 +121,11 @@ export class LabPanel {
     if (!force && sig === this.sig) return;
     this.sig = sig;
     const keep = this.ov.querySelector('.al-body')?.scrollTop ?? 0;
+    const mood = isLateNovember() ? `<span class="al-mood">${t('ally.lab.moodLateNov')}</span>` : '';
     this.ov.innerHTML = `
     <div class="al-card" role="dialog" aria-label="연구소">
       <header>
-        <div class="al-tt"><div class="al-ico">💉</div><div><h2>연구소</h2><p>백신을 만들어 기절한 좀비를 우리 편으로</p></div></div>
+        <div class="al-tt"><div class="al-ico">💉</div><div><h2>연구소</h2><p>백신을 만들어 기절한 좀비를 우리 편으로${mood}</p></div></div>
         <button class="al-x" data-act="close" aria-label="닫기">✕</button>
       </header>
       <div class="al-body">

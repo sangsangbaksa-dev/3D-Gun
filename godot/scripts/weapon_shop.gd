@@ -3,11 +3,13 @@ extends CanvasLayer
 ## The game pauses while it is open. Upgrade parts cost comes with gathering; for now only coins are charged.
 
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 var game: Node
 var root: Control
 var list: VBoxContainer
 var lbl_coins: Label
+var lbl_mood: Label
 var lbl_title: Label
 var panel_ref: Control
 
@@ -27,6 +29,9 @@ func _ready() -> void:
 	col.add_child(lbl_title)
 	lbl_coins = UiKit.label("", 20, Color(1, 0.85, 0.3), HORIZONTAL_ALIGNMENT_CENTER)
 	col.add_child(lbl_coins)
+	lbl_mood = UiKit.label("", 13, Color(0.56, 0.77, 0.91, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
+	lbl_mood.visible = false
+	col.add_child(lbl_mood)
 	var line := ColorRect.new()
 	line.color = Color(UiKit.RED, 0.35)
 	line.custom_minimum_size = Vector2(0, 1)
@@ -60,6 +65,11 @@ func _rebuild() -> void:
 	var p = game.player
 	lbl_title.text = I18n.t("shop.title")
 	lbl_coins.text = I18n.t("hud.coins", {"n": game.coins})
+	if Seasonal.is_late_november():
+		lbl_mood.text = I18n.t("weapon.panel.moodLateNov")
+		lbl_mood.visible = true
+	else:
+		lbl_mood.visible = false
 	for c in list.get_children():
 		c.queue_free()
 	var max_lv: int = int(GameData.gun_upgrade.maxLv)

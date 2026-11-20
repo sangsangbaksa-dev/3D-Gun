@@ -47,6 +47,9 @@ const CSS = `
 .bz-keybox .t{font-weight:700}.bz-keybox .d{font-size:12px;color:#9fb3c0;margin:2px 0 8px}
 .bz-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
 .bz-mood{display:block;margin-top:4px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.85;color:#7aa8c8}
+.bz-ex-mood{display:block;margin-top:6px;font-size:11px;letter-spacing:.14em;color:#8ec4e8bb;font-weight:600}
+body[data-late-november="1"] .bz-btn:not(:disabled){box-shadow:0 0 10px #3a5a7828}
+body[data-late-november="1"] .bz-ex-mood{letter-spacing:.18em;text-transform:uppercase;opacity:.9}
 body[data-season="november"] .bz-banner{background:linear-gradient(90deg,#0e2a36e6,#12384ae6);border-color:#6a9cc466}
 body[data-season="november"] .bz-banner b,body[data-season="november"] .bz-h{color:#8ec4e8}
 body[data-season="november"] .bz-pal{border-color:#6a9cc444;box-shadow:0 8px 30px #000a,0 0 22px #3a5a7828}
@@ -170,7 +173,8 @@ export class BasePanels {
     c.innerHTML = '';
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
     el('h2', '', c, t('hub.exchange.title'));
-    el('div', 'bz-sub', c, t('hub.exchange.sub') + ' (E / Esc)');
+    const exSub = t('hub.exchange.sub') + (isLateNovember() ? `<span class="bz-ex-mood">${t('hub.exchange.moodLateNov')}</span>` : '') + ' (E / Esc)';
+    el('div', 'bz-sub', c, exSub);
     const sellBonus = state.start.exchangeSellBonus ?? 0;
     for (const k of RES_KEYS) {
       const sellP = exchangeSellUnit(k, sellBonus), buyP = RES_BUY_PRICE[k];

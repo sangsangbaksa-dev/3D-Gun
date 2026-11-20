@@ -3,6 +3,7 @@ extends CanvasLayer
 ## (src/allies/view/labPanel.ts) and exchange. The game pauses while it is open; Esc / E closes it.
 
 const UiKit := preload("res://scripts/ui_kit.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 var game: Node
 var kind := ""
@@ -95,6 +96,8 @@ func _lab() -> void:
 	var q: int = al.craft_queue.size()
 	var st: String = al.tt("lab.queue", {"n": q, "left": snappedf(al.craft_left(), 0.1)}) if q > 0 else al.tt("lab.idle")
 	foot.text = "%s   ·   %s   ·   %s" % [st, al.tt("lab.have", {"a": al.vaccines[0], "b": al.vaccines[1], "c": al.vaccines[2]}), al.tt("lab.samples", {"s": game.samples, "sp": game.samples_sp})]
+	if Seasonal.is_late_november():
+		foot.text += "\n" + I18n.t("ally.lab.moodLateNov")
 
 # ── 상점: 자원 교환 ──────────────────────────────────────────────────
 
@@ -107,3 +110,5 @@ func _exchange() -> void:
 		row.add_child(_btn(game.allies.tt("shop.sell"), int(game.res[r]) > 0, func(): game.res[r] -= 1; game.coins += sell; Sfx.play("gather"); _rebuild()))
 		row.add_child(_btn(game.allies.tt("shop.buy"), game.coins >= buy, func(): game.res[r] += 1; game.coins -= buy; Sfx.play("gather"); _rebuild()))
 	foot.text = game.allies.tt("shop.coins", {"n": game.coins})
+	if Seasonal.is_late_november():
+		foot.text += "\n" + I18n.t("hub.exchange.moodLateNov")
