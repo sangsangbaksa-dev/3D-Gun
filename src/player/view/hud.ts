@@ -5,6 +5,7 @@ import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
+import { isLateNovember } from '../../ui/seasonal';
 import { combatMistTint, combatVignetteTint, prepMistAlphaMul } from '../../ui/seasonal';
 
 export const SHOW_AMMO_PANEL = true;
@@ -80,6 +81,8 @@ body[data-season="december"] .pv-up .g .s{color:#b8a8e0}
 body[data-season="december"] .pv-up .g button:not(:disabled){background:#8a7ac8;color:#0a1018}
 body[data-late-november="1"] .pv-up{background:radial-gradient(ellipse at 50% 42%,#0a1828cc,#000a)}
 body[data-late-november="1"] .pv-up .g button:not(:disabled){box-shadow:0 0 16px #4a709044}
+.pv-mood{display:block;margin:-2px 0 10px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8ec4e8bb;font-weight:600}
+body[data-late-november="1"] .pv-mood{color:#9ed4f4cc;letter-spacing:.2em}
 .pv-ammo{position:absolute;right:12px;bottom:12px;text-align:right;text-shadow:0 2px 4px #000}
 .pv-ammo .nm{font-size:13px;opacity:.85;letter-spacing:.5px;margin-bottom:4px}
 .pv-ammo .n{font-size:34px;font-weight:bold;line-height:1;font-variant-numeric:tabular-nums;transition:color .25s ease-out}
@@ -285,8 +288,9 @@ export class UpgradePanel {
       const pellets = d.pellets > 1 ? t('weapon.panel.pellets', { n: d.pellets }) : '';
       return t('weapon.panel.stats', { dmg: a.dmg.toFixed(0), pellets, mag: a.mag, reload: a.reload.toFixed(1), dps });
     };
+    const mood = isLateNovember() ? `<div class="pv-mood">${t('weapon.panel.moodLateNov')}</div>` : '';
     let html = `<h2>${t('weapon.panel.title')} <small style="font-weight:normal;opacity:.7">${t('weapon.panel.closeHint')}</small></h2>`
-      + `<div class="sub">${t('weapon.panel.sub', { gold: state.gold, partsCount: state.res.parts })}</div>`;
+      + `<div class="sub">${t('weapon.panel.sub', { gold: state.gold, partsCount: state.res.parts })}</div>${mood}`;
     for (const id of GUN_ORDER) {
       const d = GUNS[id], own = state.weapons.includes(id), lv = (state.weaponLv[id] ?? 0) + (state.weaponLvBonus[id] ?? 0);
       const price = GUN_UNLOCK_GOLD[id];
