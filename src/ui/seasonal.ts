@@ -189,6 +189,20 @@ export function combatLeafWindMul(): number {
   return 1.2 * (isLateNovember() ? 1.14 : 1);
 }
 
+/** Core-under-attack edge glow base (lerps toward alert red in the view). Mirrors godot/scripts/seasonal.gd core_alert_edge_glow. */
+export function coreAlertEdgeGlowRgb(): { r: number; g: number; b: number } | null {
+  switch (month()) {
+    case 11:
+      return isLateNovember()
+        ? { r: 90, g: 140, b: 184 }
+        : { r: 77, g: 122, b: 158 };
+    case 12:
+      return { r: 107, g: 90, b: 153 };
+    default:
+      return null;
+  }
+}
+
 /** Slightly cooler, windier combat bed in late-year months (mirrors Godot seasonal atmosphere). */
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {

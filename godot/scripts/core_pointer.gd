@@ -7,6 +7,7 @@ extends Node
 ## game.gd 는 add_child 한 줄만 한다 (CorePointer.apply(self)).
 
 const Alert := preload("res://scripts/core_alert.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 const RED := Color8(0xe0, 0x30, 0x3a)
 const MARGIN := 46.0
@@ -32,6 +33,7 @@ var layer: CanvasLayer
 var canvas: Control
 var banner: Label
 var sub: Label
+var mood: Label
 var alarms := 0          # 울린 경보음 수 (테스트용)
 var events_seen: Array = []
 var shown := false       # 화살표/마커가 그려지는 중
@@ -58,14 +60,27 @@ func _ready() -> void:
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.draw.connect(_draw_pointer)
 	layer.add_child(canvas)
-	banner = _make_label(24, 0.0)
-	sub = _make_label(15, 40.0)
+	banner = _make_label(24, 0.0, true)
+	sub = _make_label(15, 40.0, false)
+	mood = _make_label(13, 72.0, false)
+	mood.add_theme_color_override("font_color", Color(0.62, 0.83, 0.96, 0.8))
+	mood.visible = false
 	banner.visible = false
 	sub.visible = false
+	_apply_banner_season()
 	game.core.damaged.connect(func(hp: float): _on_hp(hp))
 	I18n.locale_changed.connect(_refresh_texts)
 
-func _make_label(font_size: int, y: float) -> Label:
+func _apply_banner_season() -> void:
+	var sb_b := banner.get_theme_stylebox("normal") as StyleBoxFlat
+	var sb_s := sub.get_theme_stylebox("normal") as StyleBoxFlat
+	if sb_b:
+		sb_b.border_color = Seasonal.core_alert_banner_border()
+		sb_b.bg_color = Seasonal.core_alert_banner_bg()
+	if sb_s and Seasonal.is_late_november():
+		sb_s.border_color = Color(0.35, 0.55, 0.69, 0.4)
+
+func _make_label(font_size: int, y: float, alert_main: bool = false) -> Label:
 	var l := Label.new()
 	l.anchor_left = 0.5
 	l.anchor_right = 0.5
@@ -79,8 +94,8 @@ func _make_label(font_size: int, y: float) -> Label:
 	l.add_theme_constant_override("shadow_offset_x", 2)
 	l.add_theme_constant_override("shadow_offset_y", 2)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.35, 0.05, 0.07, 0.82) if y == 0.0 else Color(0.07, 0.1, 0.12, 0.8)
-	sb.border_color = RED
+	sb.bg_color = Seasonal.core_alert_banner_bg() if alert_main else Color(0.07, 0.1, 0.12, 0.8)
+	sb.border_color = Seasonal.core_alert_banner_border() if alert_main else RED
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(8)
 	sb.content_margin_left = 18
@@ -161,6 +176,9 @@ func step(dt: float) -> void:
 	if banner.visible:
 		banner.modulate = Color(1, 1, 1, 0.65 + 0.35 * pu)
 		banner.add_theme_color_override("font_color", Color(1, 0.92, 0.9).lerp(Color(1, 0.35, 0.3), pu))
+	mood.visible = banner.visible and Seasonal.is_late_november()
+	if mood.visible:
+		mood.text = I18n.t("coreAlert.moodLateNov")
 	_aim(live)
 	canvas.queue_redraw()
 
@@ -231,10 +249,11 @@ func _text(font: Font, txt: String, center: Vector2, col: Color, fs: int) -> voi
 ## 경보 중 화면 테두리의 붉은 번쩍임.
 func _draw_edge_glow(pu: float) -> void:
 	var size: Vector2 = canvas.size
+	var base := Seasonal.core_alert_edge_glow(pu)
 	for i in 6:
 		var a := pu * 0.2 * (1.0 - float(i) / 6.0)
 		var w := 6.0 * (i + 1)
-		var c := Color(RED.r, RED.g, RED.b, a)
+		var c := Color(base.r, base.g, base.b, a)
 		canvas.draw_rect(Rect2(0, 0, size.x, w), c)
 		canvas.draw_rect(Rect2(0, size.y - w, size.x, w), c)
 		canvas.draw_rect(Rect2(0, 0, w, size.y), c)

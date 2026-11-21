@@ -8,6 +8,9 @@ const CSS = `
 .al-banner.go{animation:alpop 1.6s ease-out forwards}
 .al-banner small{display:block;font-size:17px;font-weight:600;letter-spacing:0;opacity:.9;text-align:center}
 @keyframes alpop{0%{opacity:0;transform:translate(-50%,10px) scale(.5)}15%{opacity:1;transform:translate(-50%,0) scale(1.12)}28%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px) scale(1)}}
+body[data-season="november"] .al-inj .t{border-color:#6a9cc466;box-shadow:0 0 18px #3a5a7828}
+body[data-late-november="1"] .al-banner{text-shadow:0 4px 0 #000a,0 0 32px #6a9cc488}
+body[data-season="december"] .al-inj .t{border-color:#7a6ab066}
 `;
 let styled = false;
 export function injectStyle(id: string, css: string) {
