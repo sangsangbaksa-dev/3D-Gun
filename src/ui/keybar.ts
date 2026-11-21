@@ -5,6 +5,7 @@ import { state } from '../core/state';
 import { events } from '../core/events';
 import { BUILD_SLOTS, injectKeycapCss, kbd, kbds, keyTableHtml } from './keys';
 import { onLocaleChange, t } from '../i18n';
+import { isLateNovember } from './seasonal';
 
 const CSS = `
 #zkDock{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;max-width:calc(100vw - 600px);z-index:4}
@@ -43,6 +44,8 @@ html.zk-build .bz-tip{top:auto!important;bottom:var(--zk-tip-bottom,50%)!importa
 #zkHelp .zk-row{padding:2px 0;font-size:12.5px}
 #zkHelp .zk-grp{margin-bottom:8px}
 #zkHelp .foot{margin-top:6px;font-size:12px;color:#9aa8ba;text-align:right}
+#zkHelp .zk-mood{display:block;margin-top:6px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8ec4e8bb}
+body[data-late-november="1"] #zkHelp .zk-mood{color:#9ed4f4cc}
 `;
 
 let dock: HTMLDivElement, bar: HTMLDivElement, prompt: HTMLDivElement, help: HTMLDivElement;
@@ -68,7 +71,7 @@ function paintHelp() {
   if (!help) return;
   help.setAttribute('aria-label', t('keys.helpTitle'));
   help.querySelector('.card')!.innerHTML = `<h2>${t('keys.helpTitle')}<button type="button" data-close>${t('keys.helpClose')} (H)</button></h2>
-<div class="loop">${t('keys.helpLoop')}</div>
+<div class="loop">${t('keys.helpLoop')}${isLateNovember() ? `<span class="zk-mood">${t('keys.helpMoodLateNov')}</span>` : ''}</div>
 <div class="cols">${keyTableHtml()}</div>
 <div class="foot">${kbd('H')} ${kbd('F1')} ${kbd('Esc')}</div>`;
 }

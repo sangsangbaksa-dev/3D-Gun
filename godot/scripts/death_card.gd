@@ -5,6 +5,7 @@ extends CanvasLayer
 
 const UiKit := preload("res://scripts/ui_kit.gd")
 const Skills := preload("res://scripts/skills.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 const RED := Color8(0xe0, 0x30, 0x3a)
 
 const SLOW_SCALE := 0.2 # 슬로모션 속도
@@ -129,12 +130,38 @@ func _build() -> void:
 	_card.modulate.a = 0.0
 	_card.visible = false
 	col.add_child(_card)
+	_apply_death_season()
+
+func _apply_death_season() -> void:
+	var month := Time.get_datetime_dict_from_system().month
+	match month:
+		11:
+			var late := Seasonal.is_late_november()
+			var title_col := Color(0.78, 0.86, 0.94) if late else Color(0.72, 0.82, 0.90)
+			var sub_col := Color(0.56, 0.77, 0.91, 0.85)
+			_title.add_theme_color_override("font_color", title_col)
+			_title.add_theme_color_override("font_shadow_color", Color(0.42, 0.59, 0.78, 0.6))
+			_sub.add_theme_color_override("font_color", sub_col)
 
 func _build_card() -> Control:
 	var r: Dictionary = report
 	var panel := PanelContainer.new()
-	var sb := UiKit.box(Color8(0x12, 0x1a, 0x20, 0xf0), Color(RED, 0.55), 14, 1, Vector4(34, 22, 34, 24))
-	sb.shadow_color = Color(RED, 0.2)
+	var month := Time.get_datetime_dict_from_system().month
+	var border := Color(RED, 0.55)
+	var shadow := Color(RED, 0.2)
+	match month:
+		11:
+			if Seasonal.is_late_november():
+				border = Color(0.48, 0.69, 0.83, 0.55)
+				shadow = Color(0.29, 0.42, 0.53, 0.28)
+			else:
+				border = Color(0.42, 0.61, 0.77, 0.55)
+				shadow = Color(0.23, 0.35, 0.47, 0.2)
+		12:
+			border = Color(0.55, 0.48, 0.72, 0.55)
+			shadow = Color(0.35, 0.29, 0.47, 0.22)
+	var sb := UiKit.box(Color8(0x12, 0x1a, 0x20, 0xf0), border, 14, 1, Vector4(34, 22, 34, 24))
+	sb.shadow_color = shadow
 	sb.shadow_size = 32
 	panel.add_theme_stylebox_override("panel", sb)
 	UiKit.fit_width(panel, 520)

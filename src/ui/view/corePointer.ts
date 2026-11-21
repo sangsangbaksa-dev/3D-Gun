@@ -14,6 +14,7 @@ import { onLocaleChange, t } from '../../i18n';
 import { playSfx } from '../../audio';
 import type { System } from '../../core/types';
 import { CoreAlert, ALERT_RED, bearing, distanceAlpha, edgePoint, hpColor, mixRgb, nearestLane, type Rgb } from '../logic/coreAlert';
+import { coreAlertEdgeGlowRgb, isLateNovember } from '../seasonal';
 
 const MARGIN = 46;
 
@@ -27,9 +28,18 @@ const CSS = `
 #ztCoreAlert .ptr{position:absolute;left:0;top:0;display:none;width:0;height:0}
 #ztCoreAlert .ptr svg{position:absolute;left:-20px;top:-20px;width:40px;height:40px;overflow:visible}
 #ztCoreAlert .ptr span{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font-size:15px;font-weight:800;text-shadow:1.5px 1.5px 0 #000e;white-space:nowrap}
+#ztCoreAlert .ban u{display:none;font-style:normal;margin-top:6px;font-size:13px;font-weight:600;letter-spacing:.14em;color:#9ed4f4cc;border:1px solid #5a8cb044;border-radius:8px;padding:5px 14px;background:#0a1828cc}
+body[data-season="november"] #ztCoreAlert .glow{box-shadow:inset 0 0 110px 24px rgba(88,148,210,.5)}
+body[data-late-november="1"] #ztCoreAlert .glow{box-shadow:inset 0 0 130px 28px rgba(96,152,210,.58)}
+body[data-season="december"] #ztCoreAlert .glow{box-shadow:inset 0 0 110px 24px rgba(106,90,153,.48)}
+body[data-season="november"] #ztCoreAlert .ban b{color:#e8f4ff;border-color:#6a9cc4;background:#1a2838d9}
+body[data-season="november"] #ztCoreAlert .ban i{border-color:#5a8cb066;color:#d8e8f4}
+body[data-late-november="1"] #ztCoreAlert .ban b{border-color:#7ab0d4;box-shadow:0 0 24px #3a5a7844}
+body[data-late-november="1"] #ztCoreAlert .ban u{display:block}
+body[data-season="december"] #ztCoreAlert .ban b{border-color:#8a7ac8;background:#1a1428d9;color:#e8e0f8}
 `;
 
-let root: HTMLDivElement, glow: HTMLDivElement, ban: HTMLDivElement, banMain: HTMLElement, banSub: HTMLElement;
+let root: HTMLDivElement, glow: HTMLDivElement, ban: HTMLDivElement, banMain: HTMLElement, banSub: HTMLElement, banMood: HTMLElement;
 let ptr: HTMLDivElement, svg: SVGSVGElement, tri: SVGPolygonElement, label: HTMLSpanElement;
 
 const alert = new CoreAlert();
@@ -77,6 +87,11 @@ function refreshTexts() {
   if (ln) s += `  ·  ${t('coreAlert.lane', { lane: ln })}`;
   banMain.textContent = s;
   banSub.textContent = emphKey && alert.emphasis > 0 ? t(`coreAlert.${emphKey}`) : '';
+  if (banMood) {
+    const showMood = isLateNovember() && alert.active;
+    banMood.textContent = showMood ? t('coreAlert.moodLateNov') : '';
+    banMood.style.display = showMood ? 'block' : 'none';
+  }
 }
 
 function build() {
@@ -85,13 +100,14 @@ function build() {
   document.head.appendChild(st);
   root = document.createElement('div');
   root.id = 'ztCoreAlert';
-  root.innerHTML = `<div class="glow"></div><div class="ban"><b></b><i></i></div>
+  root.innerHTML = `<div class="glow"></div><div class="ban"><b></b><i></i><u class="mood"></u></div>
 <div class="ptr"><svg viewBox="-20 -20 40 40"><polygon points="0,-16 15,14 0,7 -15,14" stroke="#000c" stroke-width="1.5" stroke-linejoin="round"/></svg><span></span></div>`;
   document.body.appendChild(root);
   glow = root.querySelector('.glow') as HTMLDivElement;
   ban = root.querySelector('.ban') as HTMLDivElement;
   banMain = ban.querySelector('b') as HTMLElement;
   banSub = ban.querySelector('i') as HTMLElement;
+  banMood = ban.querySelector('u') as HTMLElement;
   ptr = root.querySelector('.ptr') as HTMLDivElement;
   svg = ptr.querySelector('svg') as SVGSVGElement;
   tri = ptr.querySelector('polygon') as SVGPolygonElement;
@@ -119,6 +135,16 @@ export const CorePointerSystem: System = {
       ban.style.opacity = (0.65 + 0.35 * pu).toFixed(3);
       banMain.style.color = css(mixRgb({ r: 255, g: 235, b: 230 }, { r: 255, g: 89, b: 77 }, pu), 1);
     }
+    if (banMood) {
+      const showMood = showBan && isLateNovember();
+      banMood.style.display = showMood ? 'block' : 'none';
+      if (showMood) banMood.textContent = t('coreAlert.moodLateNov');
+    }
+    const edge = coreAlertEdgeGlowRgb();
+    if (edge && showBan) {
+      const c = mixRgb(edge, ALERT_RED, pu * 0.55);
+      glow.style.boxShadow = `inset 0 0 ${120 + pu * 24}px ${22 + pu * 8}px ${css(c, 0.35 + pu * 0.35)}`;
+    } else if (!showBan) glow.style.boxShadow = '';
     glow.style.opacity = showBan ? (pu * 0.8).toFixed(3) : '0';
 
     // 화살표/마커 위치

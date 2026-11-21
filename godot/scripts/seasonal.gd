@@ -150,6 +150,37 @@ static func hud_build_edge_alpha() -> float:
 		_:
 			return 0.35
 
+## Core attack edge pulse color (lerps cool mist → alert red with pulse). Mirrors src/ui/seasonal.ts coreAlertEdgeGlowRgb.
+static func core_alert_edge_glow(pulse: float) -> Color:
+	const RED := Color(0.88, 0.19, 0.23)
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			var cool := Color(0.35, 0.55, 0.72) if is_late_november() else Color(0.30, 0.48, 0.62)
+			return cool.lerp(RED, clampf(pulse, 0.0, 1.0))
+		12:
+			return Color(0.42, 0.35, 0.60).lerp(RED, clampf(pulse, 0.0, 1.0))
+		_:
+			return RED
+
+## Core alert banner chrome during November (core_pointer.gd).
+static func core_alert_banner_border() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.48, 0.69, 0.83) if is_late_november() else Color(0.42, 0.61, 0.77)
+		12:
+			return Color(0.55, 0.48, 0.72)
+		_:
+			return Color(0.88, 0.19, 0.23)
+
+static func core_alert_banner_bg() -> Color:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			return Color(0.10, 0.16, 0.22, 0.85) if is_late_november() else Color(0.12, 0.18, 0.24, 0.82)
+		12:
+			return Color(0.14, 0.10, 0.20, 0.85)
+		_:
+			return Color(0.35, 0.05, 0.07, 0.82)
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:
