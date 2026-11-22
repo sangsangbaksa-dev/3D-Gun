@@ -5,6 +5,7 @@ import { GATHER_VIEW_DIST, RES_LABEL, type ResKey } from '../../data';
 import type { GatherEvent, GatheringModel } from '../logic/gathering';
 import type { GatherNode } from '../logic/nodes';
 import { buildNodeModel, type NodeModel } from './models';
+import { gatherProgressTint } from '../../ui/seasonal';
 
 const RES_COLOR: Record<ResKey, string> = { wood: '#e0b070', stone: '#c9ccd2', iron: '#9fc4e6', herb: '#8fe07a', parts: '#f0c050' };
 
@@ -223,14 +224,15 @@ export function createGatheringView(scene: THREE.Scene, model: GatheringModel, g
         ring.position.set(focus.x, gy + 0.06, focus.z);
         const rs = focus.r + 0.55 + Math.sin(time * 4) * 0.05;
         ring.scale.set(rs, rs, 1);
-        (ring.material as THREE.MeshBasicMaterial).color.set(focus.progress > 0 ? 0xffd25a : 0xfff3b0);
+        const gt = gatherProgressTint();
+        (ring.material as THREE.MeshBasicMaterial).color.set(focus.progress > 0 ? gt.ringActive : gt.ringIdle);
         if (focus.progress > 0.005) {
           bar.visible = true;
           bar.position.set(focus.x, gy + fv.model.top * focus.scale + 0.5, focus.z);
           camera.getWorldPosition(camPos);
           bar.quaternion.copy(camera.quaternion);
           barFill.scale.x = Math.max(0.001, Math.min(1, focus.progress));
-          barFillMat.color.setHSL(0.12 + focus.progress * 0.2, 0.9, 0.58);
+          barFillMat.color.setHSL(gt.barHue + focus.progress * 0.12, 0.82, 0.58);
           // 가까이서도 읽히도록 거리에 따라 크기를 보정
           const s = Math.max(1, camPos.distanceTo(bar.position) / 9);
           bar.scale.setScalar(s);

@@ -181,6 +181,18 @@ static func core_alert_banner_bg() -> Color:
 		_:
 			return Color(0.35, 0.05, 0.07, 0.82)
 
+## Gather HUD ring colors (mirrors src/ui/seasonal.ts gatherProgressTint).
+static func gather_progress_tint() -> Dictionary:
+	match Time.get_datetime_dict_from_system().month:
+		11:
+			if is_late_november():
+				return {"ring_idle": Color(0.72, 0.83, 0.94), "ring_active": Color(0.48, 0.69, 0.83)}
+			return {"ring_idle": Color(1.0, 0.95, 0.69), "ring_active": Color(1.0, 0.82, 0.35)}
+		12:
+			return {"ring_idle": Color(0.78, 0.75, 0.91), "ring_active": Color(0.60, 0.54, 0.78)}
+		_:
+			return {"ring_idle": Color(1.0, 0.95, 0.69), "ring_active": Color(1.0, 0.82, 0.35)}
+
 ## Combat edge vignette RGB tint (alpha handled in game.gd).
 static func combat_vignette_tint(low_core: bool, low_hp: bool) -> Color:
 	if not low_core and not low_hp:

@@ -3,6 +3,7 @@ extends Control
 ## gathering.gd 가 처음 채집할 때 game.hud 아래에 만든다.
 
 const FxScript := preload("res://scripts/gather_fx.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 var game: Node
 var gathering: Node
 var _fly: Array = [] # {res, from, to, t, delay, life, bow}
@@ -37,7 +38,9 @@ func _on_gathered(res: String, amount: int, pos: Vector3) -> void:
 func _process(dt: float) -> void:
 	if gathering.is_gathering():
 		var n: Dictionary = gathering.current
-		_ring_col = FxScript.KIND[n.kind].col
+		var tint: Dictionary = Seasonal.gather_progress_tint()
+		var base_col: Color = FxScript.KIND[n.kind].col
+		_ring_col = base_col.lerp(tint.ring_active if n.progress > 0.01 else tint.ring_idle, 0.55 if Seasonal.is_late_november() else 0.35)
 		_ring = n.progress
 		_ring_a = move_toward(_ring_a, 1.0, dt * 10.0)
 	else:

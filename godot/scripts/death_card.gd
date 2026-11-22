@@ -54,6 +54,7 @@ var _mat: ShaderMaterial
 var _tween: Tween
 var _title: Label
 var _sub: Label
+var _sub_mood: Label
 var _card: Control
 var _art: TextureRect
 var _hub_btn: Button
@@ -142,6 +143,11 @@ func _apply_death_season() -> void:
 			_title.add_theme_color_override("font_color", title_col)
 			_title.add_theme_color_override("font_shadow_color", Color(0.42, 0.59, 0.78, 0.6))
 			_sub.add_theme_color_override("font_color", sub_col)
+	if Seasonal.is_late_november():
+		_sub_mood = UiKit.label(I18n.t("death.moodLateNov"), 15, Color(0.62, 0.83, 0.96, 0.75), HORIZONTAL_ALIGNMENT_CENTER)
+		_sub_mood.modulate.a = 0.0
+		_sub.get_parent().add_child(_sub_mood)
+		_sub.get_parent().move_child(_sub_mood, _sub.get_index() + 1)
 
 func _build_card() -> Control:
 	var r: Dictionary = report
@@ -262,6 +268,8 @@ func _show_title() -> void:
 	tw.tween_property(_title, "modulate:a", 1.0, 0.5)
 	tw.tween_property(_title, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_sub, "modulate:a", 1.0, 0.8).set_delay(0.3)
+	if _sub_mood:
+		tw.tween_property(_sub_mood, "modulate:a", 1.0, 0.8).set_delay(0.45)
 
 func _show_card() -> void:
 	if card_shown:

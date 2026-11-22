@@ -177,6 +177,20 @@ export function combatLeafParticles(): { count: number; colors: number[]; streng
   };
 }
 
+/** In-world gather ring / bar tints (mirrors godot/scripts/seasonal.gd gather_progress_tint). */
+export function gatherProgressTint(): { ringIdle: number; ringActive: number; barHue: number } {
+  switch (month()) {
+    case 11:
+      return isLateNovember()
+        ? { ringIdle: 0xb8d4f0, ringActive: 0x7ab0d4, barHue: 0.56 }
+        : { ringIdle: 0xfff3b0, ringActive: 0xffd25a, barHue: 0.12 };
+    case 12:
+      return { ringIdle: 0xc8c0e8, ringActive: 0x9a8ac8, barHue: 0.72 };
+    default:
+      return { ringIdle: 0xfff3b0, ringActive: 0xffd25a, barHue: 0.12 };
+  }
+}
+
 /** HQ shell leaf drifts (November only; fewer than title screen). */
 export function hubLeafCount(): number {
   if (month() !== 11) return 0;
