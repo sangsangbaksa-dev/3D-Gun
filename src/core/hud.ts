@@ -11,7 +11,7 @@ import { structures } from './entities';
 import { onLocaleChange, resLabel, t, zombieName } from '../i18n';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
-import { applySeasonDatasets } from '../ui/seasonal';
+import { applySeasonDatasets, isLateNovember } from '../ui/seasonal';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
@@ -136,14 +136,18 @@ function prepSubText() {
     hint = t('hud.prepNextBoss');
   }
   const buildPause = state.mode === 'build' ? t('hud.prepBuildPause') : '';
-  return t('hud.prep', { sec }) + buildPause + hint + t('hud.prepStart');
+  const mood = isLateNovember() ? ` <span class="hud-mood">${t('hud.prepMoodLateNov')}</span>` : '';
+  return t('hud.prep', { sec }) + buildPause + hint + t('hud.prepStart') + mood;
 }
 
 function refreshStaticHud() {
   const help = document.getElementById('help');
   if (help) help.innerHTML = t('hud.help');
   const pause = document.getElementById('pauseBanner');
-  if (pause) pause.textContent = t('hud.pause');
+  if (pause) {
+    const mood = isLateNovember() ? `<span class="pause-mood">${t('hud.pauseMoodLateNov')}</span>` : '';
+    pause.innerHTML = `${t('hud.pause')}${mood}`;
+  }
   const lock = document.getElementById('lockHint');
   if (lock) lock.textContent = t('hud.lockHint');
   const coreLbl = document.querySelector('#coreBar .lbl');
@@ -210,9 +214,9 @@ export const HudSystem: System = {
       }
     }
     if (sub) {
-      sub.textContent = state.phase === 'prep'
-        ? prepSubText()
-        : `${t('hud.zombiesLeft', { n: state.waveRemaining })} · ${t('hud.core')} ${Math.ceil(state.coreHp)}/${state.coreMaxHp}${defenseSummary()}`;
+      const prepLine = prepSubText();
+      if (state.phase === 'prep') sub.innerHTML = prepLine;
+      else sub.textContent = `${t('hud.zombiesLeft', { n: state.waveRemaining })} · ${t('hud.core')} ${Math.ceil(state.coreHp)}/${state.coreMaxHp}${defenseSummary()}`;
       sub.classList.toggle('urgent', state.phase === 'prep' && state.prepLeft > 0 && state.prepLeft <= 5);
     }
     refreshPrepBar();

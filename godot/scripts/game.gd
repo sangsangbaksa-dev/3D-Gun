@@ -798,6 +798,8 @@ func _refresh_hud() -> void:
 	lbl_top.text += "    Lv %d (+%d)" % [Skills.run_level(self), Skills.run_points(self)] # 런 레벨과 이번 판에 번 스킬 포인트
 	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
+		if Seasonal.is_late_november():
+			lbl_top.text += "  ·  " + I18n.t("hud.prepMoodLateNov")
 		if prep_bar and prep_total > 0.0:
 			prep_bar.visible = true
 			prep_bar.max_value = prep_total
@@ -856,6 +858,8 @@ func _refresh_base_hud() -> void:
 	gather_bar.visible = false
 	if not gather_focus.is_empty():
 		prompt = "E  " + I18n.t("node.%s.verb" % gather_focus.kind)
+		if Seasonal.is_late_november():
+			prompt += "\n" + I18n.t("gather.moodLateNov")
 		# 진행도는 gather_hud.gd 의 링이 그린다
 	elif allies.station_near(player.global_position) != "" and not base.building:
 		prompt = allies.tt("prompt." + allies.station_near(player.global_position))

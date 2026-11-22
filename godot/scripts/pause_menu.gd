@@ -4,6 +4,7 @@ extends CanvasLayer
 
 const UiKit := preload("res://scripts/ui_kit.gd")
 const SettingsScript := preload("res://scripts/settings_panel.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 
 var game: Node
 var root: Control
@@ -67,6 +68,9 @@ func _build() -> void:
 	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
 	col.add_child(UiKit.label(I18n.t("pause.title"), 30, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	if Seasonal.is_late_november():
+		var mood := UiKit.label(I18n.t("hud.pauseMoodLateNov"), 14, Color(0.62, 0.83, 0.96, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
+		col.add_child(mood)
 	var line := ColorRect.new()
 	line.color = Color(UiKit.TEAL, 0.25)
 	line.custom_minimum_size = Vector2(0, 1)
@@ -82,7 +86,7 @@ func _build() -> void:
 		b.pressed.connect(it[1])
 		col.add_child(b)
 	col.add_child(UiKit.label(I18n.t("pause.hint"), 14, Color(UiKit.TEXT, 0.6), HORIZONTAL_ALIGNMENT_CENTER))
-	(col.get_child(2) as Control).grab_focus()
+	(col.get_child(col.get_child_count() - 2) as Control).grab_focus()
 
 func _open_settings(page: String) -> void:
 	_settings = SettingsScript.new()

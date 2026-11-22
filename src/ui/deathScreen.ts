@@ -7,6 +7,7 @@ import { WALLET_ICON, type WalletKey } from '../data/tycoon2d';
 import { t, walletLabel } from '../i18n';
 import { cameraPost } from '../player/player';
 import { playSfx } from '../audio';
+import { isLateNovember } from './seasonal';
 
 export interface DeathInfo { reason: 'player' | 'core'; report: RunReport; level: number }
 
@@ -84,6 +85,7 @@ body[data-late-november="1"] #ztDeath .vig{opacity:1;background:radial-gradient(
 body[data-late-november="1"] #ztDeath .pulse{box-shadow:inset 0 0 180px 48px #4a78a8}
 body[data-late-november="1"] #ztDeath .ttl h1{letter-spacing:.2em}
 body[data-late-november="1"] #ztDeath .go button{box-shadow:0 0 22px #6a9cc488}
+body[data-late-november="1"] #ztDeath .ttl .dmood{display:block;margin-top:10px;font-size:clamp(11px,1.6vw,14px);letter-spacing:.28em;color:#9ed4f4bb;text-shadow:0 0 14px #3a5878}
 body[data-season="december"] #ztDeath .tint{background:radial-gradient(ellipse at 50% 55%,#6a58a822 0%,#3a286866 48%,#1a0818e8 100%)}
 body[data-season="december"] #ztDeath .ttl h1{color:#d8cce8;text-shadow:0 0 28px #8a7ac8aa,0 6px 0 #281a38,0 0 2px #fff4}
 body[data-season="december"] #ztDeath .ttl p{color:#b8a8e0cc;text-shadow:0 0 10px #5a4878}
@@ -136,6 +138,7 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
 
   const title = info.reason === 'core' ? t('death.coreTitle') : t('death.playerTitle');
   const sub = info.reason === 'core' ? t('death.coreSub') : t('death.playerSub', { wave: r.wave });
+  const dmood = isLateNovember() ? `<span class="dmood">${t('death.moodLateNov')}</span>` : '';
   const extras = (Object.keys(r.kept) as WalletKey[])
     .filter((k) => k !== 'gold' && k !== 'skillPoints' && (r.kept[k] ?? 0) > 0)
     .map((k) => `<span title="${walletLabel(k)}">${WALLET_ICON[k]} ${walletLabel(k)} +${fmt(r.kept[k] ?? 0)}</span>`).join('');
@@ -143,7 +146,7 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
   root.id = 'ztDeath';
   root.innerHTML = `
     <div class="tint"></div><div class="vig"></div><div class="pulse"></div><div class="shade"></div><div class="art"></div>
-    <div class="ttl"><h1>${title}</h1><p>${sub}</p></div>
+    <div class="ttl"><h1>${title}</h1><p>${sub}${dmood}</p></div>
     <div class="cardBox" role="dialog" aria-label="${t('death.results')}">
       <h2>${t('death.results')}${r.newBest ? `<span class="best">${t('death.best')}</span>` : ''}</h2>
       <div class="row big"><span class="k">${t('death.reachedWave')}</span><span class="v" data-n="${r.wave}">0</span></div>
