@@ -1,4 +1,7 @@
 // 주사 진행 막대와 결과 배너 (DOM). 스타일은 이 파일이 직접 주입한다.
+import { injectBarFillCss, isLateNovember } from '../../ui/seasonal';
+import { t } from '../../i18n';
+
 const CSS = `
 .al-inj{position:fixed;left:50%;top:58%;transform:translateX(-50%);z-index:4;pointer-events:none;display:none;text-align:center;font-family:inherit;color:#eaffee;text-shadow:0 2px 4px #000}
 .al-inj .l{font-size:15px;font-weight:700;margin-bottom:6px}.al-inj .l b{color:#7dffa0}
@@ -9,8 +12,14 @@ const CSS = `
 .al-banner small{display:block;font-size:17px;font-weight:600;letter-spacing:0;opacity:.9;text-align:center}
 @keyframes alpop{0%{opacity:0;transform:translate(-50%,10px) scale(.5)}15%{opacity:1;transform:translate(-50%,0) scale(1.12)}28%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px) scale(1)}}
 body[data-season="november"] .al-inj .t{border-color:#6a9cc466;box-shadow:0 0 18px #3a5a7828}
+body[data-season="november"] .al-inj .l{color:#d8e8f4}
+body[data-season="november"] .al-inj .l b{color:#8ec4e8}
+body[data-late-november="1"] .al-inj .t{border-color:#7ab0d477;box-shadow:0 0 22px #4a709038}
+body[data-late-november="1"] .al-inj .inj-mood{display:block;margin-top:5px;font-size:11px;letter-spacing:.18em;color:#9ed4f4bb;font-weight:600}
 body[data-late-november="1"] .al-banner{text-shadow:0 4px 0 #000a,0 0 32px #6a9cc488}
+body[data-late-november="1"] .al-inj .f{background:linear-gradient(90deg,#2a6a8a,#7ab0d4)}
 body[data-season="december"] .al-inj .t{border-color:#7a6ab066}
+body[data-season="december"] .al-inj .f{background:linear-gradient(90deg,#4a3a7a,#9a8ac8)}
 `;
 let styled = false;
 export function injectStyle(id: string, css: string) {
@@ -36,8 +45,10 @@ export class InjectHud {
   }
   show(text: string, progress: number) {
     this.box.style.display = 'block';
-    this.label.innerHTML = text;
-    this.fill.style.width = `${Math.round(progress * 100)}%`;
+    const mood = isLateNovember() ? `<span class="inj-mood">${t('ally.inject.moodLateNov')}</span>` : '';
+    this.label.innerHTML = text + mood;
+    const fill = injectBarFillCss();
+    if (fill) this.fill.style.background = fill;
   }
   hide() { this.box.style.display = 'none'; }
   flash(title: string, sub: string, color: string) {

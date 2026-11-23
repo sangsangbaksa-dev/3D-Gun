@@ -13,14 +13,23 @@ export function isLateNovember(): boolean {
   return month() === 11 && dayOfMonth() >= 16;
 }
 
+/** November 23rd+: last-week gust before December (mirrors godot seasonal.gd is_november_finale). */
+export function isNovemberFinale(): boolean {
+  return month() === 11 && dayOfMonth() >= 23;
+}
+
 export function lateNovemberLeafMul(): number {
   if (month() !== 11) return 1;
+  if (isNovemberFinale()) return 1.28;
   return isLateNovember() ? 1.22 : 1;
 }
 
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
+      if (isNovemberFinale()) {
+        return locale === 'ko' ? ' · 11월 끝자락, 차가운 돌풍' : ' · November finale, cold gusts';
+      }
       if (isLateNovember()) {
         return locale === 'ko' ? ' · 11월 막바지, 거센 안개' : ' · Late November gusts in the fog';
       }
@@ -84,7 +93,12 @@ export function bannerClearAccentHex(): string {
 export function combatMistTint(): { r: number; g: number; b: number; a: number } {
   switch (month()) {
     case 11:
-      return { r: 0.38, g: 0.52, b: 0.68, a: isLateNovember() ? 0.085 : 0.07 };
+      return {
+        r: 0.38,
+        g: 0.52,
+        b: 0.68,
+        a: isNovemberFinale() ? 0.092 : isLateNovember() ? 0.085 : 0.07,
+      };
     case 12:
       return { r: 0.42, g: 0.38, b: 0.58, a: 0.06 };
     default:
@@ -100,7 +114,12 @@ function rgbCss(r: number, g: number, b: number) {
 export function atmosphereFogTint(): { r: number; g: number; b: number; farMul: number } {
   switch (month()) {
     case 11:
-      return { r: 0.78, g: 0.86, b: 0.94, farMul: isLateNovember() ? 1.08 : 1.05 };
+      return {
+        r: 0.78,
+        g: 0.86,
+        b: 0.94,
+        farMul: isNovemberFinale() ? 1.1 : isLateNovember() ? 1.08 : 1.05,
+      };
     case 12:
       return { r: 0.82, g: 0.76, b: 0.92, farMul: 1.04 };
     default:
@@ -221,6 +240,7 @@ export function coreAlertEdgeGlowRgb(): { r: number; g: number; b: number } | nu
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {
     case 11:
+      if (isNovemberFinale()) return { windMul: 1.36, droneMul: 0.82, cutoffAdd: 56 };
       return isLateNovember()
         ? { windMul: 1.32, droneMul: 0.84, cutoffAdd: 52 }
         : { windMul: 1.2, droneMul: 0.88, cutoffAdd: 45 };
@@ -261,6 +281,20 @@ export function applyShellMeta(locale: string) {
   applySeasonDatasets();
 }
 
+/** Inject progress bar fill (late-year months; mirrors godot allies.gd inject bar). */
+export function injectBarFillCss(): string | null {
+  switch (month()) {
+    case 11:
+      return isLateNovember()
+        ? 'linear-gradient(90deg,#2a6a8a,#7ab0d4)'
+        : null;
+    case 12:
+      return 'linear-gradient(90deg,#4a3a7a,#9a8ac8)';
+    default:
+      return null;
+  }
+}
+
 /** `data-season` / `data-late-november` on html+body for shell CSS (combat HUD reads these too). */
 export function applySeasonDatasets() {
   const season = bodySeasonAttr();
@@ -270,5 +304,7 @@ export function applySeasonDatasets() {
     else delete el.dataset.season;
     if (isLateNovember()) el.dataset.lateNovember = '1';
     else delete el.dataset.lateNovember;
+    if (isNovemberFinale()) el.dataset.novemberFinale = '1';
+    else delete el.dataset.novemberFinale;
   }
 }

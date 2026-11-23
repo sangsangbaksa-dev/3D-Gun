@@ -30,6 +30,7 @@ export const EN_UI: Record<string, string> = {
   'hud.prepMoodLateNov': '· Stock up before the gust',
   'hud.pauseMoodLateNov': 'The gust holds its breath',
   'gather.moodLateNov': 'Gather between the gusts',
+  'ally.inject.moodLateNov': 'Inject through the cold fog',
   'death.moodLateNov': 'Fallen in the thinning fog',
   'hud.lockHint': 'Click to lock view · Right-click aim · WASD move · P pause · H help',
   'hud.defenses': 'Turrets {t} · Structures {s} · weakest {pct}%',
