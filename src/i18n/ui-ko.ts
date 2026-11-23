@@ -30,6 +30,7 @@ export const KO_UI: Record<string, string> = {
   'hud.prepMoodLateNov': '· 막바지 바람 전에 비축한다',
   'hud.pauseMoodLateNov': '거센 바람이 잠깐 멈춘다',
   'gather.moodLateNov': '거센 바람 사이에서 자원을 걷는다',
+  'ally.inject.moodLateNov': '차가운 안개 속 백신 주사',
   'death.moodLateNov': '옅어지는 안개 속에서 쓰러지다',
   'hud.lockHint': '클릭 시점 고정 · 우클릭 조준 · WASD 이동 · P 일시정지 · H 도움말',
   'hud.defenses': '포탑 {t} · 시설 {s} · 최저 {pct}%',

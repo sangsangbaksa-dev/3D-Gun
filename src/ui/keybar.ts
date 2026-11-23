@@ -24,7 +24,7 @@ body[data-season="december"] #zkBar .i.help{color:#b8a8e0}
 body[data-season="november"] #zkPrompt{border-color:#5a8cb066;background:#121A20e6}
 body[data-late-november="1"] #zkBar{border-color:#6a9cc466;box-shadow:0 0 18px #3a5a7822}
 body[data-late-november="1"] #zkPrompt{border-color:#7ab0d477;color:#d8e8f4}
-body[data-late-november="1"] #zkPrompt .zk-gmood{display:block;margin-top:4px;font-size:11px;letter-spacing:.16em;color:#9ed4f4bb}
+body[data-late-november="1"] #zkPrompt .zk-gmood,body[data-late-november="1"] #zkPrompt .zk-imood{display:block;margin-top:4px;font-size:11px;letter-spacing:.16em;color:#9ed4f4bb}
 body[data-season="november"] #zkHelp .card{border-color:#5a8cb0;box-shadow:0 20px 60px #000c,0 0 28px #3a5a7833}
 body[data-season="november"] #zkHelp h2 button{border-color:#6a9cc4;color:#8ec4e8}
 body[data-late-november="1"] #zkHelp .card{border-color:#7ab0d4;box-shadow:0 20px 60px #000c,0 0 36px #4a709044}
@@ -81,9 +81,11 @@ function paintHelp() {
 function promptHtml(text: string): string {
   const safe = text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
   const body = safe.startsWith('E ') ? `${kbd('E')} ${safe.slice(2)}` : safe;
-  const mood = isLateNovember() && safe.startsWith('E ')
-    ? `<span class="zk-gmood">${t('gather.moodLateNov')}</span>`
-    : '';
+  let mood = '';
+  if (isLateNovember() && safe.startsWith('E ')) {
+    if (/주사|inject/i.test(safe)) mood = `<span class="zk-imood">${t('ally.inject.moodLateNov')}</span>`;
+    else mood = `<span class="zk-gmood">${t('gather.moodLateNov')}</span>`;
+  }
   return body + mood;
 }
 

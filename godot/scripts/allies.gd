@@ -6,6 +6,7 @@ extends Node3D
 ## barracks raise the ally cap and the shop exchanges resources (station_panel.gd).
 
 const AllyScript := preload("res://scripts/ally.gd")
+const Seasonal := preload("res://scripts/seasonal.gd")
 const SAVE_EVERY := 2.0
 const GATHER_RADIUS := 20.0
 
@@ -22,6 +23,7 @@ var _save_t := 0.0
 var _hud: Control
 var _lbl: Label
 var _bar: ProgressBar
+var _bar_fill: StyleBoxFlat
 var _lbl_vac: Label
 
 func _ready() -> void:
@@ -369,11 +371,11 @@ func _build_hud() -> void:
 	_bar.size = Vector2(220, 10)
 	_bar.show_percentage = false
 	_bar.max_value = 1.0
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color("2ee6d6")
+	_bar_fill = StyleBoxFlat.new()
+	_bar_fill.bg_color = Color("2ee6d6")
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color(0, 0, 0, 0.55)
-	_bar.add_theme_stylebox_override("fill", fill)
+	_bar.add_theme_stylebox_override("fill", _bar_fill)
 	_bar.add_theme_stylebox_override("background", bg)
 	_hud.add_child(_bar)
 	_lbl_vac = Label.new()
@@ -396,5 +398,13 @@ func _refresh_hud() -> void:
 	elif list().size() >= cap():
 		_lbl.text = _t("ally.cap", {"n": cap()})
 	else:
-		_lbl.text = _t("ally.inject", {"v": _vac_name(active_tier()), "p": roundi(chance_for(target) * 100.0)})
+		var line := _t("ally.inject", {"v": _vac_name(active_tier()), "p": roundi(chance_for(target) * 100.0)})
+		if Seasonal.is_late_november():
+			line += "\n" + I18n.t("ally.inject.moodLateNov")
+		_lbl.text = line
+	if Seasonal.is_late_november():
+		_bar_fill.bg_color = Color(0.48, 0.69, 0.83) if progress > 0.01 else Color(0.72, 0.83, 0.94)
+		_bar_fill.bg_color = _bar_fill.bg_color.lerp(Color(0.18, 0.9, 0.84), 1.0 - clampf(progress, 0.0, 1.0) * 0.35)
+	else:
+		_bar_fill.bg_color = Color("2ee6d6")
 	_bar.value = progress

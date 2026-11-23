@@ -127,6 +127,12 @@
   body[data-late-november="1"] #prepBar .fill { background:linear-gradient(90deg,#1a5a72,#7ab0d4); }
   body[data-late-november="1"] #prepBar.paused .fill { background:linear-gradient(90deg,#3a4a58,#5a6a78); opacity:.92; }
   body[data-late-november="1"] #coreBar .track { border-color:#6a9cc455; box-shadow:0 0 8px #3a5a7822 inset; }
+  body[data-late-november="1"] #boss .track { border-color:#7ab0d488; box-shadow:0 0 18px #4a709044 inset; }
+  body[data-late-november="1"] #boss.rage .fill { animation:bossRageLate 0.9s ease-in-out infinite; }
+  @keyframes bossRageLate { 50% { filter:brightness(1.1); } }
+  body[data-november-finale="1"] #bossName { letter-spacing:.04em; }
+  body[data-november-finale="1"] #wave.pop { animation-name:wavePopNovFin; }
+  @keyframes wavePopNovFin { 0% { transform:scale(1); text-shadow:0 0 0 #6a9cc400; } 45% { transform:scale(1.08); text-shadow:0 0 22px #7ab0d466; } 100% { transform:scale(1); text-shadow:inherit; } }
   body[data-season="november"] #help { color:#b8d4e8; text-shadow:0 1px 3px #0a1828,0 0 12px #2a405533; }
   body[data-late-november="1"] #toasts div { border:1px solid #5a8cb033; box-shadow:0 0 12px #3a5a7822; }
   body[data-late-november="1"] #prompt { border:1px solid #5a8cb044; color:#d8e8f4; }
