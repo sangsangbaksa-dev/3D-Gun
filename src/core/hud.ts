@@ -11,7 +11,7 @@ import { structures } from './entities';
 import { onLocaleChange, resLabel, t, zombieName } from '../i18n';
 import { mountKeyHelp, updateKeyBar } from '../ui/keybar';
 import { mountWaveClearFlash, updateWaveClearFlash } from '../ui/waveClearFlash';
-import { applySeasonDatasets, isLateNovember } from '../ui/seasonal';
+import { applySeasonDatasets, novemberMoodKey } from '../ui/seasonal';
 
 let wave: HTMLElement | null, sub: HTMLElement | null, res: HTMLElement | null, help: HTMLElement | null;
 let hpFill: HTMLElement | null, hpText: HTMLElement | null, hpGhost: HTMLElement | null, xpFill: HTMLElement | null;
@@ -136,7 +136,8 @@ function prepSubText() {
     hint = t('hud.prepNextBoss');
   }
   const buildPause = state.mode === 'build' ? t('hud.prepBuildPause') : '';
-  const mood = isLateNovember() ? ` <span class="hud-mood">${t('hud.prepMoodLateNov')}</span>` : '';
+  const prepMood = novemberMoodKey('hud.prepMoodLateNov', 'hud.prepMoodCurtain');
+  const mood = prepMood ? ` <span class="hud-mood">${t(prepMood)}</span>` : '';
   return t('hud.prep', { sec }) + buildPause + hint + t('hud.prepStart') + mood;
 }
 
@@ -145,7 +146,8 @@ function refreshStaticHud() {
   if (help) help.innerHTML = t('hud.help');
   const pause = document.getElementById('pauseBanner');
   if (pause) {
-    const mood = isLateNovember() ? `<span class="pause-mood">${t('hud.pauseMoodLateNov')}</span>` : '';
+    const pauseMood = novemberMoodKey('hud.pauseMoodLateNov', 'hud.pauseMoodCurtain');
+    const mood = pauseMood ? `<span class="pause-mood">${t(pauseMood)}</span>` : '';
     pause.innerHTML = `${t('hud.pause')}${mood}`;
   }
   const lock = document.getElementById('lockHint');

@@ -68,8 +68,9 @@ func _build() -> void:
 	col.add_theme_constant_override("separation", 12)
 	panel.add_child(col)
 	col.add_child(UiKit.label(I18n.t("pause.title"), 30, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
-	if Seasonal.is_late_november():
-		var mood := UiKit.label(I18n.t("hud.pauseMoodLateNov"), 14, Color(0.62, 0.83, 0.96, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
+	var pause_mood := Seasonal.november_mood_key("hud.pauseMoodLateNov", "hud.pauseMoodCurtain")
+	if pause_mood != "":
+		var mood := UiKit.label(I18n.t(pause_mood), 14, Color(0.62, 0.83, 0.96, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
 		col.add_child(mood)
 	var line := ColorRect.new()
 	line.color = Color(UiKit.TEAL, 0.25)

@@ -1,5 +1,5 @@
 // 주사 진행 막대와 결과 배너 (DOM). 스타일은 이 파일이 직접 주입한다.
-import { injectBarFillCss, isLateNovember } from '../../ui/seasonal';
+import { injectBarFillCss, novemberMoodKey } from '../../ui/seasonal';
 import { t } from '../../i18n';
 
 const CSS = `
@@ -45,7 +45,8 @@ export class InjectHud {
   }
   show(text: string, progress: number) {
     this.box.style.display = 'block';
-    const mood = isLateNovember() ? `<span class="inj-mood">${t('ally.inject.moodLateNov')}</span>` : '';
+    const injMood = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain');
+    const mood = injMood ? `<span class="inj-mood">${t(injMood)}</span>` : '';
     this.label.innerHTML = text + mood;
     const fill = injectBarFillCss();
     if (fill) this.fill.style.background = fill;

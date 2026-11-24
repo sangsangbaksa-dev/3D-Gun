@@ -399,8 +399,9 @@ func _refresh_hud() -> void:
 		_lbl.text = _t("ally.cap", {"n": cap()})
 	else:
 		var line := _t("ally.inject", {"v": _vac_name(active_tier()), "p": roundi(chance_for(target) * 100.0)})
-		if Seasonal.is_late_november():
-			line += "\n" + I18n.t("ally.inject.moodLateNov")
+		var inj_mood := Seasonal.november_mood_key("ally.inject.moodLateNov", "ally.inject.moodCurtain")
+		if inj_mood != "":
+			line += "\n" + I18n.t(inj_mood)
 		_lbl.text = line
 	if Seasonal.is_late_november():
 		_bar_fill.bg_color = Color(0.48, 0.69, 0.83) if progress > 0.01 else Color(0.72, 0.83, 0.94)

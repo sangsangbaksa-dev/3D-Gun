@@ -14,7 +14,7 @@ import { onLocaleChange, t } from '../../i18n';
 import { playSfx } from '../../audio';
 import type { System } from '../../core/types';
 import { CoreAlert, ALERT_RED, bearing, distanceAlpha, edgePoint, hpColor, mixRgb, nearestLane, type Rgb } from '../logic/coreAlert';
-import { coreAlertEdgeGlowRgb, isLateNovember } from '../seasonal';
+import { coreAlertEdgeGlowRgb, isLateNovember, novemberMoodKey } from '../seasonal';
 
 const MARGIN = 46;
 
@@ -89,7 +89,8 @@ function refreshTexts() {
   banSub.textContent = emphKey && alert.emphasis > 0 ? t(`coreAlert.${emphKey}`) : '';
   if (banMood) {
     const showMood = isLateNovember() && alert.active;
-    banMood.textContent = showMood ? t('coreAlert.moodLateNov') : '';
+    const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain');
+    banMood.textContent = showMood && coreMood ? t(coreMood) : '';
     banMood.style.display = showMood ? 'block' : 'none';
   }
 }
@@ -138,7 +139,8 @@ export const CorePointerSystem: System = {
     if (banMood) {
       const showMood = showBan && isLateNovember();
       banMood.style.display = showMood ? 'block' : 'none';
-      if (showMood) banMood.textContent = t('coreAlert.moodLateNov');
+      const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain');
+      if (showMood && coreMood) banMood.textContent = t(coreMood);
     }
     const edge = coreAlertEdgeGlowRgb();
     if (edge && showBan) {

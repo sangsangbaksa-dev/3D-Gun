@@ -65,8 +65,9 @@ func _rebuild() -> void:
 	var p = game.player
 	lbl_title.text = I18n.t("shop.title")
 	lbl_coins.text = I18n.t("hud.coins", {"n": game.coins})
-	if Seasonal.is_late_november():
-		lbl_mood.text = I18n.t("weapon.panel.moodLateNov")
+	var w_mood := Seasonal.november_mood_key("weapon.panel.moodLateNov", "weapon.panel.moodCurtain")
+	if w_mood != "":
+		lbl_mood.text = I18n.t(w_mood)
 		lbl_mood.visible = true
 	else:
 		lbl_mood.visible = false

@@ -5,7 +5,7 @@ import { allies } from '../../core/entities';
 import { vaccineCost, canAfford, craftQueue, craftTime } from '../logic/vaccine';
 import { allyCap, countRole, canSetRole, type Ally } from '../logic/ally';
 import { injectStyle } from './injectHud';
-import { isLateNovember } from '../../ui/seasonal';
+import { novemberMoodKey } from '../../ui/seasonal';
 import { t } from '../../i18n';
 
 const CSS = `
@@ -121,7 +121,8 @@ export class LabPanel {
     if (!force && sig === this.sig) return;
     this.sig = sig;
     const keep = this.ov.querySelector('.al-body')?.scrollTop ?? 0;
-    const mood = isLateNovember() ? `<span class="al-mood">${t('ally.lab.moodLateNov')}</span>` : '';
+    const labMood = novemberMoodKey('ally.lab.moodLateNov', 'ally.lab.moodCurtain');
+    const mood = labMood ? `<span class="al-mood">${t(labMood)}</span>` : '';
     this.ov.innerHTML = `
     <div class="al-card" role="dialog" aria-label="연구소">
       <header>
