@@ -4,7 +4,7 @@ import { state } from '../../core/state';
 import { costText, canAfford, type Building, type Cost } from '../logic/base';
 import { buy, sell, sellAll, sellValue } from '../logic/shop';
 import { bldDesc, bldName, onLocaleChange, placeReason, resLabel, t } from '../../i18n';
-import { isLateNovember } from '../../ui/seasonal';
+import { novemberMoodKey } from '../../ui/seasonal';
 
 const CSS = `
 .bz-root{position:fixed;inset:0;pointer-events:none;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#eef3f6;z-index:4}
@@ -124,7 +124,8 @@ export class BasePanels {
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
     const prep = phase === 'prep';
-    const mood = prep && isLateNovember() ? `<span class="bz-mood">${t('build.banner.moodLateNov')}</span>` : '';
+    const buildMood = prep ? novemberMoodKey('build.banner.moodLateNov', 'build.banner.moodCurtain') : null;
+    const mood = buildMood ? `<span class="bz-mood">${t(buildMood)}</span>` : '';
     this.set(this.banner, (prep ? t('build.banner.prep') : t('build.noCombat')) + mood);
     BUILDING_ORDER.forEach((id, i) => {
       const d = BUILDINGS[id];
@@ -173,7 +174,8 @@ export class BasePanels {
     c.innerHTML = '';
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
     el('h2', '', c, t('hub.exchange.title'));
-    const exSub = t('hub.exchange.sub') + (isLateNovember() ? `<span class="bz-ex-mood">${t('hub.exchange.moodLateNov')}</span>` : '') + ' (E / Esc)';
+    const exMood = novemberMoodKey('hub.exchange.moodLateNov', 'hub.exchange.moodCurtain');
+    const exSub = t('hub.exchange.sub') + (exMood ? `<span class="bz-ex-mood">${t(exMood)}</span>` : '') + ' (E / Esc)';
     el('div', 'bz-sub', c, exSub);
     const sellBonus = state.start.exchangeSellBonus ?? 0;
     for (const k of RES_KEYS) {

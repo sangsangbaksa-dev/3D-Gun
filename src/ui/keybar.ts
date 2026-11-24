@@ -5,7 +5,7 @@ import { state } from '../core/state';
 import { events } from '../core/events';
 import { BUILD_SLOTS, injectKeycapCss, kbd, kbds, keyTableHtml } from './keys';
 import { onLocaleChange, t } from '../i18n';
-import { isLateNovember } from './seasonal';
+import { isLateNovember, novemberMoodKey } from './seasonal';
 
 const CSS = `
 #zkDock{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;max-width:calc(100vw - 600px);z-index:4}
@@ -71,8 +71,10 @@ function barHtml(): string {
 function paintHelp() {
   if (!help) return;
   help.setAttribute('aria-label', t('keys.helpTitle'));
+  const helpMood = novemberMoodKey('keys.helpMoodLateNov', 'keys.helpMoodCurtain');
+  const helpMoodHtml = helpMood ? `<span class="zk-mood">${t(helpMood)}</span>` : '';
   help.querySelector('.card')!.innerHTML = `<h2>${t('keys.helpTitle')}<button type="button" data-close>${t('keys.helpClose')} (H)</button></h2>
-<div class="loop">${t('keys.helpLoop')}${isLateNovember() ? `<span class="zk-mood">${t('keys.helpMoodLateNov')}</span>` : ''}</div>
+<div class="loop">${t('keys.helpLoop')}${helpMoodHtml}</div>
 <div class="cols">${keyTableHtml()}</div>
 <div class="foot">${kbd('H')} ${kbd('F1')} ${kbd('Esc')}</div>`;
 }
@@ -83,8 +85,13 @@ function promptHtml(text: string): string {
   const body = safe.startsWith('E ') ? `${kbd('E')} ${safe.slice(2)}` : safe;
   let mood = '';
   if (isLateNovember() && safe.startsWith('E ')) {
-    if (/주사|inject/i.test(safe)) mood = `<span class="zk-imood">${t('ally.inject.moodLateNov')}</span>`;
-    else mood = `<span class="zk-gmood">${t('gather.moodLateNov')}</span>`;
+    if (/주사|inject/i.test(safe)) {
+      const k = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain');
+      if (k) mood = `<span class="zk-imood">${t(k)}</span>`;
+    } else {
+      const k = novemberMoodKey('gather.moodLateNov', 'gather.moodCurtain');
+      if (k) mood = `<span class="zk-gmood">${t(k)}</span>`;
+    }
   }
   return body + mood;
 }

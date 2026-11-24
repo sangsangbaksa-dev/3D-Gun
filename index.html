@@ -10,8 +10,12 @@
   var m = new Date().getMonth() + 1;
   var d = new Date().getDate();
   var lateNov = m === 11 && d >= 16;
-  var extra = m === 11 ? (lateNov
-      ? (ko ? '11월 막바지, 거센 안개' : 'Late November gusts in the fog')
+  var novFin = m === 11 && d >= 23;
+  var novCurtain = m === 11 && d >= 24;
+  var extra = m === 11 ? (novCurtain
+      ? (ko ? '11월 마지막 밤, 서리 바람' : 'November curtain, frost gusts')
+      : novFin ? (ko ? '11월 끝자락, 차가운 돌풍' : 'November finale, cold gusts')
+      : lateNov ? (ko ? '11월 막바지, 거센 안개' : 'Late November gusts in the fog')
       : (ko ? '11월, 낙엽 사이의 안개' : 'November leaves in the fog'))
     : m === 12 ? (ko ? '12월, 차가운 밤' : 'December cold nights') : '';
   var base = ko
@@ -24,9 +28,13 @@
   if (m === 11) { document.documentElement.dataset.season = 'november'; document.body.dataset.season = 'november'; }
   else if (m === 12) { document.documentElement.dataset.season = 'december'; document.body.dataset.season = 'december'; }
   if (lateNov) { document.documentElement.dataset.lateNovember = '1'; document.body.dataset.lateNovember = '1'; }
+  if (novFin) { document.documentElement.dataset.novemberFinale = '1'; document.body.dataset.novemberFinale = '1'; }
+  if (novCurtain) { document.documentElement.dataset.novemberCurtain = '1'; document.body.dataset.novemberCurtain = '1'; }
   var titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
-  var titleExtra = m === 11 ? (lateNov
-      ? (ko ? ' · 11월 막바지, 거센 안개' : ' · Late November gusts in the fog')
+  var titleExtra = m === 11 ? (novCurtain
+      ? (ko ? ' · 11월 마지막 밤, 서리 바람' : ' · November curtain, frost gusts')
+      : novFin ? (ko ? ' · 11월 끝자락, 차가운 돌풍' : ' · November finale, cold gusts')
+      : lateNov ? (ko ? ' · 11월 막바지, 거센 안개' : ' · Late November gusts in the fog')
       : (ko ? ' · 11월, 낙엽 사이의 안개' : ' · November leaves in the fog'))
     : m === 12 ? (ko ? ' · 12월, 차가운 밤' : ' · December cold nights') : '';
   document.title = titleBase + titleExtra;
@@ -133,6 +141,12 @@
   body[data-november-finale="1"] #bossName { letter-spacing:.04em; }
   body[data-november-finale="1"] #wave.pop { animation-name:wavePopNovFin; }
   @keyframes wavePopNovFin { 0% { transform:scale(1); text-shadow:0 0 0 #6a9cc400; } 45% { transform:scale(1.08); text-shadow:0 0 22px #7ab0d466; } 100% { transform:scale(1); text-shadow:inherit; } }
+  body[data-november-curtain="1"] #prepBar .fill { background:linear-gradient(90deg,#1a4a66,#8ab8e0); }
+  body[data-november-curtain="1"] #res { border-color:#7ab8e0; box-shadow:0 0 32px #5a88b044; }
+  body[data-november-curtain="1"] #pauseBanner { border-color:#8ab8e8; box-shadow:0 8px 32px #000a,0 0 40px #5a88b066; }
+  body[data-november-curtain="1"] #banner { text-shadow:0 3px 16px #0a1828,0 0 42px #5a88b877; }
+  body[data-november-curtain="1"] #wave.pop { animation-name:wavePopNovCurtain; }
+  @keyframes wavePopNovCurtain { 0% { transform:scale(1); } 40% { transform:scale(1.1); text-shadow:0 0 26px #9ad4f288; } 100% { transform:scale(1); text-shadow:inherit; } }
   body[data-season="november"] #help { color:#b8d4e8; text-shadow:0 1px 3px #0a1828,0 0 12px #2a405533; }
   body[data-late-november="1"] #toasts div { border:1px solid #5a8cb033; box-shadow:0 0 12px #3a5a7822; }
   body[data-late-november="1"] #prompt { border:1px solid #5a8cb044; color:#d8e8f4; }

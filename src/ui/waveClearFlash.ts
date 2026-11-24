@@ -2,7 +2,7 @@
 import { events } from '../core/events';
 import { ENEMY_RULES, FINAL_WAVE, isBossWave } from '../data';
 import { onLocaleChange, t } from '../i18n';
-import { isLateNovember } from './seasonal';
+import { novemberMoodKey } from './seasonal';
 
 const CSS = `
 #ztWaveClear{position:fixed;left:50%;top:17%;z-index:38;transform:translateX(-50%);display:block;pointer-events:none;opacity:0;visibility:hidden;
@@ -19,6 +19,8 @@ body[data-late-november="1"] #ztWaveClear .mood{color:#8ec4e8bb}
 body[data-season="november"] #ztWaveClear .box{border-color:#6a9cc488;box-shadow:0 8px 32px #000a,0 0 28px #3a5a7844}
 body[data-season="november"] #ztWaveClear b{color:#8ec4e8;text-shadow:0 2px 8px #1a3048}
 body[data-late-november="1"] #ztWaveClear .box{border-color:#7ab0d488;box-shadow:0 8px 32px #000a,0 0 36px #4a709055}
+body[data-november-curtain="1"] #ztWaveClear .box{border-color:#8ab8e088;box-shadow:0 8px 32px #000a,0 0 42px #5a88b066}
+body[data-november-curtain="1"] #ztWaveClear .mood{color:#a8d8f8cc}
 body[data-late-november="1"] #ztWaveClear b{letter-spacing:.06em}
 body[data-season="december"] #ztWaveClear .box{border-color:#8a7ab888;box-shadow:0 8px 32px #000a,0 0 28px #4a3a6844}
 body[data-season="december"] #ztWaveClear b{color:#b8a8e0;text-shadow:0 2px 8px #2a2048}
@@ -46,7 +48,8 @@ function render() {
   });
   let extra = '';
   if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = t('waveClear.nextBoss');
-  const mood = isLateNovember() ? `<div class="mood">${t('waveClear.moodLateNov')}</div>` : '';
+  const wcMood = novemberMoodKey('waveClear.moodLateNov', 'waveClear.moodCurtain');
+  const mood = wcMood ? `<div class="mood">${t(wcMood)}</div>` : '';
   el.innerHTML = `<div class="box"><b>${t('waveClear.title', { n: w })}</b><div class="sub">${t('waveClear.rewards', { gold, heal })}${extra}</div>${mood}</div>`;
 }
 

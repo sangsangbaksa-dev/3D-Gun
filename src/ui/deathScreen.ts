@@ -7,7 +7,7 @@ import { WALLET_ICON, type WalletKey } from '../data/tycoon2d';
 import { t, walletLabel } from '../i18n';
 import { cameraPost } from '../player/player';
 import { playSfx } from '../audio';
-import { isLateNovember } from './seasonal';
+import { isLateNovember, novemberMoodKey } from './seasonal';
 
 export interface DeathInfo { reason: 'player' | 'core'; report: RunReport; level: number }
 
@@ -138,7 +138,8 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
 
   const title = info.reason === 'core' ? t('death.coreTitle') : t('death.playerTitle');
   const sub = info.reason === 'core' ? t('death.coreSub') : t('death.playerSub', { wave: r.wave });
-  const dmood = isLateNovember() ? `<span class="dmood">${t('death.moodLateNov')}</span>` : '';
+  const deathMood = novemberMoodKey('death.moodLateNov', 'death.moodCurtain');
+  const dmood = deathMood ? `<span class="dmood">${t(deathMood)}</span>` : '';
   const extras = (Object.keys(r.kept) as WalletKey[])
     .filter((k) => k !== 'gold' && k !== 'skillPoints' && (r.kept[k] ?? 0) > 0)
     .map((k) => `<span title="${walletLabel(k)}">${WALLET_ICON[k]} ${walletLabel(k)} +${fmt(r.kept[k] ?? 0)}</span>`).join('');

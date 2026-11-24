@@ -5,7 +5,7 @@ import { changed, state } from '../../core/state';
 import { events } from '../../core/events';
 import { gunName, onLocaleChange, t } from '../../i18n';
 import { gunStats } from '../logic/weapons';
-import { isLateNovember } from '../../ui/seasonal';
+import { novemberMoodKey } from '../../ui/seasonal';
 import { combatMistTint, combatVignetteTint, prepMistAlphaMul } from '../../ui/seasonal';
 
 export const SHOW_AMMO_PANEL = true;
@@ -288,7 +288,8 @@ export class UpgradePanel {
       const pellets = d.pellets > 1 ? t('weapon.panel.pellets', { n: d.pellets }) : '';
       return t('weapon.panel.stats', { dmg: a.dmg.toFixed(0), pellets, mag: a.mag, reload: a.reload.toFixed(1), dps });
     };
-    const mood = isLateNovember() ? `<div class="pv-mood">${t('weapon.panel.moodLateNov')}</div>` : '';
+    const wMood = novemberMoodKey('weapon.panel.moodLateNov', 'weapon.panel.moodCurtain');
+    const mood = wMood ? `<div class="pv-mood">${t(wMood)}</div>` : '';
     let html = `<h2>${t('weapon.panel.title')} <small style="font-weight:normal;opacity:.7">${t('weapon.panel.closeHint')}</small></h2>`
       + `<div class="sub">${t('weapon.panel.sub', { gold: state.gold, partsCount: state.res.parts })}</div>${mood}`;
     for (const id of GUN_ORDER) {
