@@ -96,7 +96,7 @@ func _lab() -> void:
 	var q: int = al.craft_queue.size()
 	var st: String = al.tt("lab.queue", {"n": q, "left": snappedf(al.craft_left(), 0.1)}) if q > 0 else al.tt("lab.idle")
 	foot.text = "%s   ·   %s   ·   %s" % [st, al.tt("lab.have", {"a": al.vaccines[0], "b": al.vaccines[1], "c": al.vaccines[2]}), al.tt("lab.samples", {"s": game.samples, "sp": game.samples_sp})]
-	var lab_mood := Seasonal.november_mood_key("ally.lab.moodLateNov", "ally.lab.moodCurtain")
+	var lab_mood := Seasonal.november_mood_key("ally.lab.moodLateNov", "ally.lab.moodCurtain", "ally.lab.moodVestige")
 	if lab_mood != "":
 		foot.text += "\n" + I18n.t(lab_mood)
 
@@ -111,6 +111,6 @@ func _exchange() -> void:
 		row.add_child(_btn(game.allies.tt("shop.sell"), int(game.res[r]) > 0, func(): game.res[r] -= 1; game.coins += sell; Sfx.play("gather"); _rebuild()))
 		row.add_child(_btn(game.allies.tt("shop.buy"), game.coins >= buy, func(): game.res[r] += 1; game.coins -= buy; Sfx.play("gather"); _rebuild()))
 	foot.text = game.allies.tt("shop.coins", {"n": game.coins})
-	var ex_mood := Seasonal.november_mood_key("hub.exchange.moodLateNov", "hub.exchange.moodCurtain")
+	var ex_mood := Seasonal.november_mood_key("hub.exchange.moodLateNov", "hub.exchange.moodCurtain", "hub.exchange.moodVestige")
 	if ex_mood != "":
 		foot.text += "\n" + I18n.t(ex_mood)

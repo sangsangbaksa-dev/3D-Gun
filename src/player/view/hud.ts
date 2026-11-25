@@ -288,7 +288,7 @@ export class UpgradePanel {
       const pellets = d.pellets > 1 ? t('weapon.panel.pellets', { n: d.pellets }) : '';
       return t('weapon.panel.stats', { dmg: a.dmg.toFixed(0), pellets, mag: a.mag, reload: a.reload.toFixed(1), dps });
     };
-    const wMood = novemberMoodKey('weapon.panel.moodLateNov', 'weapon.panel.moodCurtain');
+    const wMood = novemberMoodKey('weapon.panel.moodLateNov', 'weapon.panel.moodCurtain', 'weapon.panel.moodVestige');
     const mood = wMood ? `<div class="pv-mood">${t(wMood)}</div>` : '';
     let html = `<h2>${t('weapon.panel.title')} <small style="font-weight:normal;opacity:.7">${t('weapon.panel.closeHint')}</small></h2>`
       + `<div class="sub">${t('weapon.panel.sub', { gold: state.gold, partsCount: state.res.parts })}</div>${mood}`;

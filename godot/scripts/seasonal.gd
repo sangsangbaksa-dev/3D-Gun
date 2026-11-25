@@ -13,15 +13,25 @@ static func is_november_curtain() -> bool:
 	var dt := Time.get_datetime_dict_from_system()
 	return dt.month == 11 and dt.day >= 24
 
-static func november_mood_key(late_key: String, curtain_key: String) -> String:
+static func is_november_vestige() -> bool:
+	var dt := Time.get_datetime_dict_from_system()
+	return dt.month == 11 and dt.day >= 25
+
+static func november_mood_key(late_key: String, curtain_key: String, vestige_key: String = "") -> String:
 	if not is_late_november():
 		return ""
-	return curtain_key if is_november_curtain() else late_key
+	if is_november_vestige() and vestige_key != "":
+		return vestige_key
+	if is_november_curtain():
+		return curtain_key
+	return late_key
 
 static func title_slice_extra(locale: String) -> String:
 	var dt := Time.get_datetime_dict_from_system()
 	match dt.month:
 		11:
+			if is_november_vestige():
+				return " · " + ("11월 잔향, 얼어붙는 서리" if locale == "ko" else "November vestige, freezing gusts")
 			if is_november_curtain():
 				return " · " + ("11월 마지막 밤, 서리 바람" if locale == "ko" else "November curtain, frost gusts")
 			if is_november_finale():
@@ -54,6 +64,8 @@ static func atmosphere_fog_tint() -> Color:
 static func atmosphere_fog_far_mul() -> float:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_vestige():
+				return 1.14
 			if is_november_curtain():
 				return 1.12
 			if is_november_finale():
@@ -96,6 +108,8 @@ static func ember_amount() -> int:
 static func combat_mist_tint() -> Color:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_vestige():
+				return Color(0.38, 0.52, 0.68, 0.104)
 			if is_november_curtain():
 				return Color(0.38, 0.52, 0.68, 0.098)
 			if is_november_finale():
@@ -119,6 +133,8 @@ static func late_november_leaf_mul() -> float:
 	var dt := Time.get_datetime_dict_from_system()
 	if dt.month != 11:
 		return 1.0
+	if dt.day >= 25:
+		return 1.40
 	if dt.day >= 24:
 		return 1.34
 	if dt.day >= 23:
@@ -137,6 +153,8 @@ static func leaf_particles() -> Dictionary:
 static func ambient_season_adjust() -> Dictionary:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_vestige():
+				return {"wind_mul": 1.44, "drone_mul": 0.78, "cutoff_add": 64.0}
 			if is_november_curtain():
 				return {"wind_mul": 1.4, "drone_mul": 0.8, "cutoff_add": 60.0}
 			if is_november_finale():

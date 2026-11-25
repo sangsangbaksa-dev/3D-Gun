@@ -23,14 +23,21 @@ export function isNovemberCurtain(): boolean {
   return month() === 11 && dayOfMonth() >= 24;
 }
 
-/** Pick late-November mood i18n key (curtain overrides finale week copy on 24+). */
-export function novemberMoodKey(lateKey: string, curtainKey: string): string | null {
+/** November 25th+: last vestige of autumn before December (mirrors godot seasonal.gd is_november_vestige). */
+export function isNovemberVestige(): boolean {
+  return month() === 11 && dayOfMonth() >= 25;
+}
+
+/** Pick late-November mood i18n key (vestige overrides curtain on 25+). */
+export function novemberMoodKey(lateKey: string, curtainKey: string, vestigeKey?: string): string | null {
   if (!isLateNovember()) return null;
+  if (isNovemberVestige() && vestigeKey) return vestigeKey;
   return isNovemberCurtain() ? curtainKey : lateKey;
 }
 
 export function lateNovemberLeafMul(): number {
   if (month() !== 11) return 1;
+  if (isNovemberVestige()) return 1.4;
   if (isNovemberCurtain()) return 1.34;
   if (isNovemberFinale()) return 1.28;
   return isLateNovember() ? 1.22 : 1;
@@ -39,6 +46,9 @@ export function lateNovemberLeafMul(): number {
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
+      if (isNovemberVestige()) {
+        return locale === 'ko' ? ' · 11월 잔향, 얼어붙는 서리' : ' · November vestige, freezing gusts';
+      }
       if (isNovemberCurtain()) {
         return locale === 'ko' ? ' · 11월 마지막 밤, 서리 바람' : ' · November curtain, frost gusts';
       }
@@ -96,7 +106,7 @@ export function bodySeasonAttr(): string {
 export function bannerClearAccentHex(): string {
   switch (month()) {
     case 11:
-      return isNovemberCurtain() ? '#9ad4f2' : isLateNovember() ? '#8cc8eb' : '#72b8e0';
+      return isNovemberVestige() ? '#a8e0f8' : isNovemberCurtain() ? '#9ad4f2' : isLateNovember() ? '#8cc8eb' : '#72b8e0';
     case 12:
       return '#b8a8e0';
     default:
@@ -112,7 +122,7 @@ export function combatMistTint(): { r: number; g: number; b: number; a: number }
         r: 0.38,
         g: 0.52,
         b: 0.68,
-        a: isNovemberCurtain() ? 0.098 : isNovemberFinale() ? 0.092 : isLateNovember() ? 0.085 : 0.07,
+        a: isNovemberVestige() ? 0.104 : isNovemberCurtain() ? 0.098 : isNovemberFinale() ? 0.092 : isLateNovember() ? 0.085 : 0.07,
       };
     case 12:
       return { r: 0.42, g: 0.38, b: 0.58, a: 0.06 };
@@ -133,7 +143,7 @@ export function atmosphereFogTint(): { r: number; g: number; b: number; farMul: 
         r: 0.78,
         g: 0.86,
         b: 0.94,
-        farMul: isNovemberCurtain() ? 1.12 : isNovemberFinale() ? 1.1 : isLateNovember() ? 1.08 : 1.05,
+        farMul: isNovemberVestige() ? 1.14 : isNovemberCurtain() ? 1.12 : isNovemberFinale() ? 1.1 : isLateNovember() ? 1.08 : 1.05,
       };
     case 12:
       return { r: 0.82, g: 0.76, b: 0.92, farMul: 1.04 };
@@ -236,7 +246,8 @@ export function combatLeafWindMul(): number {
   if (month() !== 11) return 1;
   const late = isLateNovember() ? 1.14 : 1;
   const curtain = isNovemberCurtain() ? 1.06 : 1;
-  return 1.2 * late * curtain;
+  const vestige = isNovemberVestige() ? 1.05 : 1;
+  return 1.2 * late * curtain * vestige;
 }
 
 /** Core-under-attack edge glow base (lerps toward alert red in the view). Mirrors godot/scripts/seasonal.gd core_alert_edge_glow. */
@@ -257,6 +268,7 @@ export function coreAlertEdgeGlowRgb(): { r: number; g: number; b: number } | nu
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {
     case 11:
+      if (isNovemberVestige()) return { windMul: 1.44, droneMul: 0.78, cutoffAdd: 64 };
       if (isNovemberCurtain()) return { windMul: 1.4, droneMul: 0.8, cutoffAdd: 60 };
       if (isNovemberFinale()) return { windMul: 1.36, droneMul: 0.82, cutoffAdd: 56 };
       return isLateNovember()
@@ -326,5 +338,7 @@ export function applySeasonDatasets() {
     else delete el.dataset.novemberFinale;
     if (isNovemberCurtain()) el.dataset.novemberCurtain = '1';
     else delete el.dataset.novemberCurtain;
+    if (isNovemberVestige()) el.dataset.novemberVestige = '1';
+    else delete el.dataset.novemberVestige;
   }
 }

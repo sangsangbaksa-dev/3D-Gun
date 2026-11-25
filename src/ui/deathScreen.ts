@@ -86,6 +86,8 @@ body[data-late-november="1"] #ztDeath .pulse{box-shadow:inset 0 0 180px 48px #4a
 body[data-late-november="1"] #ztDeath .ttl h1{letter-spacing:.2em}
 body[data-late-november="1"] #ztDeath .go button{box-shadow:0 0 22px #6a9cc488}
 body[data-late-november="1"] #ztDeath .ttl .dmood{display:block;margin-top:10px;font-size:clamp(11px,1.6vw,14px);letter-spacing:.28em;color:#9ed4f4bb;text-shadow:0 0 14px #3a5878}
+body[data-november-vestige="1"] #ztDeath .tint{background:radial-gradient(ellipse at 50% 55%,#6088c830 0%,#30487878 48%,#0c0814ee 100%)}
+body[data-november-vestige="1"] #ztDeath .ttl .dmood{color:#b0e8ffcc;text-shadow:0 0 18px #4888a8}
 body[data-season="december"] #ztDeath .tint{background:radial-gradient(ellipse at 50% 55%,#6a58a822 0%,#3a286866 48%,#1a0818e8 100%)}
 body[data-season="december"] #ztDeath .ttl h1{color:#d8cce8;text-shadow:0 0 28px #8a7ac8aa,0 6px 0 #281a38,0 0 2px #fff4}
 body[data-season="december"] #ztDeath .ttl p{color:#b8a8e0cc;text-shadow:0 0 10px #5a4878}
@@ -138,7 +140,7 @@ export function playDeath(info: DeathInfo, onDone: () => void) {
 
   const title = info.reason === 'core' ? t('death.coreTitle') : t('death.playerTitle');
   const sub = info.reason === 'core' ? t('death.coreSub') : t('death.playerSub', { wave: r.wave });
-  const deathMood = novemberMoodKey('death.moodLateNov', 'death.moodCurtain');
+  const deathMood = novemberMoodKey('death.moodLateNov', 'death.moodCurtain', 'death.moodVestige');
   const dmood = deathMood ? `<span class="dmood">${t(deathMood)}</span>` : '';
   const extras = (Object.keys(r.kept) as WalletKey[])
     .filter((k) => k !== 'gold' && k !== 'skillPoints' && (r.kept[k] ?? 0) > 0)
