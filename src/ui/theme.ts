@@ -41,6 +41,10 @@ html[data-late-november="1"] {
   --zt-info: #9ed4f4;
   --zt-border-strong: rgba(122,176,212,.42);
 }
+html[data-november-vestige="1"] {
+  --zt-info: #b0e8ff;
+  --zt-border-strong: rgba(138,200,240,.48);
+}
 `;
 
 export function injectTheme() {
