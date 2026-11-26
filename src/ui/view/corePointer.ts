@@ -89,7 +89,7 @@ function refreshTexts() {
   banSub.textContent = emphKey && alert.emphasis > 0 ? t(`coreAlert.${emphKey}`) : '';
   if (banMood) {
     const showMood = isLateNovember() && alert.active;
-    const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain', 'coreAlert.moodVestige');
+    const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain', 'coreAlert.moodVestige', 'coreAlert.moodThreshold');
     banMood.textContent = showMood && coreMood ? t(coreMood) : '';
     banMood.style.display = showMood ? 'block' : 'none';
   }
@@ -139,7 +139,7 @@ export const CorePointerSystem: System = {
     if (banMood) {
       const showMood = showBan && isLateNovember();
       banMood.style.display = showMood ? 'block' : 'none';
-      const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain', 'coreAlert.moodVestige');
+      const coreMood = novemberMoodKey('coreAlert.moodLateNov', 'coreAlert.moodCurtain', 'coreAlert.moodVestige', 'coreAlert.moodThreshold');
       if (showMood && coreMood) banMood.textContent = t(coreMood);
     }
     const edge = coreAlertEdgeGlowRgb();

@@ -136,7 +136,12 @@ function prepSubText() {
     hint = t('hud.prepNextBoss');
   }
   const buildPause = state.mode === 'build' ? t('hud.prepBuildPause') : '';
-  const prepMood = novemberMoodKey('hud.prepMoodLateNov', 'hud.prepMoodCurtain', 'hud.prepMoodVestige');
+  const prepMood = novemberMoodKey(
+    'hud.prepMoodLateNov',
+    'hud.prepMoodCurtain',
+    'hud.prepMoodVestige',
+    'hud.prepMoodThreshold',
+  );
   const mood = prepMood ? ` <span class="hud-mood">${t(prepMood)}</span>` : '';
   return t('hud.prep', { sec }) + buildPause + hint + t('hud.prepStart') + mood;
 }
@@ -146,7 +151,12 @@ function refreshStaticHud() {
   if (help) help.innerHTML = t('hud.help');
   const pause = document.getElementById('pauseBanner');
   if (pause) {
-    const pauseMood = novemberMoodKey('hud.pauseMoodLateNov', 'hud.pauseMoodCurtain', 'hud.pauseMoodVestige');
+    const pauseMood = novemberMoodKey(
+      'hud.pauseMoodLateNov',
+      'hud.pauseMoodCurtain',
+      'hud.pauseMoodVestige',
+      'hud.pauseMoodThreshold',
+    );
     const mood = pauseMood ? `<span class="pause-mood">${t(pauseMood)}</span>` : '';
     pause.innerHTML = `${t('hud.pause')}${mood}`;
   }

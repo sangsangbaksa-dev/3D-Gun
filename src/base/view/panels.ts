@@ -124,7 +124,7 @@ export class BasePanels {
     this.show(this.hover, active && !!hover, 'block');
     if (!active) return;
     const prep = phase === 'prep';
-    const buildMood = prep ? novemberMoodKey('build.banner.moodLateNov', 'build.banner.moodCurtain', 'build.banner.moodVestige') : null;
+    const buildMood = prep ? novemberMoodKey('build.banner.moodLateNov', 'build.banner.moodCurtain', 'build.banner.moodVestige', 'build.banner.moodThreshold') : null;
     const mood = buildMood ? `<span class="bz-mood">${t(buildMood)}</span>` : '';
     this.set(this.banner, (prep ? t('build.banner.prep') : t('build.noCombat')) + mood);
     BUILDING_ORDER.forEach((id, i) => {
@@ -174,7 +174,7 @@ export class BasePanels {
     c.innerHTML = '';
     el('div', 'bz-gold', c, `🪙 ${state.gold}`);
     el('h2', '', c, t('hub.exchange.title'));
-    const exMood = novemberMoodKey('hub.exchange.moodLateNov', 'hub.exchange.moodCurtain', 'hub.exchange.moodVestige');
+    const exMood = novemberMoodKey('hub.exchange.moodLateNov', 'hub.exchange.moodCurtain', 'hub.exchange.moodVestige', 'hub.exchange.moodThreshold');
     const exSub = t('hub.exchange.sub') + (exMood ? `<span class="bz-ex-mood">${t(exMood)}</span>` : '') + ' (E / Esc)';
     el('div', 'bz-sub', c, exSub);
     const sellBonus = state.start.exchangeSellBonus ?? 0;
