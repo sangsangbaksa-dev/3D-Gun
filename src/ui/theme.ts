@@ -45,6 +45,10 @@ html[data-november-vestige="1"] {
   --zt-info: #b0e8ff;
   --zt-border-strong: rgba(138,200,240,.48);
 }
+html[data-november-threshold="1"] {
+  --zt-info: #c0f0ff;
+  --zt-border-strong: rgba(154,216,255,.52);
+}
 `;
 
 export function injectTheme() {

@@ -71,7 +71,12 @@ function barHtml(): string {
 function paintHelp() {
   if (!help) return;
   help.setAttribute('aria-label', t('keys.helpTitle'));
-  const helpMood = novemberMoodKey('keys.helpMoodLateNov', 'keys.helpMoodCurtain', 'keys.helpMoodVestige');
+  const helpMood = novemberMoodKey(
+    'keys.helpMoodLateNov',
+    'keys.helpMoodCurtain',
+    'keys.helpMoodVestige',
+    'keys.helpMoodThreshold',
+  );
   const helpMoodHtml = helpMood ? `<span class="zk-mood">${t(helpMood)}</span>` : '';
   help.querySelector('.card')!.innerHTML = `<h2>${t('keys.helpTitle')}<button type="button" data-close>${t('keys.helpClose')} (H)</button></h2>
 <div class="loop">${t('keys.helpLoop')}${helpMoodHtml}</div>
@@ -86,10 +91,10 @@ function promptHtml(text: string): string {
   let mood = '';
   if (isLateNovember() && safe.startsWith('E ')) {
     if (/주사|inject/i.test(safe)) {
-      const k = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige');
+      const k = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige', 'ally.inject.moodThreshold');
       if (k) mood = `<span class="zk-imood">${t(k)}</span>`;
     } else {
-      const k = novemberMoodKey('gather.moodLateNov', 'gather.moodCurtain', 'gather.moodVestige');
+      const k = novemberMoodKey('gather.moodLateNov', 'gather.moodCurtain', 'gather.moodVestige', 'gather.moodThreshold');
       if (k) mood = `<span class="zk-gmood">${t(k)}</span>`;
     }
   }
