@@ -76,6 +76,7 @@ function paintHelp() {
     'keys.helpMoodCurtain',
     'keys.helpMoodVestige',
     'keys.helpMoodThreshold',
+    'keys.helpMoodLiminal',
   );
   const helpMoodHtml = helpMood ? `<span class="zk-mood">${t(helpMood)}</span>` : '';
   help.querySelector('.card')!.innerHTML = `<h2>${t('keys.helpTitle')}<button type="button" data-close>${t('keys.helpClose')} (H)</button></h2>
@@ -91,10 +92,10 @@ function promptHtml(text: string): string {
   let mood = '';
   if (isLateNovember() && safe.startsWith('E ')) {
     if (/주사|inject/i.test(safe)) {
-      const k = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige', 'ally.inject.moodThreshold');
+      const k = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige', 'ally.inject.moodThreshold', 'ally.inject.moodLiminal');
       if (k) mood = `<span class="zk-imood">${t(k)}</span>`;
     } else {
-      const k = novemberMoodKey('gather.moodLateNov', 'gather.moodCurtain', 'gather.moodVestige', 'gather.moodThreshold');
+      const k = novemberMoodKey('gather.moodLateNov', 'gather.moodCurtain', 'gather.moodVestige', 'gather.moodThreshold', 'gather.moodLiminal');
       if (k) mood = `<span class="zk-gmood">${t(k)}</span>`;
     }
   }

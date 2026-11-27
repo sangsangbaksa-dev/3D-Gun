@@ -399,7 +399,7 @@ func _refresh_hud() -> void:
 		_lbl.text = _t("ally.cap", {"n": cap()})
 	else:
 		var line := _t("ally.inject", {"v": _vac_name(active_tier()), "p": roundi(chance_for(target) * 100.0)})
-		var inj_mood := Seasonal.november_mood_key("ally.inject.moodLateNov", "ally.inject.moodCurtain", "ally.inject.moodVestige", "ally.inject.moodThreshold")
+		var inj_mood := Seasonal.november_mood_key("ally.inject.moodLateNov", "ally.inject.moodCurtain", "ally.inject.moodVestige", "ally.inject.moodThreshold", "ally.inject.moodLiminal")
 		if inj_mood != "":
 			line += "\n" + I18n.t(inj_mood)
 		_lbl.text = line

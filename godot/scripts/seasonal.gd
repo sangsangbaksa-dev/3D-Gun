@@ -21,9 +21,15 @@ static func is_november_threshold() -> bool:
 	var dt := Time.get_datetime_dict_from_system()
 	return dt.month == 11 and dt.day >= 26
 
-static func november_mood_key(late_key: String, curtain_key: String, vestige_key: String = "", threshold_key: String = "") -> String:
+static func is_november_liminal() -> bool:
+	var dt := Time.get_datetime_dict_from_system()
+	return dt.month == 11 and dt.day >= 27
+
+static func november_mood_key(late_key: String, curtain_key: String, vestige_key: String = "", threshold_key: String = "", liminal_key: String = "") -> String:
 	if not is_late_november():
 		return ""
+	if is_november_liminal() and liminal_key != "":
+		return liminal_key
 	if is_november_threshold() and threshold_key != "":
 		return threshold_key
 	if is_november_vestige() and vestige_key != "":
@@ -36,6 +42,8 @@ static func title_slice_extra(locale: String) -> String:
 	var dt := Time.get_datetime_dict_from_system()
 	match dt.month:
 		11:
+			if is_november_liminal():
+				return " · " + ("11월 경계, 달의 마지막 숨" if locale == "ko" else "November liminal, the month’s last breath")
 			if is_november_threshold():
 				return " · " + ("11월 문턱, 눈 앞 새벽" if locale == "ko" else "November threshold, dawn before snow")
 			if is_november_vestige():
@@ -72,6 +80,8 @@ static func atmosphere_fog_tint() -> Color:
 static func atmosphere_fog_far_mul() -> float:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_liminal():
+				return 1.18
 			if is_november_threshold():
 				return 1.16
 			if is_november_vestige():
@@ -118,6 +128,8 @@ static func ember_amount() -> int:
 static func combat_mist_tint() -> Color:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_liminal():
+				return Color(0.38, 0.52, 0.68, 0.116)
 			if is_november_threshold():
 				return Color(0.38, 0.52, 0.68, 0.11)
 			if is_november_vestige():
@@ -145,6 +157,8 @@ static func late_november_leaf_mul() -> float:
 	var dt := Time.get_datetime_dict_from_system()
 	if dt.month != 11:
 		return 1.0
+	if dt.day >= 27:
+		return 1.52
 	if dt.day >= 26:
 		return 1.46
 	if dt.day >= 25:
@@ -167,6 +181,8 @@ static func leaf_particles() -> Dictionary:
 static func ambient_season_adjust() -> Dictionary:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_liminal():
+				return {"wind_mul": 1.52, "drone_mul": 0.74, "cutoff_add": 72.0}
 			if is_november_threshold():
 				return {"wind_mul": 1.48, "drone_mul": 0.76, "cutoff_add": 68.0}
 			if is_november_vestige():

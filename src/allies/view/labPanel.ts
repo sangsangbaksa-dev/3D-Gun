@@ -121,7 +121,7 @@ export class LabPanel {
     if (!force && sig === this.sig) return;
     this.sig = sig;
     const keep = this.ov.querySelector('.al-body')?.scrollTop ?? 0;
-    const labMood = novemberMoodKey('ally.lab.moodLateNov', 'ally.lab.moodCurtain', 'ally.lab.moodVestige', 'ally.lab.moodThreshold');
+    const labMood = novemberMoodKey('ally.lab.moodLateNov', 'ally.lab.moodCurtain', 'ally.lab.moodVestige', 'ally.lab.moodThreshold', 'ally.lab.moodLiminal');
     const mood = labMood ? `<span class="al-mood">${t(labMood)}</span>` : '';
     this.ov.innerHTML = `
     <div class="al-card" role="dialog" aria-label="연구소">

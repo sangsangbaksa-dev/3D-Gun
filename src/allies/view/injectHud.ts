@@ -24,6 +24,9 @@ body[data-november-vestige="1"] .al-inj .inj-mood{color:#b0e8ffcc}
 body[data-november-threshold="1"] .al-inj .t{border-color:#9ad8ff88;box-shadow:0 0 28px #78b8e048}
 body[data-november-threshold="1"] .al-inj .f{background:linear-gradient(90deg,#184a6a,#9ad0f8)}
 body[data-november-threshold="1"] .al-inj .inj-mood{color:#c8f8ffdd}
+body[data-november-liminal="1"] .al-inj .t{border-color:#a8e8ff88;box-shadow:0 0 30px #88c8f052}
+body[data-november-liminal="1"] .al-inj .f{background:linear-gradient(90deg,#103a5a,#aae8ff)}
+body[data-november-liminal="1"] .al-inj .inj-mood{color:#d8fcffee}
 body[data-season="december"] .al-inj .t{border-color:#7a6ab066}
 body[data-season="december"] .al-inj .f{background:linear-gradient(90deg,#4a3a7a,#9a8ac8)}
 `;
@@ -51,7 +54,7 @@ export class InjectHud {
   }
   show(text: string, progress: number) {
     this.box.style.display = 'block';
-    const injMood = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige', 'ally.inject.moodThreshold');
+    const injMood = novemberMoodKey('ally.inject.moodLateNov', 'ally.inject.moodCurtain', 'ally.inject.moodVestige', 'ally.inject.moodThreshold', 'ally.inject.moodLiminal');
     const mood = injMood ? `<span class="inj-mood">${t(injMood)}</span>` : '';
     this.label.innerHTML = text + mood;
     const fill = injectBarFillCss();

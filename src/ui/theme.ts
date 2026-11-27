@@ -49,6 +49,10 @@ html[data-november-threshold="1"] {
   --zt-info: #c0f0ff;
   --zt-border-strong: rgba(154,216,255,.52);
 }
+html[data-november-liminal="1"] {
+  --zt-info: #d0f8ff;
+  --zt-border-strong: rgba(168,232,255,.56);
+}
 `;
 
 export function injectTheme() {
