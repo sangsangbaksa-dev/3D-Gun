@@ -515,7 +515,7 @@ func _wave_cleared() -> void:
 	var sub := I18n.t("waveClear.rewards", {"gold": bonus, "heal": heal})
 	if GameData.is_boss_wave(wave + 1) and wave + 1 <= GameData.final_wave:
 		sub += I18n.t("waveClear.nextBoss")
-	var wc_mood := Seasonal.november_mood_key("waveClear.moodLateNov", "waveClear.moodCurtain", "waveClear.moodVestige", "waveClear.moodThreshold")
+	var wc_mood := Seasonal.november_mood_key("waveClear.moodLateNov", "waveClear.moodCurtain", "waveClear.moodVestige", "waveClear.moodThreshold", "waveClear.moodLiminal")
 	if wc_mood != "":
 		sub += "\n" + I18n.t(wc_mood)
 	_banner(I18n.t("waveClear.title", {"n": wave}), "clear", sub)
@@ -799,7 +799,7 @@ func _refresh_hud() -> void:
 	lbl_top.text += "    Lv %d (+%d)" % [Skills.run_level(self), Skills.run_points(self)] # 런 레벨과 이번 판에 번 스킬 포인트
 	if phase == "prep":
 		lbl_top.text += "    " + I18n.t("hud.prep", {"n": ceili(prep_left)})
-		var prep_mood := Seasonal.november_mood_key("hud.prepMoodLateNov", "hud.prepMoodCurtain", "hud.prepMoodVestige", "hud.prepMoodThreshold")
+		var prep_mood := Seasonal.november_mood_key("hud.prepMoodLateNov", "hud.prepMoodCurtain", "hud.prepMoodVestige", "hud.prepMoodThreshold", "hud.prepMoodLiminal")
 		if prep_mood != "":
 			lbl_top.text += "  ·  " + I18n.t(prep_mood)
 		if prep_bar and prep_total > 0.0:
@@ -860,7 +860,7 @@ func _refresh_base_hud() -> void:
 	gather_bar.visible = false
 	if not gather_focus.is_empty():
 		prompt = "E  " + I18n.t("node.%s.verb" % gather_focus.kind)
-		var g_mood := Seasonal.november_mood_key("gather.moodLateNov", "gather.moodCurtain", "gather.moodVestige", "gather.moodThreshold")
+		var g_mood := Seasonal.november_mood_key("gather.moodLateNov", "gather.moodCurtain", "gather.moodVestige", "gather.moodThreshold", "gather.moodLiminal")
 		if g_mood != "":
 			prompt += "\n" + I18n.t(g_mood)
 		# 진행도는 gather_hud.gd 의 링이 그린다
@@ -877,7 +877,7 @@ func _refresh_base_hud() -> void:
 	if base.building:
 		build_panel.position = Vector2(hud.size.x - 544, 18)
 		var lines := [I18n.t("build.title")]
-		var b_mood := Seasonal.november_mood_key("build.banner.moodLateNov", "build.banner.moodCurtain", "build.banner.moodVestige", "build.banner.moodThreshold")
+		var b_mood := Seasonal.november_mood_key("build.banner.moodLateNov", "build.banner.moodCurtain", "build.banner.moodVestige", "build.banner.moodThreshold", "build.banner.moodLiminal")
 		if phase == "prep" and b_mood != "":
 			lines.append(I18n.t(b_mood))
 		for i in base.BUILDABLE.size():

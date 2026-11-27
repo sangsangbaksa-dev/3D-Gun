@@ -25,6 +25,8 @@ body[data-november-vestige="1"] #ztWaveClear .box{border-color:#9ac8f088;box-sha
 body[data-november-vestige="1"] #ztWaveClear .mood{color:#b0e8ffdd}
 body[data-november-threshold="1"] #ztWaveClear .box{border-color:#aae8ff88;box-shadow:0 8px 32px #000a,0 0 52px #78c8e077}
 body[data-november-threshold="1"] #ztWaveClear .mood{color:#c8f8ffee}
+body[data-november-liminal="1"] #ztWaveClear .box{border-color:#b8f0ff88;box-shadow:0 8px 32px #000a,0 0 56px #88d8f088}
+body[data-november-liminal="1"] #ztWaveClear .mood{color:#d8fcffff}
 body[data-late-november="1"] #ztWaveClear b{letter-spacing:.06em}
 body[data-season="december"] #ztWaveClear .box{border-color:#8a7ab888;box-shadow:0 8px 32px #000a,0 0 28px #4a3a6844}
 body[data-season="december"] #ztWaveClear b{color:#b8a8e0;text-shadow:0 2px 8px #2a2048}
@@ -52,7 +54,7 @@ function render() {
   });
   let extra = '';
   if (isBossWave(w + 1) && w + 1 <= FINAL_WAVE) extra = t('waveClear.nextBoss');
-  const wcMood = novemberMoodKey('waveClear.moodLateNov', 'waveClear.moodCurtain', 'waveClear.moodVestige', 'waveClear.moodThreshold');
+  const wcMood = novemberMoodKey('waveClear.moodLateNov', 'waveClear.moodCurtain', 'waveClear.moodVestige', 'waveClear.moodThreshold', 'waveClear.moodLiminal');
   const mood = wcMood ? `<div class="mood">${t(wcMood)}</div>` : '';
   el.innerHTML = `<div class="box"><b>${t('waveClear.title', { n: w })}</b><div class="sub">${t('waveClear.rewards', { gold, heal })}${extra}</div>${mood}</div>`;
 }

@@ -49,6 +49,9 @@ html[data-november-vestige="1"] #ztTitle{background:linear-gradient(#0000 55%,#0
 html[data-november-threshold="1"] #ztTitle .leaf{opacity:.98;animation-name:tbLeafThreshold}
 @keyframes tbLeafThreshold{0%{transform:translate(0,0) rotate(-16deg);opacity:0}10%{opacity:.98}100%{transform:translate(calc(var(--dx,48px) * 1.6),108vh) rotate(440deg);opacity:0}}
 html[data-november-threshold="1"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a9cc436,#0c284022 55%,#0000 70%),linear-gradient(90deg,#0000 58%,#5898a828 100%),linear-gradient(270deg,#0000 66%,#5098b022 100%)}
+html[data-november-liminal="1"] #ztTitle .leaf{opacity:1;animation-name:tbLeafLiminal}
+@keyframes tbLeafLiminal{0%{transform:translate(0,0) rotate(-18deg);opacity:0}10%{opacity:1}100%{transform:translate(calc(var(--dx,48px) * 1.65),108vh) rotate(460deg);opacity:0}}
+html[data-november-liminal="1"] #ztTitle{background:linear-gradient(#0000 55%,#0a0306aa),linear-gradient(#6a9cc438,#081c3018 55%,#0000 70%),linear-gradient(88deg,#0000 56%,#60a0b028 100%),linear-gradient(268deg,#0000 64%,#58a0c024 100%)}
 @media (prefers-reduced-motion:reduce){#ztTitle .leaf{display:none}}
 @keyframes tbGlow{50%{filter:drop-shadow(0 0 26px ${TEAL}bb) drop-shadow(0 0 6px ${TEAL}55)}}
 @keyframes tbPulseBtn{50%{box-shadow:0 0 8px ${ORANGE}66}}
