@@ -53,6 +53,10 @@ html[data-november-liminal="1"] {
   --zt-info: #d0f8ff;
   --zt-border-strong: rgba(168,232,255,.56);
 }
+html[data-november-cusp="1"] {
+  --zt-info: #e0fcff;
+  --zt-border-strong: rgba(184,248,255,.6);
+}
 `;
 
 export function injectTheme() {

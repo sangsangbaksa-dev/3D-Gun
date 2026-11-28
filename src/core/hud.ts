@@ -142,6 +142,7 @@ function prepSubText() {
     'hud.prepMoodVestige',
     'hud.prepMoodThreshold',
     'hud.prepMoodLiminal',
+    'hud.prepMoodCusp',
   );
   const mood = prepMood ? ` <span class="hud-mood">${t(prepMood)}</span>` : '';
   return t('hud.prep', { sec }) + buildPause + hint + t('hud.prepStart') + mood;
@@ -158,6 +159,7 @@ function refreshStaticHud() {
       'hud.pauseMoodVestige',
       'hud.pauseMoodThreshold',
       'hud.pauseMoodLiminal',
+      'hud.pauseMoodCusp',
     );
     const mood = pauseMood ? `<span class="pause-mood">${t(pauseMood)}</span>` : '';
     pause.innerHTML = `${t('hud.pause')}${mood}`;
