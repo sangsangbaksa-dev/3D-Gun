@@ -178,7 +178,7 @@ func step(dt: float) -> void:
 		banner.add_theme_color_override("font_color", Color(1, 0.92, 0.9).lerp(Color(1, 0.35, 0.3), pu))
 	mood.visible = banner.visible and Seasonal.is_late_november()
 	if mood.visible:
-		var core_mood := Seasonal.november_mood_key("coreAlert.moodLateNov", "coreAlert.moodCurtain", "coreAlert.moodVestige", "coreAlert.moodThreshold", "coreAlert.moodLiminal")
+		var core_mood := Seasonal.november_mood_key("coreAlert.moodLateNov", "coreAlert.moodCurtain", "coreAlert.moodVestige", "coreAlert.moodThreshold", "coreAlert.moodLiminal", "coreAlert.moodCusp")
 		mood.text = I18n.t(core_mood) if core_mood != "" else ""
 	_aim(live)
 	canvas.queue_redraw()

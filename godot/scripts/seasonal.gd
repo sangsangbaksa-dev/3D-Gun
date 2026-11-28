@@ -25,9 +25,15 @@ static func is_november_liminal() -> bool:
 	var dt := Time.get_datetime_dict_from_system()
 	return dt.month == 11 and dt.day >= 27
 
-static func november_mood_key(late_key: String, curtain_key: String, vestige_key: String = "", threshold_key: String = "", liminal_key: String = "") -> String:
+static func is_november_cusp() -> bool:
+	var dt := Time.get_datetime_dict_from_system()
+	return dt.month == 11 and dt.day >= 28
+
+static func november_mood_key(late_key: String, curtain_key: String, vestige_key: String = "", threshold_key: String = "", liminal_key: String = "", cusp_key: String = "") -> String:
 	if not is_late_november():
 		return ""
+	if is_november_cusp() and cusp_key != "":
+		return cusp_key
 	if is_november_liminal() and liminal_key != "":
 		return liminal_key
 	if is_november_threshold() and threshold_key != "":
@@ -42,6 +48,8 @@ static func title_slice_extra(locale: String) -> String:
 	var dt := Time.get_datetime_dict_from_system()
 	match dt.month:
 		11:
+			if is_november_cusp():
+				return " · " + ("11월 끝, 눈 앞 한밤" if locale == "ko" else "November cusp, the final night before snow")
 			if is_november_liminal():
 				return " · " + ("11월 경계, 달의 마지막 숨" if locale == "ko" else "November liminal, the month’s last breath")
 			if is_november_threshold():
@@ -80,6 +88,8 @@ static func atmosphere_fog_tint() -> Color:
 static func atmosphere_fog_far_mul() -> float:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_cusp():
+				return 1.20
 			if is_november_liminal():
 				return 1.18
 			if is_november_threshold():
@@ -128,6 +138,8 @@ static func ember_amount() -> int:
 static func combat_mist_tint() -> Color:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_cusp():
+				return Color(0.38, 0.52, 0.68, 0.122)
 			if is_november_liminal():
 				return Color(0.38, 0.52, 0.68, 0.116)
 			if is_november_threshold():
@@ -157,6 +169,8 @@ static func late_november_leaf_mul() -> float:
 	var dt := Time.get_datetime_dict_from_system()
 	if dt.month != 11:
 		return 1.0
+	if dt.day >= 28:
+		return 1.58
 	if dt.day >= 27:
 		return 1.52
 	if dt.day >= 26:
@@ -181,6 +195,8 @@ static func leaf_particles() -> Dictionary:
 static func ambient_season_adjust() -> Dictionary:
 	match Time.get_datetime_dict_from_system().month:
 		11:
+			if is_november_cusp():
+				return {"wind_mul": 1.56, "drone_mul": 0.72, "cutoff_add": 76.0}
 			if is_november_liminal():
 				return {"wind_mul": 1.52, "drone_mul": 0.74, "cutoff_add": 72.0}
 			if is_november_threshold():

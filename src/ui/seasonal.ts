@@ -38,15 +38,22 @@ export function isNovemberLiminal(): boolean {
   return month() === 11 && dayOfMonth() >= 27;
 }
 
-/** Pick late-November mood i18n key (liminal overrides threshold on 27+). */
+/** November 28th+: final night before December snow (mirrors godot seasonal.gd is_november_cusp). */
+export function isNovemberCusp(): boolean {
+  return month() === 11 && dayOfMonth() >= 28;
+}
+
+/** Pick late-November mood i18n key (cusp overrides liminal on 28+). */
 export function novemberMoodKey(
   lateKey: string,
   curtainKey: string,
   vestigeKey?: string,
   thresholdKey?: string,
   liminalKey?: string,
+  cuspKey?: string,
 ): string | null {
   if (!isLateNovember()) return null;
+  if (isNovemberCusp() && cuspKey) return cuspKey;
   if (isNovemberLiminal() && liminalKey) return liminalKey;
   if (isNovemberThreshold() && thresholdKey) return thresholdKey;
   if (isNovemberVestige() && vestigeKey) return vestigeKey;
@@ -55,6 +62,7 @@ export function novemberMoodKey(
 
 export function lateNovemberLeafMul(): number {
   if (month() !== 11) return 1;
+  if (isNovemberCusp()) return 1.58;
   if (isNovemberLiminal()) return 1.52;
   if (isNovemberThreshold()) return 1.46;
   if (isNovemberVestige()) return 1.4;
@@ -66,6 +74,9 @@ export function lateNovemberLeafMul(): number {
 export function titleSliceExtra(locale: string): string {
   switch (month()) {
     case 11:
+      if (isNovemberCusp()) {
+        return locale === 'ko' ? ' · 11월 끝, 눈 앞 한밤' : ' · November cusp, the final night before snow';
+      }
       if (isNovemberLiminal()) {
         return locale === 'ko' ? ' · 11월 경계, 달의 마지막 숨' : ' · November liminal, the month’s last breath';
       }
@@ -132,6 +143,7 @@ export function bodySeasonAttr(): string {
 export function bannerClearAccentHex(): string {
   switch (month()) {
     case 11:
+      if (isNovemberCusp()) return '#d4f8ff';
       if (isNovemberLiminal()) return '#c8f4ff';
       if (isNovemberThreshold()) return '#b4e8ff';
       return isNovemberVestige() ? '#a8e0f8' : isNovemberCurtain() ? '#9ad4f2' : isLateNovember() ? '#8cc8eb' : '#72b8e0';
@@ -150,7 +162,9 @@ export function combatMistTint(): { r: number; g: number; b: number; a: number }
         r: 0.38,
         g: 0.52,
         b: 0.68,
-        a: isNovemberLiminal()
+        a: isNovemberCusp()
+          ? 0.122
+          : isNovemberLiminal()
           ? 0.116
           : isNovemberThreshold()
           ? 0.11
@@ -183,7 +197,9 @@ export function atmosphereFogTint(): { r: number; g: number; b: number; farMul: 
         r: 0.78,
         g: 0.86,
         b: 0.94,
-        farMul: isNovemberLiminal()
+        farMul: isNovemberCusp()
+          ? 1.2
+          : isNovemberLiminal()
           ? 1.18
           : isNovemberThreshold()
           ? 1.16
@@ -301,7 +317,8 @@ export function combatLeafWindMul(): number {
   const vestige = isNovemberVestige() ? 1.05 : 1;
   const threshold = isNovemberThreshold() ? 1.04 : 1;
   const liminal = isNovemberLiminal() ? 1.05 : 1;
-  return 1.2 * late * curtain * vestige * threshold * liminal;
+  const cusp = isNovemberCusp() ? 1.04 : 1;
+  return 1.2 * late * curtain * vestige * threshold * liminal * cusp;
 }
 
 /** Core-under-attack edge glow base (lerps toward alert red in the view). Mirrors godot/scripts/seasonal.gd core_alert_edge_glow. */
@@ -322,6 +339,7 @@ export function coreAlertEdgeGlowRgb(): { r: number; g: number; b: number } | nu
 export function ambientSeasonAdjust(): { windMul: number; droneMul: number; cutoffAdd: number } {
   switch (month()) {
     case 11:
+      if (isNovemberCusp()) return { windMul: 1.56, droneMul: 0.72, cutoffAdd: 76 };
       if (isNovemberLiminal()) return { windMul: 1.52, droneMul: 0.74, cutoffAdd: 72 };
       if (isNovemberThreshold()) return { windMul: 1.48, droneMul: 0.76, cutoffAdd: 68 };
       if (isNovemberVestige()) return { windMul: 1.44, droneMul: 0.78, cutoffAdd: 64 };
@@ -400,5 +418,7 @@ export function applySeasonDatasets() {
     else delete el.dataset.novemberThreshold;
     if (isNovemberLiminal()) el.dataset.novemberLiminal = '1';
     else delete el.dataset.novemberLiminal;
+    if (isNovemberCusp()) el.dataset.novemberCusp = '1';
+    else delete el.dataset.novemberCusp;
   }
 }

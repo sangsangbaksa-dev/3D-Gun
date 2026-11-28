@@ -15,7 +15,10 @@
   var novVestige = m === 11 && d >= 25;
   var novThreshold = m === 11 && d >= 26;
   var novLiminal = m === 11 && d >= 27;
-  var extra = m === 11 ? (novLiminal
+  var novCusp = m === 11 && d >= 28;
+  var extra = m === 11 ? (novCusp
+      ? (ko ? '11월 끝, 눈 앞 한밤' : 'November cusp, the final night before snow')
+      : novLiminal
       ? (ko ? '11월 경계, 달의 마지막 숨' : 'November liminal, the month’s last breath')
       : novThreshold
       ? (ko ? '11월 문턱, 눈 앞 새벽' : 'November threshold, dawn before snow')
@@ -42,8 +45,11 @@
   if (novVestige) { document.documentElement.dataset.novemberVestige = '1'; document.body.dataset.novemberVestige = '1'; }
   if (novThreshold) { document.documentElement.dataset.novemberThreshold = '1'; document.body.dataset.novemberThreshold = '1'; }
   if (novLiminal) { document.documentElement.dataset.novemberLiminal = '1'; document.body.dataset.novemberLiminal = '1'; }
+  if (novCusp) { document.documentElement.dataset.novemberCusp = '1'; document.body.dataset.novemberCusp = '1'; }
   var titleBase = ko ? '3D-GUN · 좀비 타이쿤 3D' : '3D-GUN · Zombie Tycoon 3D';
-  var titleExtra = m === 11 ? (novLiminal
+  var titleExtra = m === 11 ? (novCusp
+      ? (ko ? ' · 11월 끝, 눈 앞 한밤' : ' · November cusp, the final night before snow')
+      : novLiminal
       ? (ko ? ' · 11월 경계, 달의 마지막 숨' : ' · November liminal, the month’s last breath')
       : novThreshold
       ? (ko ? ' · 11월 문턱, 눈 앞 새벽' : ' · November threshold, dawn before snow')
@@ -183,6 +189,12 @@
   body[data-november-liminal="1"] #banner { text-shadow:0 3px 16px #0a1828,0 0 58px #88d8f8aa; }
   body[data-november-liminal="1"] #wave.pop { animation-name:wavePopNovLiminal; }
   @keyframes wavePopNovLiminal { 0% { transform:scale(1); } 34% { transform:scale(1.13); text-shadow:0 0 32px #d8f8ffbb; } 100% { transform:scale(1); text-shadow:inherit; } }
+  body[data-november-cusp="1"] #prepBar .fill { background:linear-gradient(90deg,#061c3c,#c8f8ff); }
+  body[data-november-cusp="1"] #res { border-color:#b0f0ff; box-shadow:0 0 48px #98d8ff77; }
+  body[data-november-cusp="1"] #pauseBanner { border-color:#c8f8ff; box-shadow:0 8px 32px #000a,0 0 58px #98e8ff99; }
+  body[data-november-cusp="1"] #banner { text-shadow:0 3px 16px #0a1828,0 0 62px #98e8ffbb; }
+  body[data-november-cusp="1"] #wave.pop { animation-name:wavePopNovCusp; }
+  @keyframes wavePopNovCusp { 0% { transform:scale(1); } 32% { transform:scale(1.14); text-shadow:0 0 34px #e8fcffcc; } 100% { transform:scale(1); text-shadow:inherit; } }
   body[data-season="november"] #help { color:#b8d4e8; text-shadow:0 1px 3px #0a1828,0 0 12px #2a405533; }
   body[data-late-november="1"] #toasts div { border:1px solid #5a8cb033; box-shadow:0 0 12px #3a5a7822; }
   body[data-late-november="1"] #prompt { border:1px solid #5a8cb044; color:#d8e8f4; }

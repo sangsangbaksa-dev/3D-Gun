@@ -143,7 +143,7 @@ func _apply_death_season() -> void:
 			_title.add_theme_color_override("font_color", title_col)
 			_title.add_theme_color_override("font_shadow_color", Color(0.42, 0.59, 0.78, 0.6))
 			_sub.add_theme_color_override("font_color", sub_col)
-	var death_mood := Seasonal.november_mood_key("death.moodLateNov", "death.moodCurtain", "death.moodVestige", "death.moodThreshold", "death.moodLiminal")
+	var death_mood := Seasonal.november_mood_key("death.moodLateNov", "death.moodCurtain", "death.moodVestige", "death.moodThreshold", "death.moodLiminal", "death.moodCusp")
 	if death_mood != "":
 		_sub_mood = UiKit.label(I18n.t(death_mood), 15, Color(0.62, 0.83, 0.96, 0.75), HORIZONTAL_ALIGNMENT_CENTER)
 		_sub_mood.modulate.a = 0.0
